@@ -4,60 +4,67 @@ from ncatbot.utils import config
 import asyncio
 # ========== 创建 BotClient ==========
 bot = BotClient()
+# 配置：设置轮询等待时间（秒）
 cyc_wait_time = 0.2
-# 配置：将这里的账号 ID 替换为你要监控的“账号 A”QQ 号（字符串或整数都可）
-ACCOUNT_A_ID = '3196611630'
+# 配置：表情歼灭模式
+emoji_kill_model = False
+emoji_kill_times = 8
+emoji_wait_time = 0.2
+emoji_combo={147,127827,127853,10068,76,424,12951,63,66,9992}#废
+# 配置：将这里的账号 ID 替换为你要监控的“账号 MASTER”QQ 号（字符串或整数都可）
+ACCOUNT_MASTER_ID = '3196611630'
 
 # ========= 注册回调函数 ==========
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):
-    if msg.raw_message == "测试":
-        await bot.api.post_private_msg(msg.user_id, text="NcatBot 测试成功喵~")
+    global emoji_kill_model
+    if msg.user_id == ACCOUNT_MASTER_ID:
+        if msg.raw_message == "测试":
+            await bot.api.post_private_msg(msg.user_id, text="NcatBot 测试成功喵~")
+        if msg.raw_message == "表情歼灭模式开启":
+            emoji_kill_model = True
+            await bot.api.post_private_msg(msg.user_id, text="表情歼灭模式已开启喵~")
+        if msg.raw_message == "表情歼灭模式关闭":
+            emoji_kill_model = False
+            await bot.api.post_private_msg(msg.user_id, text="表情歼灭模式已关闭喵~")
+        if msg.raw_message == "查询表情歼灭模式":
+            status = "开启" if emoji_kill_model else "关闭"
+            await bot.api.post_private_msg(msg.user_id, text=f"当前表情歼灭模式为：{status} 喵~")
 @bot.group_event()
 async def on_group_message(msg: GroupMessage):
-    # 与 on_private_message 类似：收到 @ 机器人的消息时，回复固定文本
+    #如果msg中含有@bot.self_id，则回复一条消息
+    # 最简单的 at 回复实现（风格类似 on_private_message）
     try:
-        # event.message 是 MessageArray，可迭代
-        for seg in getattr(event, 'message', []) or []:
-            seg_type = getattr(seg, 'type', None) if not isinstance(seg, dict) else seg.get('type')
-            if seg_type != 'at':
-                continue
-            data = getattr(seg, 'data', None) if not isinstance(seg, dict) else seg.get('data', {})
-            qq = None
-            if isinstance(data, dict):
-                qq = data.get('qq') or data.get('user_id')
-            else:
-                qq = getattr(data, 'qq', None) if data else None
-
-            # 使用事件中自己的 id 进行比较，避免依赖外部 config
-            if qq is not None and str(qq) == str(getattr(event, 'self_id', None)):
-                await bot.api.post_group_msg(getattr(event, 'group_id', None), text="你叫我吗？喵~")
-                return
+        raw = getattr(msg, 'raw_message', '') or ''
+        bot_id = getattr(bot, 'self_id', '')
+        # 检查是否包含 CQ at 目标（兼容常见 CQ 码格式）
+        if f"[CQ:at,qq={bot_id}]" in raw:
+            await bot.api.post_group_msg(group_id=getattr(msg, 'group_id', None), text="你叫我吗？喵~", at=getattr(msg, 'user_id', None))
     except Exception:
-        return
+        # 不抛出异常以免影响主流程
+        pass
 @bot.on_notice() # type: ignore
 async def on_notice(event: NoticeEvent):
     # 兼容不同版本的字段名
     notice = getattr(event, 'sub_type', None) or getattr(event, 'notice_type', None)
-    is_add = getattr(event, 'is_add', None)
-    emoji_like_id = getattr(event, 'emoji_like_id', None)
     liker = getattr(event, 'user_id', None)
 
-    # (已移除调试输出)
-
-    # 监听消息的表情回应
-    if notice == 'group_msg_emoji_like':
-        # 只对账号A的新增表情回应作出反应
+    # 监听贴表情事件
+    if notice == 'group_msg_emoji_like':        
+        is_add = getattr(event, 'is_add', None)
+        emoji_like_id = getattr(event, 'emoji_like_id', None)
+        # 只对账号MASTER的新增表情回应作出反应
         if is_add :
-            # 类型安全比较（避免 int/str 导致的不匹配）
             try:
-                if str(liker) != str(ACCOUNT_A_ID):
+                if str(liker) != str(ACCOUNT_MASTER_ID):
                     return
             except Exception:
                 return
-
-            # 在这里执行你希望的动作（示例：发送戳一戳或发送群消息）
-    #！！！！之前的bug，找到原因了，是因为参数不匹配导致的！！！！
+        else:
+            return
+         #！！！！之前的bug，找到原因了，是参数不匹配导致的！！！！
+        global emoji_kill_model
+        if emoji_kill_model == False:
             try:
                 #await bot.api.send_poke(user_id=getattr(event, 'user_id', None), group_id=getattr(event, 'group_id', None))
                 #await bot.api.post_group_msg(group_id=getattr(event, 'group_id', None), text="糖")
@@ -65,11 +72,19 @@ async def on_notice(event: NoticeEvent):
             except Exception:
                 pass
             return
-
-    # 监听 poke（戳一戳）事件
+        else:
+            for i in range(emoji_kill_times):
+                
+                try:
+                    await bot.api.set_msg_emoji_like(message_id=getattr(event, 'message_id', None), emoji_id=emoji_like_id, set=True)
+                    await asyncio.sleep(emoji_wait_time)
+                    await bot.api.set_msg_emoji_like(message_id=getattr(event, 'message_id', None), emoji_id=emoji_like_id, set=False)
+                except Exception:
+                    pass
+    # 监听戳一戳事件
     if notice == 'poke':
         if getattr(event, 'target_id', None) == getattr(event, 'self_id', None):
-            for i in range(5):
+            for _ in range(5):
                 try:
                     await bot.api.send_poke(user_id=getattr(event, 'user_id', None), group_id=getattr(event, 'group_id', None))
                 except Exception:
