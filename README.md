@@ -1,0 +1,2 @@
+# bot_as812
+一个基于ncatbot的名为as812的简单QQ聊天bot
