@@ -9,7 +9,7 @@ cyc_wait_time = 0.2
 # 配置：表情歼灭模式
 emoji_kill_model = False
 emoji_kill_times = 8
-emoji_wait_time = 0.2
+emoji_wait_time = 0.1
 emoji_combo={147,127827,127853,10068,76,424,12951,63,66,9992}#废
 # 配置：将这里的账号 ID 替换为你要监控的“账号 MASTER”QQ 号（字符串或整数都可）
 ACCOUNT_MASTER_ID = '3196611630'
@@ -30,19 +30,13 @@ async def on_private_message(msg: PrivateMessage):
         if msg.raw_message == "查询表情歼灭模式":
             status = "开启" if emoji_kill_model else "关闭"
             await bot.api.post_private_msg(msg.user_id, text=f"当前表情歼灭模式为：{status} 喵~")
+        
+            await msg.reply(text="诶？我还没搞这个")
 @bot.group_event()
 async def on_group_message(msg: GroupMessage):
-    #如果msg中含有@bot.self_id，则回复一条消息
-    # 最简单的 at 回复实现（风格类似 on_private_message）
-    try:
-        raw = getattr(msg, 'raw_message', '') or ''
-        bot_id = getattr(bot, 'self_id', '')
-        # 检查是否包含 CQ at 目标（兼容常见 CQ 码格式）
-        if f"[CQ:at,qq={bot_id}]" in raw:
-            await bot.api.post_group_msg(group_id=getattr(msg, 'group_id', None), text="你叫我吗？喵~", at=getattr(msg, 'user_id', None))
-    except Exception:
-        # 不抛出异常以免影响主流程
-        pass
+    if msg.raw_message == "/菜单":
+        menu_text = "诶？我还没搞这个诶"
+        await msg.reply(text=menu_text)
 @bot.on_notice() # type: ignore
 async def on_notice(event: NoticeEvent):
     # 兼容不同版本的字段名
