@@ -16,11 +16,11 @@ emoji_combo={147,127827,127853,10068,76,424,12951,63,66,9992}#废
 sex_language ={"逼","b","B","批","比","匕","几把","寄吧"}
 # 初始化：集会码
 
-is_mhw_team_code = re.compile(r'^[A-Za-z0-9!#$%&+-=?@[\\\]^_`{|}~]{16}$')
-is_mhr_team_code = re.compile(r'^[A-Za-z0-9!#$%&+-=?@[\\\]^_`{|}~]{12}$')
-mhw=set()
-mhr=set()
-# 配置：将这里的账号 ID 替换为你要监控的“账号 MASTER”QQ 号（字符串或整数都可）#废
+is_mhw_team_code = re.compile(r'^[A-Za-z0-9!#$%&+\-=?@^_`~]{12}$')
+is_mhr_team_code = re.compile(r'^[A-Za-z0-9!#$%&+\-=?@^_`~]{8}$')
+mhw=list()
+mhr=list()
+# 配置：特殊监控账号
 
 # ========= 注册回调函数 ==========
 @bot.private_event()
@@ -40,22 +40,44 @@ async def on_private_message(msg: PrivateMessage):
             await bot.api.post_private_msg(msg.user_id, text=f"当前表情歼灭模式为：{status} 喵~")
 @bot.group_event()
 async def on_group_message(msg: GroupMessage):
-    if msg.raw_message == "/菜单":
-        menu_text = "诶？我还没搞这个诶"
+    msg.raw_message = msg.raw_message.replace("&amp;","&")
+    if msg.user_id == config.bt_uin:
+        return
+    if msg.raw_message == "/help":
+        menu_text = \
+        "直接发送集会码即可记录" \
+        "/查询 获取集会列表" \
+        "/清空 清空所有集会码"
         await msg.reply(text=menu_text)
     for x in sex_language:
         if (x in msg.raw_message) and not (is_mhw_team_code.match(msg.raw_message)) and not (is_mhr_team_code.match(msg.raw_message))==False:
             await bot.api.post_group_msg(group_id=msg.group_id,text="看看"+x)
     if is_mhw_team_code.match(msg.raw_message):
-        mhw.add(msg.raw_message)
+        mhw.append(msg.raw_message)
         await bot.api.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{msg.raw_message}\n输入 /查询 获取集会列表喵~") 
     if is_mhr_team_code.match(msg.raw_message):
-        mhr.add(msg.raw_message)
+        mhr.append(msg.raw_message)
         await bot.api.post_group_msg(group_id=msg.group_id,text=f"收到 MHR 集会码：\n{msg.raw_message}\n输入 /查询 获取集会列表喵~") 
     if msg.raw_message == "/查询":
         mhw_codes = "\n".join(mhw) if len(mhw) > 0 else "暂无 MHW 集会码"
         mhr_codes = "\n".join(mhr) if len(mhr) > 0 else "暂无 MHR 集会码"
         await bot.api.post_group_msg(group_id=msg.group_id,text=f"MHW集会码：\n{mhw_codes}\nMHR 集会码：\n{mhr_codes} ")
+    if msg.raw_message == "/删除mhw":
+        if len(mhw) == 0:
+            await bot.api.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHW 集会码喵~")
+            return
+        await bot.api.post_group_msg(group_id=msg.group_id,text="已删除一个 MHW 集会码"+mhw[-1]+"喵~")
+        mhw.pop()
+    if msg.raw_message == "/删除mhr":
+        if len(mhr) == 0:
+            await bot.api.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHR 集会码喵~")
+            return
+        await bot.api.post_group_msg(group_id=msg.group_id,text="已删除一个 MHR 集会码"+mhr[-1]+"喵~")
+        mhr.pop()
+    if msg.raw_message == "/清空":
+        mhw.clear()
+        mhr.clear()
+        await bot.api.post_group_msg(group_id=msg.group_id,text="已清空所有集会码喵~")
 @bot.on_notice() # type: ignore
 async def on_notice(event: NoticeEvent):
     # 兼容不同版本的字段名
