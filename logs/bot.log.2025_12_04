@@ -1,0 +1,77 @@
+[2025-12-04 09:45:24,778.778] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | [BOTQQ]: 3024473284 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]: NcatBot | [ROOT]: 3196611630 | [WEBUI]: http://localhost:6099 | [WEBUI_TOKEN]: ?H>|KgBx*1>a?mQ#
+[2025-12-04 09:45:24,783.783] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | 配置已保存到 D:\_store\bot_as812\config.yaml
+[2025-12-04 09:45:25,011.011] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载内置插件数 [2]
+[2025-12-04 09:45:25,012.012] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 从 D:\_store\bot_as812\plugins 导入插件
+[2025-12-04 09:45:25,037.037] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp>=3.8.0
+[2025-12-04 09:45:25,335.335] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「Lolicon」
+[2025-12-04 09:45:25,361.361] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载插件数 [3]
+[2025-12-04 09:45:25,363.363] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 正在以本地模式运行, 检查中...
+[2025-12-04 09:45:29,418.418] WARNING  [Thread-4 (runner)|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:warning:139) | 测试 websocket 连接失败: [WinError 1225] 远程计算机拒绝网络连接。
+[2025-12-04 09:45:29,472.472] INFO     [MainThread|MainProcess] adapter.nc.start (logger.py:info:129) | 当前操作系统为: Windows 11
+[2025-12-04 09:45:29,473.473] INFO     [MainThread|MainProcess] adapter.nc.start (logger.py:info:129) | 正在启动QQ, 启动器路径: D:\_store\bot_as812\napcat\launcher.bat
+[2025-12-04 09:45:33,555.555] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 登录中...
+[2025-12-04 09:45:38,491.491] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.login (logger.py:info:129) | 快速登录列表: []
+[2025-12-04 09:45:39,890.890] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.login (logger.py:info:129) | QQ 已登录
+[2025-12-04 09:45:39,923.923] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 连接 napcat websocket 服务器成功!
+[2025-12-04 09:45:39,924.924] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 连接成功
+[2025-12-04 09:45:39,930.930] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接成功
+[2025-12-04 09:45:39,931.931] INFO     [asyncio_0|MainProcess] Client (logger.py:info:129) | Bot 3024473284 启动成功
+[2025-12-04 09:45:44,105.105] INFO     [MainThread|MainProcess] ncatbot.plugin_system.builtin_plugin.unified_registry.plugin (logger.py:info:129) | 命令前缀集合: ['/', '!']
+[2025-12-04 09:49:04,389.389] ERROR    [MainThread|MainProcess] API (logger.py:error:134) | NapCatAPIError: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 09:49:04,390.390] ERROR    [MainThread|MainProcess] Lolicon (logger.py:error:134) | 发送图片失败: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 09:49:56,857.857] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2021/11/14/11/27/36/94124031_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:05:24,543.543] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2024/04/06/00/00/17/117580767_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:05:24,642.642] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2021/06/14/13/53/13/90548856_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:11:01,952.952] ERROR    [MainThread|MainProcess] Lolicon (logger.py:error:134) | 调用 API 异常: Cannot connect to host api.lolicon.app:443 ssl:default [getaddrinfo failed]
+[2025-12-04 10:21:11,041.041] ERROR    [MainThread|MainProcess] API (logger.py:error:134) | NapCatAPIError: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 10:21:11,043.043] ERROR    [MainThread|MainProcess] Lolicon (logger.py:error:134) | 发送图片失败: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 10:21:31,599.599] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2022/01/22/01/11/15/95682143_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:21:31,624.624] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2018/07/12/00/07/15/69647093_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:21:31,659.659] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2019/09/20/06/00/03/76870748_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:46:49,026.026] ERROR    [MainThread|MainProcess] API (logger.py:error:134) | NapCatAPIError: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 10:46:49,028.028] ERROR    [MainThread|MainProcess] Lolicon (logger.py:error:134) | 发送图片失败: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 10:48:00,511.511] ERROR    [MainThread|MainProcess] API (logger.py:error:134) | NapCatAPIError: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 10:48:00,512.512] ERROR    [MainThread|MainProcess] Lolicon (logger.py:error:134) | 发送图片失败: Timeout: NTEvent serviceAndMethod:NodeIKernelMsgService/sendMsg ListenerName:NodeIKernelMsgListener/onMsgInfoListUpdate EventRet:
+{
+    "result": 0,
+    "errMsg": ""
+}
+
+[2025-12-04 10:48:16,382.382] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2025/01/21/00/02/39/126415824_p0_master1200.jpg, 状态码: 404
+[2025-12-04 10:48:16,588.588] WARNING  [MainThread|MainProcess] Lolicon (logger.py:warning:139) | 下载图片失败: https://i.pixiv.re/img-master/img/2021/03/05/03/47/05/88221103_p0_master1200.jpg, 状态码: 404
+[2025-12-04 12:15:11,414.414] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接已关闭, 正在尝试重新连接...
