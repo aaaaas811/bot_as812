@@ -23,7 +23,7 @@
         ],
         "admin": [],
         "root": [
-            "3196611630"
+            "3024473284"
         ]
     },
     "users": {
@@ -38,15 +38,15 @@
             "white_permissions_list": [],
             "black_permissions_list": [],
             "role_list": [
-                "user",
-                "root"
+                "user"
             ]
         },
         "3024473284": {
             "white_permissions_list": [],
             "black_permissions_list": [],
             "role_list": [
-                "user"
+                "user",
+                "root"
             ]
         }
     },
