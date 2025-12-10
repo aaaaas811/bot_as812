@@ -13,7 +13,7 @@ emoji_kill_times = 8
 emoji_wait_time = 0.1
 emoji_combo = {147,127827,127853,10068,76,424,12951,63,66,9992}#废
 # 配置：虾头语言
-sex_language = {"逼","β","弊","批","比","杯","匕","几把","寄吧"}
+sex_language = {"逼","β","弊","批","比","杯","匕","几把","寄吧","鸡"}
 sex_check_size = 10
 # 配置：特殊监控账号
 MASTER_UIN = "3196611630"
@@ -21,7 +21,7 @@ MARIA_UIN = "1634483575"
 # ========= 注册回调函数 ==========
 @bot.private_event()
 async def on_private_message(msg: PrivateMessage):
-    global emoji_kill_model
+    global emoji_kill_model, emoji_kill_times
     if msg.user_id == MASTER_UIN:
         text = msg.raw_message
         if text == "测试":
@@ -36,14 +36,20 @@ async def on_private_message(msg: PrivateMessage):
             status = "开启" if emoji_kill_model else "关闭"
             await bot.api.post_private_msg(msg.user_id, text=f"当前表情歼灭模式为：{status} 喵~")
         if text == "睡觉":
-            await bot.api.post_private_msg(msg.user_id, text="欧亚斯密....")
+            await bot.api.post_private_msg(msg.user_id, text="哦呀斯密....")
             await bot.close()
-        if text == "歼灭次数+":
-            emoji_kill_times += 1
+        if text.startswith("歼灭次数+"):
+            number_plus = text[len("歼灭次数+"):].strip()
+            if number_plus.isdigit():
+                emoji_kill_times += int(number_plus)
             await bot.api.post_private_msg(msg.user_id, text=f"当前歼灭次数为：{emoji_kill_times} 次喵~")
-        if text == "歼灭次数-":
-            if emoji_kill_times > 1:
-                emoji_kill_times -= 1
+        if text.startswith("歼灭次数-"):
+            number_minus = text[len("歼灭次数-"):].strip()
+            if number_minus.isdigit():
+                if emoji_kill_times > int(number_minus):
+                    emoji_kill_times -= int(number_minus)
+                else:
+                    emoji_kill_times = 1
             await bot.api.post_private_msg(msg.user_id, text=f"当前歼灭次数为：{emoji_kill_times} 次喵~")
 @bot.group_event()
 async def on_group_message(msg: GroupMessage):
@@ -59,7 +65,7 @@ async def on_group_message(msg: GroupMessage):
         await bot.api.post_group_msg(group_id=msg.group_id,text="不许去")
     if msg.user_id == MASTER_UIN or msg.user_id == MARIA_UIN:
         if text == "812睡觉":
-            await bot.api.post_group_msg(msg.group_id, text="欧亚斯密....")
+            await bot.api.post_group_msg(msg.group_id, text="哦呀斯密....")
             await bot.api.bot_exit()
 @bot.on_notice() # type: ignore
 async def on_notice1(event: NoticeEvent):
