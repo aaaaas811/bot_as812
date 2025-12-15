@@ -2,6 +2,7 @@
 from ncatbot.core import BotClient, PrivateMessage,GroupMessage,NoticeEvent, MessageArray
 from ncatbot.utils import config
 import asyncio
+import bot_state
 # ========== 创建 BotClient ==========
 bot = BotClient()
 
@@ -12,14 +13,10 @@ emoji_kill_model = False
 emoji_kill_times = 8
 emoji_wait_time = 0.1
 emoji_combo = {147,127827,127853,10068,76,424,12951,63,66,9992}#废
-# 配置：虾头语言
-sex_language = {"逼","β","弊","批","比","杯","匕","几把","寄吧","鸡"}
-sex_check_size = 10
-# 配置：特殊监控账号
-MASTER_UIN = "3196611630"
-MARIA_UIN = "1634483575"
+
 # ========= 注册回调函数 ==========
 @bot.private_event()
+@bot_state.ignore_if_sleeping
 async def on_private_message(msg: PrivateMessage):
     global emoji_kill_model, emoji_kill_times
     if msg.user_id == MASTER_UIN:
