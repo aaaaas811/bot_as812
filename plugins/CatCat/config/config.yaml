@@ -1,4 +1,4 @@
 api_key: "sk-93acce766c28487480a585bc4c531070"
 manager_id: "3196611630"
-message_delay: 100
+message_delay: 3600
 max_history: 10

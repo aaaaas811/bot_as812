@@ -5,11 +5,12 @@ import re
 import json
 import os
 import sys
+import bot_state
 LOG = get_log("mh")
 
 class mh(NcatBotPlugin):
     name = "mh" # 必须，插件名称，要求全局独立
-    version = "0.0.1" # 必须，插件版本
+    version = "0.0.3" # 必须，插件版本
     dependencies = {}  # 必须，依赖的其他插件和版本
     description = "mh软件测试" # 可选
     author = "as811" # 可选
@@ -49,6 +50,7 @@ class mh(NcatBotPlugin):
                     self.meat_data[monster['name']] = monster.get('hitzone_data', [])
 
     @filter_registry.group_filter
+    @bot_state.ignore_if_sleeping()
     async def on_group_message(self, msg: GroupMessage):
         text = msg.raw_message
         text = text.replace("&amp;", "&") 

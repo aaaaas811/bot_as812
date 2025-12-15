@@ -1,5 +1,6 @@
 # main.py
 
+import asyncio
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment
 from ncatbot.core.message import GroupMessage, PrivateMessage
 from ncatbot.utils.logger import get_log
@@ -70,3 +71,30 @@ class CatCat(BasePlugin):
         # 插件加载时执行的操作, 可缺省
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
+        # 启动后台定时任务：定期触发 gene_response（无需群消息）
+        try:
+            self._periodic_task = asyncio.create_task(self._periodic_trigger())
+        except Exception as e:
+            _log.error(f"启动 CatCat 定时任务失败: {e}")
+
+    async def _periodic_trigger(self):
+        # 定时唤醒，调用 gene_response; gene_response 内部会根据历史判断是否真正回复
+        # 这里使用较短的轮询间隔以便及时触发（实际发送由 message_delay 控制）
+        interval = 5
+        # 尝试从配置读取更合适的轮询或间隔值
+        try:
+            with open("plugins/CatCat/config/config.yaml", "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+                interval = int(cfg.get("poll_interval", interval))
+        except Exception:
+            pass
+        while True:
+            try:
+                # 如果 super_user 未设置，尝试跳过
+                if super_user:
+                    response = await gene_response(api_key, msg=None, cat_prompt=cat_prompt, group_id=super_user)
+                    if response:
+                        await self.api.post_group_msg(super_user, response)
+            except Exception as e:
+                _log.error(f"CatCat 定时触发出错: {e}")
+            await asyncio.sleep(interval)
