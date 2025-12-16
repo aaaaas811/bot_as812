@@ -5,7 +5,7 @@ debug: false
 github_proxy: null
 check_ncatbot_update: true
 skip_ncatbot_install_check: false
-websocket_timeout: 15
+websocket_timeout: 60
 napcat:
   ws_uri: ws://localhost:3001
   ws_token: NcatBot

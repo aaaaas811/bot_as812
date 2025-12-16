@@ -15,7 +15,7 @@ def is_sleeping() -> bool:
 from functools import wraps
 from typing import Iterable, Optional
 
-def ignore_if_sleeping(allow_uins: Optional[Iterable[str]] = None, user_attr: str = "user_id"):
+def ignore_if_sleeping(allow_uins: Optional[Iterable[str]] = None, user_attr: str = "user_id", allow_group_admins: bool = False):
     """
     装饰器：若处于睡眠态则阻止处理；allow_uins 列表中的 user_id 始终放行。
     user_attr 指定消息对象中用于比较的属性名（默认 user_id，GroupMessage/PrivateMessage 均适用）。
@@ -33,8 +33,25 @@ def ignore_if_sleeping(allow_uins: Optional[Iterable[str]] = None, user_attr: st
                     break
             if is_sleeping():
                 uid = getattr(msg, user_attr, None)
-                if uid is None or str(uid) not in allow_set:
-                    return  # 睡眠且非放行用户，直接返回不处理
+                # 首先按显式白名单判断
+                if uid is not None and str(uid) in allow_set:
+                    return await func(*args, **kwargs)
+
+                # 如果允许群管理员放行，且消息对象包含群内角色信息，则按角色判断
+                if allow_group_admins and msg is not None:
+                    # 常见实现：GroupMessage 包含 sender 对象，且有 role 属性（'owner'|'admin'|'member'）
+                    sender = getattr(msg, "sender", None)
+                    role = None
+                    if sender is not None:
+                        role = getattr(sender, "role", None)
+                    # 有些实现可能把角色放在 msg.role 或 msg.sender.role_name 等，这里做容错
+                    if role is None:
+                        role = getattr(msg, "role", None)
+                    if role is not None and str(role).lower() in {"admin", "owner"}:
+                        return await func(*args, **kwargs)
+
+                # 否则阻止处理
+                return
             return await func(*args, **kwargs)
         return wrapper
     return decorator

@@ -56,7 +56,7 @@ async def admin_message_control(msg: PrivateMessage):
         await bot.api.post_private_msg(msg.user_id, text="嗯——早上好喵呜喵呜~")
 
 @bot.group_event()
-@bot_state.ignore_if_sleeping(allow_uins=bot_state.ADMIN_UINS)
+@bot_state.ignore_if_sleeping(allow_uins=bot_state.ADMIN_UINS, allow_group_admins=True)
 async def on_group_message(msg: GroupMessage):
     text = msg.raw_message
     if text == "812睡觉":
