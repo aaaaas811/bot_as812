@@ -28,7 +28,7 @@ class CatCat(BasePlugin):
     @bot_state.ignore_if_sleeping()
     async def on_group_event(self, msg: GroupMessage):
         # 定义的回调函数
-        if msg.raw_message == "测试CatCat":
+        if msg.raw_message == "测试CatCat" and msg.user_id == bot_state.MASTER_UIN:
             await self.api.post_group_msg(msg.group_id, text="NCatBot插件CatCat测试成功喵")
 
     @bot.group_event

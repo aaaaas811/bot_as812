@@ -25,3 +25,6 @@ Github: https://github.com/Azuxa616/mhws_Wiki_Crawler Author: @Azuxa616
 
 
 无法主动解析时间戳
+*更聪明：
+    认识人
+    能够避免一问一答的输出

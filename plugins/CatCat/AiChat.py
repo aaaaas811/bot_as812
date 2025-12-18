@@ -33,8 +33,7 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
         return
 
     history_file = f"plugins/CatCat/logs/{gid}_history.log"
-
-    # 使用异步文件读取历史以兼容原实现
+    # 使用上下文管理器处理文件操作
     try:
         async with aiofiles.open(history_file, "r", encoding="utf-8") as f:
             lines = await f.readlines()
@@ -55,75 +54,81 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
         last_group_message_time = 0
 
     force_reply = False
-    # 只有在有 msg 的情况下才解析消息并追加历史
-    if msg is not None:
-        text_content = ""
-        for message in msg.message:
-            try:
-                mtype = message["type"]
-            except Exception:
-                mtype = getattr(message, "msg_seg_type", None)
+    text_content = ""
+    for message in msg.message:
+        # 兼容两种 message 格式：旧的 dict 格式或新的 MessageSegment 对象
+        try:
+            mtype = message["type"]
+        except Exception:
+            mtype = getattr(message, "msg_seg_type", None)
 
-            if mtype == "text":
-                txt = None
-                if hasattr(message, "text"):
-                    txt = getattr(message, "text")
-                else:
-                    try:
-                        txt = message.get("data", {}).get("text")
-                    except Exception:
-                        txt = None
-                if txt:
-                    text_content += (txt + ",")
+        if mtype == "text":
+            # 获取文本内容，优先使用对象属性，再使用 dict 结构
+            txt = None
+            if hasattr(message, "text"):
+                txt = getattr(message, "text")
+            else:
+                try:
+                    txt = message.get("data", {}).get("text")
+                except Exception:
+                    txt = None
+            if txt:
+                text_content += (txt + ",")
 
-            if mtype == "at":
-                qq_val = None
-                if hasattr(message, "qq"):
-                    qq_val = getattr(message, "qq")
-                else:
-                    try:
-                        qq_val = message.get("data", {}).get("qq")
-                    except Exception:
-                        qq_val = None
-                if qq_val is not None and str(qq_val) == str(config.bt_uin):
-                    text_content = f"@812({config.bt_uin}) " + text_content
+        if mtype == "at":
+            # 获取 at 的 qq 标识
+            qq_val = None
+            if hasattr(message, "qq"):
+                qq_val = getattr(message, "qq")
+            else:
+                try:
+                    qq_val = message.get("data", {}).get("qq")
+                except Exception:
+                    qq_val = None
+            if qq_val is not None and str(qq_val) == str(config.bt_uin):
+                text_content = f"@812({config.bt_uin}) " + text_content
+                force_reply = True
+
+    # 如果文本中包含 '812' 字样，也视为被提及，除非明确是睡觉/起床命令
+    if not force_reply and text_content:
+        try:
+            # 去掉空格以便匹配像 '812 睡觉' 的情况
+            compact = text_content.replace(" ", "")
+            if "812" in compact:
+                if not ("812睡觉" in compact or "812起床" in compact):
                     force_reply = True
+        except Exception:
+            pass
 
-        text_content = f"{msg.sender.nickname}({msg.sender.user_id}): {text_content}"
+    if msg is not None:
+        # 提取群成员额外字段：群名片(card)、角色(role)、头衔(title)
+        try:
+            card = getattr(msg.sender, "card", "") or ""
+        except Exception:
+            card = ""
+        try:
+            role = getattr(msg.sender, "role", "") or ""
+        except Exception:
+            role = ""
+        try:
+            title = getattr(msg.sender, "title", "") or ""
+        except Exception:
+            title = ""
+
+        sender_info = f"{msg.sender.nickname}({msg.sender.user_id})[{card}][{role}][{title}]"
+        text_content = f"{sender_info}: {text_content}"
 
         # Append the new message to the appropriate chat history
         with open(history_file, "a", encoding="utf-8") as f:
             f.write(f"{asyncio.get_event_loop().time()} {text_content}\n")
 
-    # 读取 config 中的 message_delay（秒）
+    current_time = asyncio.get_event_loop().time()
     try:
         with open("plugins/CatCat/config/config.yaml", "r", encoding="utf-8") as f:
-            message_delay = int(yaml.safe_load(f).get("message_delay", 10))
-    except Exception:
-        message_delay = 10
-
-    # 查找历史记录中最后一次由机器人（812）发送的时间戳，以实现定时触发策略
-    last_reply_time = 0.0
-    try:
-        if os.path.exists(history_file):
-            with open(history_file, "r", encoding="utf-8") as hf:
-                for ln in reversed(hf.readlines()):
-                    parts = ln.strip().split(None, 1)
-                    if len(parts) < 2:
-                        continue
-                    try:
-                        ts = float(parts[0])
-                    except Exception:
-                        continue
-                    if "812(" in parts[1]:
-                        last_reply_time = ts
-                        break
-    except Exception:
-        last_reply_time = 0.0
-
-    current_time = asyncio.get_event_loop().time()
-    # 如果距离上次机器人回复还未到间隔且没有被@，则不生成回复
-    if not force_reply and (current_time - last_reply_time) < message_delay:
+            message_dalay = int(yaml.safe_load(f)["message_delay"])
+    except:
+        message_dalay = 10
+    if current_time - last_group_message_time < message_dalay and not force_reply:
         return
 
     _log.info("开始生成回复……")
@@ -132,21 +137,24 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
         result = []
         try:
             with open("plugins/CatCat/config/config.yaml", "r", encoding="utf-8") as f:
-                max_history = int(yaml.safe_load(f).get("max_history", 5))
+                max_history = int(yaml.safe_load(f)["max_history"])
         except:
             max_history = 5
         for line in reversed(lines):
             try:
                 if len(result) >= max_history:
                     break
+                # 解析格式: <timestamp> <rest...>
                 parts = line.strip().split(None, 1)
                 if len(parts) < 2:
                     continue
+                # 确保首项为时间戳
                 try:
                     _ = float(parts[0])
                 except Exception:
                     continue
                 rest = parts[1]
+                # 尝试从 rest 中提取消息主体（冒号后部分）
                 if ":" in rest:
                     this_content = rest.split(":", 1)[1].strip()
                 else:
@@ -161,7 +169,7 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
         _log.info(f"812：{response}")
     else:
         return
-
+      
     with open(history_file, "a", encoding="utf-8") as f:
         f.write(f"{asyncio.get_event_loop().time()} 812({config.bt_uin}): {'\\'.join(response.split('\n'))}\n")
     return response

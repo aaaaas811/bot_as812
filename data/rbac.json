@@ -17,8 +17,17 @@
     },
     "role_users": {
         "user": [
+            "1402303649",
+            "249638876",
+            "1139969975",
             "123456",
-            "3196611630"
+            "1634483575",
+            "3430580038",
+            "1277791982",
+            "2987148330",
+            "3196611630",
+            "819188864",
+            "1749383987"
         ],
         "admin": [],
         "root": [
@@ -39,6 +48,69 @@
             "role_list": [
                 "user",
                 "root"
+            ]
+        },
+        "2987148330": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "1402303649": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "1749383987": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "1139969975": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "1277791982": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "249638876": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "3430580038": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "1634483575": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
+            ]
+        },
+        "819188864": {
+            "white_permissions_list": [],
+            "black_permissions_list": [],
+            "role_list": [
+                "user"
             ]
         }
     },

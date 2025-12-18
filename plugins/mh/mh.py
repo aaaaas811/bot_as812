@@ -7,7 +7,7 @@ import os
 import sys
 import bot_state
 LOG = get_log("mh")
-
+#我真懒得按命令系统改了
 class mh(NcatBotPlugin):
     name = "mh" # 必须，插件名称，要求全局独立
     version = "0.0.3" # 必须，插件版本

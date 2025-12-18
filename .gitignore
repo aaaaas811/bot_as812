@@ -1,1 +1,9 @@
 /napcat/
+
+# Ignore log files and log directories
+*.log
+*.log.*
+logs/
+**/logs/
+plugins/*/logs/
+napcat/logs/

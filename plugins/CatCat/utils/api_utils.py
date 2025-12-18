@@ -16,9 +16,15 @@ async def call_deepseek_chat_api(api_key, messages):
 
     data = {
         "model": "deepseek-chat",
+        "thinking": {
+            "type": "enabled"
+        },
+        "frequency_penalty": 1.0,
+        "presence_penalty": 0.7,
         "messages": messages,
-        "temperature": 1.3,
+        "temperature": 1.5,
         "max_tokens": 256,
+        "stream": False
     }
 
     try:
