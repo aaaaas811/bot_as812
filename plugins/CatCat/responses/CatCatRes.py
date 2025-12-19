@@ -1,16 +1,9 @@
 from ..utils.api_utils import call_deepseek_chat_api
 import re
+import json
 
 
 def format_group_chat(messages):
-    """
-    将原始群聊记录转换为 API 接受的格式
-    输入示例：
-        [
-            166658.6419105 manager(10101): init catcat
-            166658.6430702 何山(7894652): @812 你是谁,
-        ]
-    """
     # 将每条历史拆成独立的 user message，解析新格式：
     # 可接受的行格式例子：
     #   166658.6419105 manager(10101)[][member][效绿]: init catcat
@@ -23,20 +16,32 @@ def format_group_chat(messages):
     for message in messages:
         try:
             line = message.strip()
-            m = pattern.match(line)
-            if m:
-                nick = m.group('nick').strip()
-                qq = m.group('qq').strip()
-                card = m.group('card').strip()
-                role = m.group('role').strip()
-                title = m.group('title').strip()
-                msg = m.group('msg').strip()
-                # 构建内容，保留方括号信息供模型参考（不带时间戳/分值）
-                content = f"{nick}({qq})[{card}][{role}][{title}]: {msg}"
-            else:
-                # 回退：如果不匹配新格式，尝试按旧规则处理（去掉首个 token）
-                parts = line.split()
-                content = ' '.join(parts[1:]) if len(parts) > 1 else line
+            content = None
+            # 如果是 JSON 行，先解析
+            try:
+                obj = json.loads(line)
+                nick = obj.get('nickname', '').strip()
+                qq = str(obj.get('qq', '')).strip()
+                card = str(obj.get('card', '')).strip()
+                role = str(obj.get('role', '')).strip()
+                title = str(obj.get('title', '')).strip()
+                msg = str(obj.get('message', '')).strip()
+                content = f"QQ昵称: {nick}, QQ号: {qq}, 群昵称: {card}, 群权限: {role}, 群头衔: {title}: {msg}"
+            except Exception:
+                # 不是 JSON，再尝试正则匹配旧/新文本格式
+                m = pattern.match(line)
+                if m:
+                    nick = m.group('nick').strip()
+                    qq = m.group('qq').strip()
+                    card = m.group('card').strip()
+                    role = m.group('role').strip()
+                    title = m.group('title').strip()
+                    msg = m.group('msg').strip()
+                    content = f"QQ昵称: {nick}, QQ号: {qq}, 群昵称: {card}, 群权限: {role}, 群头衔: {title}: {msg}"
+                else:
+                    # 回退：如果不匹配新格式，尝试按旧规则处理（去掉首个 token）
+                    parts = line.split()
+                    content = ' '.join(parts[1:]) if len(parts) > 1 else line
 
             if content:
                 out.append({"role": "user", "content": content})

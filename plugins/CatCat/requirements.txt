@@ -1,3 +1,4 @@
 PyYAML==6.0.2
 aiohttp==3.11.13
 aiofiles==24.1.0
+jieba==0.42.1

@@ -25,7 +25,7 @@ class MHWSCrawler:
         self.http_utils = HttpUtils(retry_times=3, retry_interval=2, timeout=10)
         
         # 创建数据目录
-        self.data_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'data')
+        self.data_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'data')
         os.makedirs(self.data_dir, exist_ok=True)
     
     def _request(self, url):

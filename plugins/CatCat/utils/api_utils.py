@@ -17,12 +17,12 @@ async def call_deepseek_chat_api(api_key, messages):
     data = {
         "model": "deepseek-chat",
         "thinking": {
-            "type": "enabled"
+            "type": "disabled"
         },
         "frequency_penalty": 1.0,
         "presence_penalty": 0.7,
         "messages": messages,
-        "temperature": 1.5,
+        "temperature": 0.7,
         "max_tokens": 256,
         "stream": False
     }

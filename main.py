@@ -2,11 +2,12 @@
 from ncatbot.core import BotClient, PrivateMessage,GroupMessage,NoticeEvent, MessageArray
 from ncatbot.utils import config
 from ncatbot.plugin_system import root_filter, admin_filter, on_group_increase
+from ncatbot.utils import ncatbot_config
 import asyncio
 import bot_state
 # ========== 创建 BotClient ==========
 bot = BotClient()
-
+ncatbot_config.debug = True  # 启用调试模式
 # 配置：设置轮询等待时间（秒）
 cyc_wait_time = 0.2
 # 配置：表情歼灭模式
