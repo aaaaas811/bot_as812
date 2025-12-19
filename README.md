@@ -28,3 +28,5 @@ Github: https://github.com/Azuxa616/mhws_Wiki_Crawler Author: @Azuxa616
 *更聪明：
     认识人
     能够避免一问一答的输出
+    为了更好地进行群话题的总结，我想要引进“话题总结“。
+        bot每接收到该群100条消息进行一次约在50字的话题总结，然后该总结同样作为记忆区输入给bot。

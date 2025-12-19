@@ -4,7 +4,7 @@ import json
 
 
 def format_group_chat(messages):
-    # 将每条历史拆成独立的 user message，解析新格式：
+    # 将每条历史拆成独立的 message，解析新格式：
     # 可接受的行格式例子：
     #   166658.6419105 manager(10101)[][member][效绿]: init catcat
     #   166658.6430702 何山(7894652)[小何][admin][]: @812 你是谁,
@@ -13,7 +13,7 @@ def format_group_chat(messages):
     out = []
     # 正则：可选分值，时间戳，昵称(qq)，三个方括号字段，冒号后消息
     pattern = re.compile(r"^\s*(?:(?P<score>\d+\.\d+)\s+)?(?P<ts>\d+(?:\.\d+)?)\s+(?P<nick>[^()\[]+)\((?P<qq>\d+)\)\[(?P<card>[^\]]*)\]\[(?P<role>[^\]]*)\]\[(?P<title>[^\]]*)\]\s*:\s*(?P<msg>.*)$")
-    for message in messages:
+    for i, message in enumerate(messages):
         try:
             line = message.strip()
             content = None
@@ -44,7 +44,9 @@ def format_group_chat(messages):
                     content = ' '.join(parts[1:]) if len(parts) > 1 else line
 
             if content:
-                out.append({"role": "user", "content": content})
+                # 除了最后一个，其他都设为system
+                msg_role = "system" if i < len(messages) - 1 else "user"
+                out.append({"role": msg_role, "content": content})
         except Exception:
             continue
     return out
@@ -62,7 +64,7 @@ async def cat_cat_response(api_key, chat_history, prompt):
     try:
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复，必要时才回复。"
-        instruction = "请根据上下文判断是否需要回复，并只输出要说的话，不要任何额外说明或前缀。"
+        instruction = "请根据上下文判断是否需要回复当前用户的消息，并只输出要说的话，不要任何额外说明或前缀。优先考虑当前消息的内容，保持角色一致性。"
         messages = [
             {"role": "system", "content": persona},
             {"role": "system", "content": instruction},

@@ -149,6 +149,7 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
     # 加载个人历史
     personal_history = []
     user_info_str = ""
+    personality_summary = ""
     if os.path.exists(personal_log_file):
         with open(personal_log_file, "r", encoding="utf-8") as f:
             content = f.read()
@@ -159,6 +160,13 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
                 if end == -1:
                     end = content.find("\n\n过往聊天记录：", start)
                 user_info_str = content[start:end].strip()
+            # 解析个性总结
+            if "该用户的个性总结：" in content:
+                start = content.find("该用户的个性总结：") + len("该用户的个性总结：")
+                end = content.find("\n\n过往聊天记录：", start)
+                if end == -1:
+                    end = len(content)
+                personality_summary = content[start:end].strip()
             # 解析聊天记录
             if "过往聊天记录：" in content:
                 records_start = content.find("过往聊天记录：") + len("过往聊天记录：")
@@ -212,9 +220,11 @@ async def gene_response(api_key, msg: GroupMessage = None, cat_prompt=None, grou
     chat_history = []
     chat_history.append("个人的过往聊天记录（不一定是最近发生的）：")
     for h in personal_history:
-        chat_history.append(h)
-    if keywords:
-        keywords_str = "关键高频词（按词频降序排列，来自当前群聊，反应了最近在聊什么话题）: " + ", ".join(keywords)
+        chat_history.append(h)    
+        if personality_summary:
+            chat_history.append(f"该用户的个性总结：{personality_summary}")    
+        if keywords:
+            keywords_str = "关键高频词（按词频降序排列，来自当前群聊，反应了最近在聊什么话题）: " + ", ".join(keywords)
         chat_history.append(keywords_str)
     # 添加用户信息
     user_info = f"用户信息: 昵称={current_message['nickname']}, QQ={current_message['qq']}, 群名片={current_message['card']}, 角色={map_role(current_message['role'])}, 头衔={current_message['title']}"

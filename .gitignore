@@ -6,4 +6,5 @@
 logs/
 **/logs/
 plugins/*/logs/
+!plugins/CatCat/logs/
 napcat/logs/
