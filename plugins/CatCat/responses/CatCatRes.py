@@ -53,14 +53,6 @@ def format_group_chat(messages):
 
 
 async def cat_cat_response(api_key, chat_history, prompt):
-    """
-    参数：
-        chat_history: 群聊记录，格式为：
-            [
-                166658.6419105 manager(10101): init catcat
-                166658.6430702 何山(98645135): @812 你是谁,
-            ]
-    """
     try:
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复，必要时才回复。"
@@ -68,8 +60,13 @@ async def cat_cat_response(api_key, chat_history, prompt):
         messages = [
             {"role": "system", "content": persona},
             {"role": "system", "content": instruction},
-            *format_group_chat(chat_history),
         ]
+        # 如果chat_history已经是字典列表，直接使用
+        if chat_history and isinstance(chat_history[0], dict):
+            messages.extend(chat_history)
+        else:
+            # 兼容旧格式
+            messages.extend(format_group_chat(chat_history))
 
         response = await call_deepseek_chat_api(api_key, messages)
         return response.strip('"') if response else ""

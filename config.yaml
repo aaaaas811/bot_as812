@@ -11,7 +11,7 @@ napcat:
   ws_token: NcatBot
   ws_listen_ip: localhost
   webui_uri: http://localhost:6099
-  webui_token: ?H>|KgBx*1>a?mQ#
+  webui_token: EcxAO&H+O;c}2{}<
   enable_webui: true
   check_napcat_update: false
   stop_napcat: false

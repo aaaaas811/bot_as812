@@ -144,7 +144,30 @@ class mh(NcatBotPlugin):
             
             # 发送消息
             if msg_chain:
-                await self.api.post_group_msg(group_id=msg.group_id, rtf=MessageChain(msg_chain))
+                try:
+                    await self.api.post_group_msg(group_id=msg.group_id, rtf=MessageChain(msg_chain))
+                except Exception as e:
+                    LOG.error(f"发送消息失败: {e}")
+                    # 如果有图片，删除缓存文件并重试
+                    if cache_path and cache_path.exists():
+                        try:
+                            cache_path.unlink()  # 删除文件
+                            LOG.info(f"已删除缓存图片: {cache_path}")
+                            # 重新下载图片
+                            cache_path = await self._download_image(image_url)
+                            if cache_path:
+                                msg_chain[0] = Image(str(cache_path))  # 更新消息链中的图片
+                                await self.api.post_group_msg(group_id=msg.group_id, rtf=MessageChain(msg_chain))
+                            else:
+                                # 如果重新下载失败，只发送文本
+                                await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
+                        except Exception as retry_e:
+                            LOG.error(f"重试发送失败: {retry_e}")
+                            # 重试失败，只发送文本
+                            await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
+                    else:
+                        # 没有图片或文件不存在，只发送文本
+                        await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
             return
         if text.startswith("/弱点 "):
             monster_name = text[len("/弱点 "):].strip()
