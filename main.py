@@ -1,13 +1,28 @@
 # ========= 导入必要模块 ==========
+import sys
+from pathlib import Path
+# 将项目根和 plugins/as812 添加到 sys.path，保证老式相对导入能被解析
+project_root = Path(__file__).resolve().parent
+sys.path.insert(0, str(project_root))
+# 保留项目根路径，避免把插件目录直接加入 sys.path
+# 这样包内的相对导入（例如 "..models"）才能正常工作
+
 from ncatbot.core import BotClient, PrivateMessage,GroupMessage,NoticeEvent, MessageArray
 from ncatbot.utils import config
 from ncatbot.plugin_system import root_filter, admin_filter, on_group_increase
 from ncatbot.utils import ncatbot_config
 import asyncio
 import bot_state
+import random
+import os
+import yaml
+from plugins.as812.responses.CatCatRes import cat_cat_response
+from plugins.as812.core.log_manager import LogManager
+from uapi import UapiClient
+from uapi.errors import UapiError
 # ========== 创建 BotClient ==========
 bot = BotClient()
-ncatbot_config.debug = True  # 启用调试模式
+ncatbot_config.debug = False  # 启用调试模式
 # 配置：设置轮询等待时间（秒）
 cyc_wait_time = 0.2
 # 配置：表情歼灭模式
@@ -15,13 +30,51 @@ emoji_kill_model = False
 emoji_kill_times = 8
 emoji_wait_time = 0.1
 emoji_combo = {147,127827,127853,10068,76,424,12951,63,66,9992}#废
+# 配置：戳一戳回击次数
+poke_back_times = 1
+poke_back_enabled = True
+# 配置：名言警句间隔时间（秒）
+famous_words_time = 3600  # 默认1小时
 
+# 名言警句定时任务##############未完成#############
+async def send_famous_words():
+    client = UapiClient("https://uapis.cn")
+    while True:
+        try:
+            result = client.poem.get_saying()
+            # 获取活跃群ID
+            try:
+                with open("config.yaml", "r", encoding="utf-8") as f:
+                    root_config = yaml.safe_load(f)
+                    active_group_id = root_config.get("active_group_id")
+                if active_group_id:
+                    await bot.api.post_group_msg(active_group_id, text=result)
+            except Exception as e:
+                print(f"发送名言警句失败: {e}")
+        except UapiError as exc:
+            print(f"API error: {exc}")
+        await asyncio.sleep(famous_words_time)
+
+
+def load_cat_prompt():
+    """从 plugins/as812/config/cat_prompt.txt 文件中读取人设 prompt"""
+    try:
+        with open(os.path.join("plugins", "as812", "config", "cat_prompt.txt"), "r", encoding="utf-8") as f:
+            return f.read().strip()
+    except Exception as e:
+        try:
+            from ncatbot.utils.logger import get_log
+            _log = get_log()
+            _log.error(f"读取cat_prompt.txt失败: {e}")
+        except Exception:
+            print(f"读取cat_prompt.txt失败: {e}")
+        return ""
 # ========= 注册回调函数 ==========
 #测试用
 @bot.private_event()
 @bot_state.ignore_if_sleeping(allow_uins=[bot_state.MASTER_UIN])
 async def master_message_control(msg: PrivateMessage):
-    global emoji_kill_model, emoji_kill_times
+    global emoji_kill_model, emoji_kill_times, poke_back_enabled, poke_back_times
     text = msg.raw_message
     if msg.user_id == bot_state.MASTER_UIN:
         if text == "测试":
@@ -48,6 +101,28 @@ async def master_message_control(msg: PrivateMessage):
                 else:
                     emoji_kill_times = 1
             await bot.api.post_private_msg(msg.user_id, text=f"当前歼灭次数为：{emoji_kill_times} 次")
+        if text == "戳一戳回击开启":
+            poke_back_enabled = True
+            await bot.api.post_private_msg(msg.user_id, text="戳一戳回击已开启喵~")
+        if text == "戳一戳回击关闭":
+            poke_back_enabled = False
+            await bot.api.post_private_msg(msg.user_id, text="戳一戳回击已关闭喵~")
+        if text == "查询戳一戳回击":
+            status = "开启" if poke_back_enabled else "关闭"
+            await bot.api.post_private_msg(msg.user_id, text=f"当前戳一戳回击为：{status}，次数：{poke_back_times}")
+        if text.startswith("戳一戳回击次数+"):
+            number_plus = text[len("戳一戳回击次数+"):].strip()
+            if number_plus.isdigit():
+                poke_back_times += int(number_plus)
+            await bot.api.post_private_msg(msg.user_id, text=f"当前戳一戳回击次数为：{poke_back_times} 次")
+        if text.startswith("戳一戳回击次数-"):
+            number_minus = text[len("戳一戳回击次数-"):].strip()
+            if number_minus.isdigit():
+                if poke_back_times > int(number_minus):
+                    poke_back_times -= int(number_minus)
+                else:
+                    poke_back_times = 0
+            await bot.api.post_private_msg(msg.user_id, text=f"当前戳一戳回击次数为：{poke_back_times} 次")
         if text == "812睡觉":
             await bot.api.post_private_msg(msg.user_id, text="哦呀斯密....")
             bot_state.set_sleep(True)
@@ -73,21 +148,78 @@ async def on_group_message(msg: GroupMessage):
         await bot.api.post_group_msg(msg.group_id, text="哦呀斯密....")
         bot_state.set_sleep(True)
 
-    if text == "812起床":
+    if text == "812起床" and bot_state.is_sleeping():
         bot_state.set_sleep(False)
         await bot.api.post_group_msg(msg.group_id, text="嗯——早上好喵呜喵呜~")
+
+    if text.startswith("/名言警句"):
+        try:
+            file_path = os.path.join(os.path.dirname(__file__), "data", "rgl.txt")
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f.readlines() if line.strip()]
+            if not lines:
+                await bot.api.post_group_msg(msg.group_id, text="无话可说")
+                return
+            
+            # 解析次数
+            parts = text.split()
+            count = 1
+            if len(parts) > 1 and parts[1].isdigit():
+                count = int(parts[1])
+                if count > 10:  # 限制最大次数，避免滥用
+                    count = 10
+            
+            # 发送指定次数的名言警句
+            for _ in range(count):
+                quote = random.choice(lines)
+                await bot.api.post_group_msg(msg.group_id, text=quote)
+                if count > 1:
+                    await asyncio.sleep(0.5)  # 避免发送太快
+        except FileNotFoundError:
+            await bot.api.post_group_msg(msg.group_id, text="文件不存在")
 @bot.on_notice() # type: ignore
 @bot_state.ignore_if_sleeping()
 async def on_notice1(event: NoticeEvent):
     # 监听戳一戳事件
     if event.sub_type == 'poke':
-        if event.target_id == event.self_id:
-            for _ in range(5):
+        if event.target_id == event.self_id and poke_back_enabled:
+            for _ in range(poke_back_times):
                 try:
                     await bot.api.send_poke(user_id=event.user_id, group_id=event.group_id)
                 except Exception:
                     pass
                 await asyncio.sleep(cyc_wait_time)
+            
+            # 获取API key和prompt，并尝试加载被戳者的个人信息加入到 AI 输入中
+            try:
+                with open(os.path.join("plugins", "as812", "config", "config.yaml"), "r", encoding="utf-8") as f:
+                    cat_config = yaml.safe_load(f)
+                    api_key = cat_config.get("api_key")
+                cat_prompt = load_cat_prompt()
+
+                # 使用 plugins/as812 的 LogManager 加载个人数据（位置：plugins/as812/logs/{group_id}/{user}.log）
+                try:
+                    log_manager = LogManager()
+                    personal_history, user_info_str, personality_summary, personal_log_path = \
+                        log_manager.load_personal_log(str(event.group_id), str(event.user_id))
+                except Exception:
+                    user_info_str = ""
+                    personality_summary = ""
+
+                # 构建chat_history，优先包含被戳者的个人信息和个性总结（如果存在）
+                chat_history = []
+                if user_info_str:
+                    chat_history.append({"role": "system", "content": f"该用户的基本信息：{user_info_str}"})
+                if personality_summary:
+                    chat_history.append({"role": "system", "content": f"该用户的个性总结：{personality_summary}"})
+                chat_history.append({"role": "system", "content": f"有人戳了戳因此812对其进行了{poke_back_times}下回击，812对此有些戏谑性的恼怒"})
+
+                # 生成AI回复
+                response = await cat_cat_response(api_key, chat_history, cat_prompt)
+                if response:
+                    await bot.api.post_group_msg(event.group_id, text=response)
+            except Exception as e:
+                print(f"戳一戳AI回复失败: {e}")
 @bot.on_notice() # type: ignore
 @bot_state.ignore_if_sleeping()
 async def emoji_killer(event: NoticeEvent):

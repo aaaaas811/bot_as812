@@ -20,7 +20,7 @@ class mh(NcatBotPlugin):
     
     # 初始化：集会码
     is_mhw_team_code = re.compile(r'^[A-Za-z0-9!#$%&+\-=?@^_`~]{12}$')
-    is_mhr_team_code = re.compile(r'^[A-Za-z0-9!#$%&+\-=?@^_`~]{8}$')
+    is_mhr_team_code = re.compile(r'^[A-Za-z0-9!#$%&+\-=?@^_`~]{16}$')
     mhw=list()
     mhr=list()
     analyzer = None
