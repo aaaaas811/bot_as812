@@ -16,8 +16,15 @@ import bot_state
 import random
 import os
 import yaml
+import re
 from plugins.as812.responses.CatCatRes import cat_cat_response
 from plugins.as812.core.log_manager import LogManager
+from plugins.as812.core.config_manager import ConfigManager
+from plugins.as812.models.message_models import BotResponse
+import base64
+import time
+import json
+from pathlib import Path
 from uapi import UapiClient
 from uapi.errors import UapiError
 # ========== 创建 BotClient ==========
@@ -33,6 +40,9 @@ emoji_combo = {147,127827,127853,10068,76,424,12951,63,66,9992}#废
 # 配置：戳一戳回击次数
 poke_back_times = 1
 poke_back_enabled = True
+# as812 配置与日志管理器实例（用于戳一戳回复的特殊指令处理）
+config_manager = ConfigManager()
+log_manager = LogManager()
 # 配置：名言警句间隔时间（秒）
 famous_words_time = 3600  # 默认1小时
 
@@ -217,7 +227,7 @@ async def on_notice1(event: NoticeEvent):
                 # 生成AI回复
                 response = await cat_cat_response(api_key, chat_history, cat_prompt)
                 if response:
-                    await bot.api.post_group_msg(event.group_id, text=response)
+                    await _send_response_like_as812(event.group_id, response)
             except Exception as e:
                 print(f"戳一戳AI回复失败: {e}")
 @bot.on_notice() # type: ignore
@@ -260,6 +270,97 @@ async def on_group_member_join(event: NoticeEvent):
         await bot.api.post_group_msg(group_id=event.group_id, text=welcome_msg)
 
     
+async def _send_response_like_as812(group_id: int, response: str):
+    """模仿 plugins/as812.main.py 的回复发送逻辑，处理 spacial_actions.txt 中的特殊指令。"""
+    try:
+        pause_multiplier, line_pause_multiplier = config_manager.get_pause_multipliers()
+        paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", response) if p.strip()]
+        last_sent_id = None
+        assets_dir = Path("plugins") / "as812" / "assests"
+
+        for para in paragraphs:
+            lines = [l.strip() for l in para.splitlines() if l.strip()]
+            for line in lines:
+                m = re.match(r"^##emoji\s*\[?([^\]\s]+)\]?$", line)
+                if m:
+                    emoji_name = m.group(1)
+                    sent = False
+                    for ext in (".png", ".jpg", ".jpeg"):
+                        img_path = assets_dir / f"{emoji_name}{ext}"
+                        if img_path.exists() and img_path.is_file():
+                            try:
+                                data = img_path.read_bytes()
+                                b64 = base64.b64encode(data).decode()
+                                res = await bot.api.post_group_msg(group_id, image=f"base64://{b64}")
+                            except Exception:
+                                res = None
+
+                            if res:
+                                last_sent_id = str(res)
+                                try:
+                                    bot_qq = "812"
+                                    bot_resp = BotResponse(timestamp=float(time.time()), message=f"[EMOJI]{emoji_name}", qq=str(bot_qq))
+                                    log_manager.save_bot_response(str(group_id), bot_resp)
+                                except Exception:
+                                    pass
+
+                            sent = True
+                            break
+
+                    if not sent:
+                        try:
+                            res = await bot.api.post_group_msg(group_id, text=f"表情包不存在: {emoji_name}")
+                        except Exception:
+                            res = None
+                        if res:
+                            last_sent_id = str(res)
+                    continue
+
+                if line == "##revoke":
+                    if last_sent_id:
+                        try:
+                            await bot.api.delete_msg(last_sent_id)
+                        except Exception:
+                            pass
+                    continue
+
+                if line == "##should not say":
+                    return
+
+                if line.startswith("##set_emotion "):
+                    try:
+                        mood_val = line[len("##set_emotion "):].strip()
+                        mood_path = os.path.join("plugins", "as812", "logs", f"{group_id}_mood.json")
+                        try:
+                            os.makedirs(os.path.dirname(mood_path), exist_ok=True)
+                            with open(mood_path, "w", encoding="utf-8") as mf:
+                                json.dump({"mood": mood_val}, mf, ensure_ascii=False)
+                        except Exception:
+                            pass
+                    except Exception:
+                        pass
+                    continue
+
+                try:
+                    res = await bot.api.post_group_msg(group_id, text=line)
+                except Exception:
+                    res = None
+
+                if res:
+                    last_sent_id = str(res)
+                    try:
+                        bot_qq = "812"
+                        bot_resp = BotResponse(timestamp=float(time.time()), message=line, qq=str(bot_qq))
+                        log_manager.save_bot_response(str(group_id), bot_resp)
+                    except Exception:
+                        pass
+
+                await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
+
+            await asyncio.sleep(pause_multiplier * len(para))
+    except Exception as e:
+        print(f"发送回复失败: {e}")
+
 # ========== 启动 BotClient==========
 bot.run()
 

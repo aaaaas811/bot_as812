@@ -35,7 +35,7 @@ async def summarize_personality(log_file_path, api_key, user_info_str):
     summary = await cat_cat_response(api_key, chat_history, "")
 
     if summary:
-        # 覆写日志文件
-        new_content = f"该用户的基本信息：{user_info_str}\n\n该用户的个性总结：\n{123}\n\n过往聊天记录：\n"
+        # 覆写日志文件，使用从模型返回的摘要文本
+        new_content = f"该用户的基本信息：{user_info_str}\n\n该用户的个性总结：\n{summary}\n\n过往聊天记录：\n"
         with open(log_file_path, "w", encoding="utf-8") as f:
             f.write(new_content)
