@@ -21,6 +21,7 @@ from plugins.as812.responses.CatCatRes import cat_cat_response
 from plugins.as812.core.log_manager import LogManager
 from plugins.as812.core.config_manager import ConfigManager
 from plugins.as812.models.message_models import BotResponse
+from ncatbot.core.event.message_segment import Face
 import base64
 import time
 import json
@@ -139,6 +140,8 @@ async def master_message_control(msg: PrivateMessage):
         if text == "812起床":
             bot_state.set_sleep(False)
             await bot.api.post_private_msg(msg.user_id, text="嗯——早上好喵呜喵呜~")
+        if text == "测试1":
+            await bot.api.post_private_msg(msg.user_id, text="[CQ:face,id=66] hi")
 #普通用户私聊回复
 @bot.private_event()
 @bot_state.ignore_if_sleeping()

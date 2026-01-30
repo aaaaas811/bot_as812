@@ -3,6 +3,8 @@ import asyncio
 import re
 import os
 import base64
+import sys
+import subprocess
 from pathlib import Path
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment
 from ncatbot.plugin_system import filter_registry
@@ -63,6 +65,17 @@ class as812(BasePlugin):
         )
         
         _log.info(f"{self.name} 插件已加载 (v{self.version})")
+        # 以子进程方式启动可视化面板，避免在主进程导入 tkinter/PIL
+        try:
+            script_path = Path(__file__).parent / "visual_panel.py"
+            args = [sys.executable, str(script_path), str(self._assets_dir), str(Path(__file__).parent / "logs")]
+            try:
+                subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                _log.info("as812 可视化面板已以子进程启动")
+            except Exception as e:
+                _log.warning(f"启动 as812 可视化面板失败: {e}")
+        except Exception as e:
+            _log.warning(f"准备启动 visual_panel 失败: {e}")
     
     @filter_registry.group_filter
     @bot_state.ignore_if_sleeping()
@@ -160,9 +173,10 @@ class as812(BasePlugin):
                 
                 for line in lines:
                     # 处理发表情包指令：格式支持 ##emoji 名称 或 ##emoji [名称]
-                    m = re.match(r"^##emoji\s*\[?([^\]\s]+)\]?$", line)
+                    # 支持中括号内任意字符（包括空格、中文），以及不带中括号时把整行剩余内容作为名称
+                    m = re.match(r"^##emoji(?:\s+\[([^\]]+)\]|\s+(.+))\s*$", line)
                     if m:
-                        emoji_name = m.group(1)
+                        emoji_name = (m.group(1) or m.group(2) or "").strip()
                         try:
                             # 只在 assests 根目录查找（不递归子目录）
                             sent = False

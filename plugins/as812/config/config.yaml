@@ -1,8 +1,8 @@
-active_group_id: '883744030'
+active_group_id: 'local:qwen3:8b'
 active_reply_delay: 1800
 api_key: sk-fe78045dba8649898c5605fae73cf0de
-context_history: 8
-current_active_delay: 1697
+context_history: 50
+current_active_delay: 1731
 line_pause_multiplier: 0.1
 mood_change_every: 4
 pause_multiplier: 0.1
