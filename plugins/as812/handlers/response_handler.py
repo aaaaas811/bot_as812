@@ -9,7 +9,7 @@ from ..core.config_manager import ConfigManager
 from ..core.log_manager import LogManager
 from .message_handler import MessageHandler
 from ..responses.CatCatRes import cat_cat_response
-from ..personality_summary import summarize_personality
+from ..personality_summary import summarize_personality, adjust_format_if_needed
 
 _log = get_log()
 
@@ -32,7 +32,6 @@ class ResponseHandler:
         """处理被动回复（由用户消息触发）"""
         # 关键判断：只有被@或消息中包含812时才回复
         if not msg.force_reply:
-            _log.info(f"被动回复：消息未@机器人或未包含812，跳过回复")
             return None
         
         user_qq = msg.user.qq
@@ -202,7 +201,6 @@ class ResponseHandler:
 
         # 如果从未发送过消息，跳过本次主动回复
         if last_bot_message_time == 0:
-            _log.info("主动回复：机器人从未发送过消息，跳过本次主动回复")
             return False
         
         # 检查延迟
@@ -210,7 +208,6 @@ class ResponseHandler:
         time_since_last_reply = current_time - last_bot_message_time
         
         if time_since_last_reply < current_delay:
-            _log.info(f"主动回复：距离机器人最后回复 {time_since_last_reply:.1f} 秒，随机延迟 {current_delay} 秒未到，跳过")
             return False
         
         _log.info(f"主动回复：距离上次回复 {time_since_last_reply:.1f} 秒，已超过延迟 {current_delay} 秒，开始处理")
@@ -246,6 +243,11 @@ class ResponseHandler:
     def _append_to_personal_chat_history(self, log_path: str, content: str) -> None:
         """向个人聊天记录追加内容"""
         try:
+            # 确保日志格式正确（若不正确则尝试修正）
+            try:
+                adjust_format_if_needed(log_path, "")
+            except Exception:
+                pass
             with open(log_path, "r", encoding="utf-8") as f:
                 file_content = f.read()
             

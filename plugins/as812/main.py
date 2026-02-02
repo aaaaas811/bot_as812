@@ -172,11 +172,12 @@ class as812(BasePlugin):
                 lines = [l.strip() for l in para.splitlines() if l.strip()]
                 
                 for line in lines:
-                    # 处理发表情包指令：格式支持 ##emoji 名称 或 ##emoji [名称]
-                    # 支持中括号内任意字符（包括空格、中文），以及不带中括号时把整行剩余内容作为名称
-                    m = re.match(r"^##emoji(?:\s+\[([^\]]+)\]|\s+(.+))\s*$", line)
+                    # 处理发表情包指令：支持两种格式：[EMOJI]名称 或 ##emoji 名称（支持可选中括号）
+                    m_em_bracket = re.match(r"^\[EMOJI\]\s*([^\s\]]+)$", line)
+                    m_em_hash = re.match(r"^##emoji\s*\[?([^\]\s]+)\]?$", line, flags=re.IGNORECASE)
+                    m = m_em_bracket or m_em_hash
                     if m:
-                        emoji_name = (m.group(1) or m.group(2) or "").strip()
+                        emoji_name = m.group(1)
                         try:
                             # 只在 assests 根目录查找（不递归子目录）
                             sent = False
@@ -217,7 +218,7 @@ class as812(BasePlugin):
 
                             # 表情包指令处理完毕，继续下一行
                         except Exception as e:
-                            _log.warning(f"处理 ##emoji 指令失败: {e}")
+                            _log.warning(f"处理表情包指令失败: {e}")
                         continue
                     if line == "##revoke":
                         if last_sent_id:

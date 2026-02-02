@@ -64,8 +64,8 @@ async def cat_cat_response(api_key, chat_history, prompt):
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复。"
         
-        instruction = "请根据上下文判断是否需要回复当前用户的消息。优先考虑当前消息的内容，保持角色一致性。"
-        responsetimes = "每行只会说一句话。根据问题确定回复多少行。尽量不超过五行。##之后的内容表示特殊行为，不算做回复内容。"
+        instruction = "**重要**请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。"
+        responsetimes = "**重要**每行只说一句话。根据问题确定回复多少行。尽量不超过五行。##之后的内容表示特殊行为，不算做回复内容。不要复读。"
         
         messages = [{"role": "system", "content": persona}]
         # 读取特殊行为文件（每行一个特殊行为），将每行作为 system 内容追加

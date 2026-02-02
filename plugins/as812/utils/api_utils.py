@@ -32,6 +32,8 @@ async def call_deepseek_chat_api(api_key: str, messages: list) -> Optional[str]:
         "model": "deepseek-chat",
         "messages": messages,
         "temperature": 1.3,
+        "frequency_penalty": 1.3,
+        "presence_penalty": 0.8,
         "max_tokens": 2000,
         "stream": False
     }
@@ -54,7 +56,9 @@ async def call_deepseek_chat_api(api_key: str, messages: list) -> Optional[str]:
 async def call_local_chat_api(model_name: Optional[str] = None, messages: list = None, stream: bool = False) -> Optional[str]:
     """使用本地 Ollama 服务调用模型并返回字符串响应。
 
-    - 默认模型为 `qwen3:8b`。
+    - 默认模型为 `qwen3`。
+    - 使用 `think=False` 来取消链式/深度思考（不再通过 prompt 插入“别想太多”类系统消息）。
+    - 使用更低的 `temperature`（更确定的回复）。
     - 使用 AsyncClient 进行异步调用；如果未安装 ollama，则退回到简单的模拟回复。
     """
     if model_name is None:
@@ -67,15 +71,29 @@ async def call_local_chat_api(model_name: Optional[str] = None, messages: list =
     if not _has_ollama:
         _log.warning("未检测到 ollama SDK，使用本地模拟回复")
         return "本地模型不可用，请安装 ollama SDK。"
-
+    options={
+    "temperature": 1.3,      # 温度，控制随机性（0-2）
+    "top_p": 0.9,           # 核采样参数
+    "top_k": 40,            # 保留前 k 个 token
+    "repeat_penalty": 1.3,  # 重复惩罚
+    "repeat_last_n": 64,            # 检查最近多少个token的重复
+    "frequency_penalty": 0.1,       # 频率惩罚（降低常用词概率）
+    "presence_penalty": 0.1,        # 存在惩罚（降低已出现词概率）
+    "num_predict": 512,     # 最大生成长度
+    "stop":None   # 停止词
+   }
     try:
         client = AsyncClient()
         if stream:
-            # 流式响应：按块拼接并返回完整文本
             content_parts = []
-            # AsyncClient.chat(..., stream=True) 返回的是异步可迭代项
-            async for part in await client.chat(model=model_name, messages=messages, stream=True):
-                # part 可能是 dict 或对象，这里尽量兼容两种访问方式
+            # 传入 think=False 与较低的 temperature，保留 stream=True
+            async for part in await client.chat(
+                model=model_name, 
+                messages=messages,
+                stream=True, 
+                think=False,
+                options=options,
+                keep_alive=-1):
                 try:
                     chunk = part.get('message', {}).get('content', '') if isinstance(part, dict) else getattr(part, 'message', None).content
                 except Exception:
@@ -87,16 +105,18 @@ async def call_local_chat_api(model_name: Optional[str] = None, messages: list =
                     content_parts.append(chunk)
             return ''.join(content_parts)
         else:
-            resp = await client.chat(model=model_name, messages=messages)
-            # 尝试从响应对象/字典中抽取文本
+            resp = await client.chat(
+            model=model_name, 
+            messages=messages, 
+            think=False,
+            options=options,
+            keep_alive=-1)
             try:
-                # dict 风格
                 content = resp.get('message', {}).get('content', '') if isinstance(resp, dict) else None
             except Exception:
                 content = None
             if not content:
                 try:
-                    # 对象风格
                     content = getattr(resp, 'message', None).content  # type: ignore
                 except Exception:
                     content = str(resp)
