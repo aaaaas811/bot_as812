@@ -68,7 +68,7 @@ class as812(BasePlugin):
         # 以子进程方式启动可视化面板，避免在主进程导入 tkinter/PIL
         try:
             script_path = Path(__file__).parent / "visual_panel.py"
-            args = [sys.executable, str(script_path), str(self._assets_dir), str(Path(__file__).parent / "logs")]
+            args = [sys.executable, str(script_path), str(self._assets_dir), str(Path(__file__).parent / "logs"), str(os.getpid())]
             try:
                 subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                 _log.info("as812 可视化面板已以子进程启动")
@@ -114,6 +114,65 @@ class as812(BasePlugin):
         
         # 解析消息
         chat_message = self.message_handler.parse_group_message(msg)
+
+        # 若消息引用了其他消息，尝试通过 API 展开引用内容后再保存
+        try:
+            if getattr(chat_message, "reply_id", None):
+                try:
+                    orig_event = await self.api.get_msg(chat_message.reply_id)
+                    # 优先使用 raw_message（若存在），否则尝试展平 message 段数组
+                    orig_text = None
+                    if hasattr(orig_event, "raw_message") and orig_event.raw_message:
+                        orig_text = orig_event.raw_message
+                    else:
+                        # 尝试 message 属性（可能为列表）
+                        if hasattr(orig_event, "message") and orig_event.message:
+                            parts = []
+                            for seg in orig_event.message:
+                                try:
+                                    if isinstance(seg, dict):
+                                        if seg.get("type") == "text":
+                                            parts.append(seg.get("data", {}).get("text", ""))
+                                    else:
+                                        if getattr(seg, "msg_seg_type", None) == "text":
+                                            parts.append(getattr(seg, "text", ""))
+                                except Exception:
+                                    continue
+                            orig_text = "".join(parts).strip()
+
+                    if orig_text:
+                        # 尝试获取被引用消息的用户 card（优先）或昵称作为标识
+                        try:
+                            sender = getattr(orig_event, "sender", None)
+                            card = None
+                            if sender is not None:
+                                card = getattr(sender, "card", None) or getattr(sender, "nickname", None) or getattr(sender, "user_id", None)
+                            if not card:
+                                # 兼容字典式 sender
+                                try:
+                                    card = orig_event.get("sender", {}).get("card") or orig_event.get("sender", {}).get("nickname")
+                                except Exception:
+                                    card = None
+                        except Exception:
+                            card = None
+
+                        # 格式化引用为 [引用:card:内容]，若 card 为空则省略 card
+                        if card:
+                            expanded = f"[引用:{card}:{orig_text}]"
+                        else:
+                            expanded = f"[引用:{orig_text}]"
+
+                        # 如果解析阶段意外已将简单引用文本加入（如 [引用:efrfr]），先移除简单占位，避免重复
+                        import re
+                        chat_msg = chat_message.message or ""
+                        # 删除形如 [引用:... ] 的最前面一项（只删除第一个匹配），以便用 expanded 替换
+                        chat_msg = re.sub(r'^\[引用:[^\]]+\]\s*', '', chat_msg, count=1)
+
+                        chat_message.message = f"{expanded} " + chat_msg
+                except Exception as e:
+                    _log.debug(f"拉取引用消息失败: {e}")
+        except Exception:
+            pass
 
         # 保存用户消息到群历史
         self.log_manager.save_group_message(str(msg.group_id), chat_message)

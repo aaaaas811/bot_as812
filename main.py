@@ -21,7 +21,6 @@ from plugins.as812.responses.CatCatRes import cat_cat_response
 from plugins.as812.core.log_manager import LogManager
 from plugins.as812.core.config_manager import ConfigManager
 from plugins.as812.models.message_models import BotResponse
-from ncatbot.core.event.message_segment import Face
 import base64
 import time
 import json

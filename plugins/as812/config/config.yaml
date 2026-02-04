@@ -1,8 +1,9 @@
 active_group_id: '883744030'
 active_reply_delay: 1800
 api_key: sk-fe78045dba8649898c5605fae73cf0de
+api_key_image: 463c62c573024a9fad8d084bca8a67e5.oiAPjIZ4YU87plrp
 context_history: 10
-current_active_delay: 1139
+current_active_delay: 2153
 line_pause_multiplier: 0.1
 mood_change_every: 4
 pause_multiplier: 0.1

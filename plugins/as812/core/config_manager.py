@@ -51,6 +51,10 @@ class ConfigManager:
     def get_api_key(self) -> Optional[str]:
         """获取API密钥"""
         return self.get("api_key")
+
+    def get_image_api_key(self) -> Optional[str]:
+        """获取识图服务的 API Key（配置项名：api_key_image）"""
+        return self.get("api_key_image")
     
     def get_active_group_id(self) -> Optional[str]:
         """获取主动回复群ID"""

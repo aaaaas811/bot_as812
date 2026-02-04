@@ -1,5 +1,6 @@
 """消息处理器"""
 import jieba
+import html
 import random
 from datetime import datetime
 from collections import Counter
@@ -35,7 +36,20 @@ class MessageHandler:
         """解析GroupMessage为ChatMessage对象"""
         user_qq = str(msg.sender.user_id)
         text_content = ""
+        message_array = []
         force_reply = False
+        reply_id = None
+        message_id = None
+
+        # 兼容不同事件字段名，尝试获取消息 id
+        for attr in ("message_id", "msg_id", "id", "message_seq", "messageId"):
+            try:
+                val = getattr(msg, attr, None)
+                if val is not None:
+                    message_id = str(val)
+                    break
+            except Exception:
+                continue
         
         # 提取消息内容
         for message in msg.message:
@@ -55,6 +69,10 @@ class MessageHandler:
                         txt = None
                 if txt:
                     text_content += (txt + ",")
+                    try:
+                        message_array.append({"type": "text", "text": txt})
+                    except Exception:
+                        pass
 
             if mtype == "at":
                 qq_val = None
@@ -68,6 +86,114 @@ class MessageHandler:
                 if qq_val is not None and str(qq_val) == str(bot_config.bt_uin):
                     text_content = f"@812({bot_config.bt_uin}) " + text_content
                     force_reply = True
+
+            # Reply 段：尝试将被引用的消息文本抽取并附加到当前文本中，便于保存与后续处理
+            if mtype == "reply":
+                try:
+                    # 支持两种访问方式：对象属性或字典式
+                    data = None
+                    if hasattr(message, "id") or hasattr(message, "msg_seg_type"):
+                        data = getattr(message, "data", None) or {}
+                    else:
+                        data = message.get("data", {})
+
+                    # 尝试直接获取被引用消息的原文（不同平台字段名可能不同）
+                    orig_text = None
+                    for key in ("message", "raw_message", "text", "content"):
+                        try:
+                            if isinstance(data, dict) and key in data and data.get(key):
+                                orig = data.get(key)
+                                if isinstance(orig, list):
+                                    parts = []
+                                    for seg in orig:
+                                        try:
+                                            if isinstance(seg, dict):
+                                                if seg.get("type") == "text":
+                                                    parts.append(seg.get("data", {}).get("text", ""))
+                                            else:
+                                                if getattr(seg, "msg_seg_type", None) == "text":
+                                                    parts.append(getattr(seg, "text", ""))
+                                        except Exception:
+                                            continue
+                                    orig_text = "".join(parts).strip()
+                                else:
+                                    orig_text = str(orig)
+                                break
+                        except Exception:
+                            continue
+
+                    if not orig_text:
+                        try:
+                            rid = None
+                            try:
+                                rid = getattr(message, "id", None)
+                            except Exception:
+                                rid = None
+
+                            if not rid and isinstance(data, dict):
+                                rid = data.get("id") or data.get("message_id") or data.get("msg_id")
+
+                            if rid:
+                                orig_text = f"[引用消息 id={rid}]"
+                        except Exception:
+                            orig_text = None
+
+                    try:
+                        rid = None
+                        try:
+                            rid = getattr(message, "id", None)
+                        except Exception:
+                            rid = None
+
+                        if not rid and isinstance(data, dict):
+                            rid = data.get("id") or data.get("message_id") or data.get("msg_id")
+
+                        if rid:
+                            reply_id = str(rid)
+                    except Exception:
+                        pass
+                except Exception as e:
+                    _log.debug(f"解析 reply 段失败: {e}")
+
+            # 其它类型（图片/表情等），尽量保留原始段的关键信息到 message_array
+            if mtype not in ("text", "at", "reply"):
+                try:
+                    seg = {"type": mtype}
+                    # 尝试从对象属性或字典 data 中取关键字段
+                    data = None
+                    try:
+                        data = getattr(message, "data", None) or {}
+                    except Exception:
+                        data = {}
+
+                    if isinstance(message, dict):
+                        data = message.get("data", {}) if message.get("data") is not None else data
+
+                    # 常见字段
+                    for key in ("file", "url", "sub_type", "id", "summary", "file_size"):
+                        try:
+                            val = None
+                            if hasattr(message, key):
+                                val = getattr(message, key)
+                            else:
+                                val = data.get(key) if isinstance(data, dict) else None
+                            if val is not None:
+                                seg[key] = val
+                        except Exception:
+                            continue
+
+                    # fallback: 如果段对象本身有直出属性（如 .text / .emoji / .id）
+                    try:
+                        if hasattr(message, "text"):
+                            t = getattr(message, "text")
+                            if t:
+                                seg.setdefault("text", t)
+                    except Exception:
+                        pass
+
+                    message_array.append(seg)
+                except Exception:
+                    pass
         
         # 如果文本中包含'812'字样，也视为被提及
         if text_content:
@@ -105,7 +231,10 @@ class MessageHandler:
             timestamp=float(ts),
             user=user_info,
             message=text_content.rstrip(','),
-            force_reply=force_reply
+            message_array=message_array if message_array else None,
+            force_reply=force_reply,
+            message_id=message_id,
+            reply_id=reply_id
         )
         
         return chat_message
@@ -187,6 +316,57 @@ class MessageHandler:
 
         # 添加当前消息，明确标记要回复的那条消息
         current_msg_text = current_message.message or ""
+        # 若当前消息包含结构化段（如图片/表情），将其列出供模型选择是否需要识图
+        try:
+            if getattr(current_message, "message_array", None):
+                arr = getattr(current_message, "message_array") or []
+                img_lines = []
+                for i, seg in enumerate(arr):
+                    try:
+                        t = (seg.get("type") or "").lower()
+                        has_file = bool(seg.get("file") or seg.get("url") or seg.get("image_url") or seg.get("file_url"))
+                        # 更宽松的判断：类型包含 image 或显式带有 file/url 字段均视为图片段
+                        if "image" in t or t in ("face", "sticker") or has_file:
+                            # 优先显示 url，其次 file 字段，再fallback为 summary 或空占位
+                            url = seg.get("url") or seg.get("file") or seg.get("image_url") or seg.get("file_url") or seg.get("summary") or ""
+                            img_lines.append(f"图片[{i}]: {url}")
+                    except Exception:
+                        continue
+                # 解析当前消息文本中可能存在的 CQ:image（例如引用中的展开文本）
+                try:
+                    # 如果 message 中包含 CQ:image 标签，解析出其中的 url/file 字段
+                    cq_imgs = []
+                    try:
+                        import re
+                        pattern = re.compile(r"\[CQ:image,([^\]]+)\]")
+                        for m in pattern.finditer(current_msg_text):
+                            params = m.group(1)
+                            # 将参数按逗号切分，再解析 key=value
+                            parts = [p for p in params.split(',') if '=' in p]
+                            info = {}
+                            for p in parts:
+                                k, v = p.split('=', 1)
+                                info[k.strip()] = html.unescape(v.strip())
+                            # 优先取 url，其次 file
+                            url = info.get('url') or info.get('file') or ''
+                            cq_imgs.append(url)
+                    except Exception:
+                        cq_imgs = []
+
+                    if cq_imgs:
+                        start_idx = len(img_lines)
+                        for j, u in enumerate(cq_imgs):
+                            try:
+                                img_lines.append(f"图片[{start_idx + j}]: {u}")
+                            except Exception:
+                                continue
+                except Exception:
+                    pass
+                if img_lines:
+                    messages.append({"role": "system", "content": "当前消息包含图片/表情片段，索引如下：\n" + "\n".join(img_lines)})
+        except Exception:
+            pass
+
         messages.append({"role": "user", "content": f"【请回答这条消息】{current_user_name}: {current_msg_text}"})
 
         return messages, chat_config.summary_threshold

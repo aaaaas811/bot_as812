@@ -1,7 +1,8 @@
 # 配置：特殊监控账号
 MASTER_UIN = "3196611630"
 MARIA_UIN = "1634483575"
-ADMIN_UINS = {MASTER_UIN, MARIA_UIN}
+HUNGRY_UIN = "249638876"
+ADMIN_UINS = {MASTER_UIN, MARIA_UIN, HUNGRY_UIN}
 _sleeping = False
 def set_sleep(flag: bool):
     global _sleeping

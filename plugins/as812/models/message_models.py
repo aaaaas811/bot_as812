@@ -39,7 +39,11 @@ class ChatMessage:
     timestamp: float
     user: UserInfo
     message: str
+    # 新增：结构化的消息段列表，保存原始消息中的图片/表情等段
+    message_array: Optional[list] = None
     force_reply: bool = False
+    message_id: Optional[str] = None
+    reply_id: Optional[str] = None
     
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -50,7 +54,10 @@ class ChatMessage:
             "role": self.user.role,
             "title": self.user.title,
             "message": self.message,
-            "force_reply": self.force_reply
+            "message_array": self.message_array,
+            "force_reply": self.force_reply,
+            "message_id": self.message_id,
+            "reply_id": self.reply_id
         }
     
     @classmethod
@@ -65,7 +72,10 @@ class ChatMessage:
                 title=data.get("title", "")
             ),
             message=data.get("message", ""),
-            force_reply=data.get("force_reply", False)
+            message_array=data.get("message_array"),
+            force_reply=data.get("force_reply", False),
+            message_id=data.get("message_id"),
+            reply_id=data.get("reply_id")
         )
 
 

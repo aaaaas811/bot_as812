@@ -59,7 +59,8 @@ class ResponseHandler:
         
         # 生成回复
         _log.info("开始生成回复……")
-        response = await cat_cat_response(api_key, chat_history, cat_prompt)
+        image_api_key = self.config_manager.get_image_api_key()
+        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key)
         
         if not response:
             return None
@@ -127,7 +128,8 @@ class ResponseHandler:
         
         # 生成回复
         _log.info("开始主动生成回复……")
-        response = await cat_cat_response(api_key, chat_history, cat_prompt)
+        image_api_key = self.config_manager.get_image_api_key()
+        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key)
         
         if not response:
             return None

@@ -13,6 +13,7 @@ import subprocess
 import sys
 from pathlib import Path
 from typing import Dict, Optional
+import errno
 
 try:
     import tkinter as tk
@@ -30,7 +31,7 @@ except Exception:
 class VisualPanel:
     """显示窗口，左侧为文本输出，右侧为立绘图片。"""
 
-    def __init__(self, assets_dir: Optional[str] = None, logs_dir: Optional[str] = None):
+    def __init__(self, assets_dir: Optional[str] = None, logs_dir: Optional[str] = None, parent_pid: Optional[int] = None):
         self.root = tk.Tk()
         self.root.title("as812 面板")
         self.root.configure(bg="#ffffff")
@@ -93,6 +94,12 @@ class VisualPanel:
         # 消息缓冲：将短时间内的多条输出合并为一次显示
         self._msg_buffer: list[str] = []
         self._buffer_job: Optional[str] = None
+        # 父进程 PID（用于在父进程退出时自动关闭面板）
+        self._parent_pid = parent_pid
+        self._parent_monitor_thread: Optional[threading.Thread] = None
+        if self._parent_pid:
+            self._parent_monitor_thread = threading.Thread(target=self._monitor_parent, daemon=True)
+            self._parent_monitor_thread.start()
 
     def _on_configure(self, event):
         # 节流 resize 事件，避免过度频繁重绘
@@ -265,6 +272,33 @@ class VisualPanel:
             self._buffer_job = None
         except Exception:
             pass
+
+    def _monitor_parent(self):
+        # 监控父进程是否仍然存在；不存在则在主线程中关闭窗口并退出
+        try:
+            parent = int(self._parent_pid)
+        except Exception:
+            return
+        while not self._stop_event.is_set():
+            try:
+                # signal 0 just checks for existence
+                os.kill(parent, 0)
+            except OSError as e:
+                # errno.ESRCH -> no such process
+                if getattr(e, 'errno', None) == errno.ESRCH or getattr(e, 'winerror', None) == 0:
+                    try:
+                        self.root.after(0, self.stop)
+                    except Exception:
+                        try:
+                            self.stop()
+                        except Exception:
+                            pass
+                    break
+                # other errors likely mean process exists but no permission
+            except Exception:
+                # 在某些平台上可能抛出 PermissionError 或其他异常，视为父进程仍在
+                pass
+            time.sleep(1.0)
 
 
 _panel_instance: Optional[VisualPanel] = None
