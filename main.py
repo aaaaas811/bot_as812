@@ -142,12 +142,12 @@ async def master_message_control(msg: PrivateMessage):
         if text == "测试1":
             await bot.api.post_private_msg(msg.user_id, text="[CQ:face,id=66] hi")
 #普通用户私聊回复
-@bot.private_event()
-@bot_state.ignore_if_sleeping()
-async def on_private_message(msg: PrivateMessage):
-    text = msg.raw_message
-    if(msg.user_id != bot_state.MASTER_UIN):
-        await bot.api.post_private_msg(msg.user_id, text="811现在不让我和别人说话")
+##@bot.private_event()
+##@bot_state.ignore_if_sleeping()
+#async def on_private_message(msg: PrivateMessage):
+    #text = msg.raw_message
+    #if(msg.user_id != bot_state.MASTER_UIN):
+       # await bot.api.post_private_msg(msg.user_id, text="811现在不让我和别人说话")
 @bot.group_event()
 @bot_state.ignore_if_sleeping(allow_uins=bot_state.ADMIN_UINS, allow_group_admins=True)
 async def on_group_message(msg: GroupMessage):
