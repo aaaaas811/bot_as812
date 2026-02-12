@@ -1,0 +1,45 @@
+{
+  "name": "香菇猪",
+  "description": "以敏锐的嗅觉寻找喜欢的蘑菇而四处游走的小型怪物。",
+  "base_data": {
+    "val": "100 体力",
+    "≤0厘米": "≥0厘米"
+  },
+  "hitzone_data": [
+    {
+      "Part": "Body",
+      "切断": "90",
+      "打击": "90",
+      "遥远": "85",
+      "col4": "100",
+      "col5": "100",
+      "col6": "100",
+      "col7": "100",
+      "col8": "0",
+      "col9": "100",
+      "耐力": "100"
+    },
+    {
+      "Part": "Body",
+      "Value": "1",
+      "Sever": "",
+      "Extract Color": "R"
+    }
+  ],
+  "status_effects": [],
+  "materials": [
+    {
+      "name": "蘑菇猪苔皮",
+      "rate": "100%"
+    },
+    {
+      "name": "蘑菇猪苔皮",
+      "rate": "100%"
+    },
+    {
+      "name": "蘑菇猪苔皮",
+      "rate": "100%"
+    }
+  ],
+  "source_url": "https://mhworld.kiranico.com/zh/monsters/B05hV/xiang-gu-zhu"
+}

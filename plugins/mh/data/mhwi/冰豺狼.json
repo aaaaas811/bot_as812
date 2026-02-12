@@ -1,0 +1,68 @@
+{
+  "name": "冰豺狼",
+  "description": "",
+  "base_data": {
+    "val": "60 体力",
+    "≤0厘米": "≥0厘米"
+  },
+  "hitzone_data": [
+    {
+      "Part": "Head",
+      "切断": "80",
+      "打击": "90",
+      "遥远": "90",
+      "col4": "50",
+      "col5": "5",
+      "col6": "25",
+      "col7": "0",
+      "col8": "5",
+      "col9": "100",
+      "耐力": "100"
+    },
+    {
+      "Part": "Body",
+      "切断": "70",
+      "打击": "80",
+      "遥远": "80",
+      "col4": "50",
+      "col5": "5",
+      "col6": "30",
+      "col7": "0",
+      "col8": "5",
+      "col9": "0",
+      "耐力": "100"
+    },
+    {
+      "Part": "Head",
+      "Value": "25",
+      "Sever": "",
+      "Extract Color": "O"
+    },
+    {
+      "Part": "Body",
+      "Value": "30",
+      "Sever": "",
+      "Extract Color": "R"
+    }
+  ],
+  "status_effects": [],
+  "materials": [
+    {
+      "name": "冰豺狼的厚毛皮",
+      "rate": "65%"
+    },
+    {
+      "name": "强韧之爪",
+      "rate": "35%"
+    },
+    {
+      "name": "冰豺狼的厚毛皮",
+      "rate": "65%"
+    },
+    {
+      "name": "强韧之爪",
+      "rate": "35%"
+    }
+  ],
+  "source_url": "https://mhworld.kiranico.com/zh/monsters/qpVH9/bing-chai-lang"
+}

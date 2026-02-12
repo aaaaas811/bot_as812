@@ -1,0 +1,68 @@
+{
+  "name": "雪鹿",
+  "description": "",
+  "base_data": {
+    "val": "70 体力",
+    "≤0厘米": "≥0厘米"
+  },
+  "hitzone_data": [
+    {
+      "Part": "Head",
+      "切断": "85",
+      "打击": "85",
+      "遥远": "80",
+      "col4": "80",
+      "col5": "80",
+      "col6": "80",
+      "col7": "80",
+      "col8": "0",
+      "col9": "100",
+      "耐力": "100"
+    },
+    {
+      "Part": "Body",
+      "切断": "85",
+      "打击": "85",
+      "遥远": "80",
+      "col4": "80",
+      "col5": "80",
+      "col6": "80",
+      "col7": "80",
+      "col8": "0",
+      "col9": "100",
+      "耐力": "100"
+    },
+    {
+      "Part": "Head",
+      "Value": "1",
+      "Sever": "",
+      "Extract Color": "G"
+    },
+    {
+      "Part": "Body",
+      "Value": "1",
+      "Sever": "",
+      "Extract Color": "G"
+    }
+  ],
+  "status_effects": [],
+  "materials": [
+    {
+      "name": "雪鹿角",
+      "rate": "70%"
+    },
+    {
+      "name": "顶级的毛皮",
+      "rate": "30%"
+    },
+    {
+      "name": "顶级的毛皮",
+      "rate": "65%"
+    },
+    {
+      "name": "雪鹿角",
+      "rate": "35%"
+    }
+  ],
+  "source_url": "https://mhworld.kiranico.com/zh/monsters/BDPt0/xue-lu"
+}
