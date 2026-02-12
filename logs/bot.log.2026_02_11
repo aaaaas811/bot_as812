@@ -1,0 +1,1102 @@
+[2026-02-11 00:13:47,317.317] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 812睡觉
+[2026-02-11 00:14:07,109.109] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接已关闭, 正在尝试重新连接...
+[2026-02-11 10:31:16,666.666] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | [BOTQQ]: 3024473284 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]: NcatBot | [ROOT]: 3196611630 | [WEBUI]: http://localhost:6099 | [WEBUI_TOKEN]: EcxAO&H+O;c}2{}<
+[2026-02-11 10:31:16,668.668] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | 配置已保存到 D:\_store\bot_as812\config.yaml
+[2026-02-11 10:31:16,676.676] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载内置插件数 [2]
+[2026-02-11 10:31:16,676.676] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 从 D:\_store\bot_as812\plugins 导入插件
+[2026-02-11 10:31:16,701.701] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: PyYAML==6.0.2
+[2026-02-11 10:31:16,726.726] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp==3.11.13
+[2026-02-11 10:31:16,754.754] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiofiles==24.1.0
+[2026-02-11 10:31:16,769.769] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: jieba==0.42.1
+[2026-02-11 10:31:16,771.771] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: ollama
+[2026-02-11 10:31:16,819.819] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: requests>=2.31.0
+[2026-02-11 10:31:16,840.840] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: beautifulsoup4>=4.12.2
+[2026-02-11 10:31:16,841.841] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp>=3.9.1
+[2026-02-11 10:31:16,846.846] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 成功导入插件文件: __init__
+[2026-02-11 10:31:16,846.846] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「as812」
+[2026-02-11 10:31:16,847.847] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「mh」
+[2026-02-11 10:31:16,850.850] INFO     [asyncio_0|MainProcess] root (main.py:on_load:50) | as812插件加载中……
+[2026-02-11 10:31:16,851.851] INFO     [asyncio_0|MainProcess] root (main.py:on_load:69) | as812 插件已加载 (v1.1.0)
+[2026-02-11 10:31:16,856.856] INFO     [asyncio_0|MainProcess] root (main.py:on_load:76) | as812 可视化面板已以子进程启动
+[2026-02-11 10:31:16,859.859] INFO     [asyncio_0|MainProcess] root (main.py:on_load:89) | 已注册每日金句定时任务：每天 12:00
+[2026-02-11 10:31:18,337.337] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载插件数 [4]
+[2026-02-11 10:31:18,338.338] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 正在以本地模式运行, 检查中...
+[2026-02-11 10:31:22,444.444] WARNING  [Thread-4 (runner)|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:warning:139) | 测试 websocket 连接失败: [WinError 1225] 远程计算机拒绝网络连接。
+[2026-02-11 10:31:22,519.519] INFO     [MainThread|MainProcess] adapter.nc.start (logger.py:info:129) | 当前操作系统为: Windows 11
+[2026-02-11 10:31:22,520.520] INFO     [MainThread|MainProcess] adapter.nc.start (logger.py:info:129) | 正在启动QQ, 启动器路径: D:\_store\bot_as812\napcat\launcher.bat
+[2026-02-11 10:31:26,592.592] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 登录中...
+[2026-02-11 10:31:28,359.359] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.login (logger.py:info:129) | 快速登录列表: []
+[2026-02-11 10:31:29,406.406] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.login (logger.py:info:129) | 登录状态异常, 请物理重启本机
+[2026-02-11 10:31:29,406.406] ERROR    [MainThread|MainProcess] ncatbot.core.adapter.nc.login (logger.py:error:134) | 生成 ASCII 二维码时出错: 登录状态异常
+[2026-02-11 10:31:29,428.428] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.login (logger.py:info:129) | Traceback (most recent call last):
+  File "D:\_store\bot_as812\.venv\Lib\site-packages\ncatbot\core\adapter\nc\login.py", line 218, in _qrcode_login
+    show_qrcode(self.get_qrcode_url())
+                ~~~~~~~~~~~~~~~~~~~^^
+  File "D:\_store\bot_as812\.venv\Lib\site-packages\ncatbot\core\adapter\nc\login.py", line 186, in get_qrcode_url
+    raise QQLoginedError()
+ncatbot.core.adapter.nc.login.QQLoginedError: QQ 已登录
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\_store\bot_as812\.venv\Lib\site-packages\ncatbot\core\adapter\nc\login.py", line 225, in _qrcode_login
+    raise Exception("登录状态异常")
+Exception: 登录状态异常
+
+[2026-02-11 10:31:33,268.268] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | [BOTQQ]: 3024473284 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]: NcatBot | [ROOT]: 3196611630 | [WEBUI]: http://localhost:6099 | [WEBUI_TOKEN]: EcxAO&H+O;c}2{}<
+[2026-02-11 10:31:33,270.270] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | 配置已保存到 D:\_store\bot_as812\config.yaml
+[2026-02-11 10:31:33,277.277] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载内置插件数 [2]
+[2026-02-11 10:31:33,277.277] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 从 D:\_store\bot_as812\plugins 导入插件
+[2026-02-11 10:31:33,280.280] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: PyYAML==6.0.2
+[2026-02-11 10:31:33,281.281] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp==3.11.13
+[2026-02-11 10:31:33,282.282] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiofiles==24.1.0
+[2026-02-11 10:31:33,284.284] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: jieba==0.42.1
+[2026-02-11 10:31:33,285.285] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: ollama
+[2026-02-11 10:31:33,297.297] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: requests>=2.31.0
+[2026-02-11 10:31:33,298.298] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: beautifulsoup4>=4.12.2
+[2026-02-11 10:31:33,299.299] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp>=3.9.1
+[2026-02-11 10:31:33,303.303] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 成功导入插件文件: __init__
+[2026-02-11 10:31:33,304.304] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「as812」
+[2026-02-11 10:31:33,304.304] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「mh」
+[2026-02-11 10:31:33,308.308] INFO     [asyncio_0|MainProcess] root (main.py:on_load:50) | as812插件加载中……
+[2026-02-11 10:31:33,309.309] INFO     [asyncio_0|MainProcess] root (main.py:on_load:69) | as812 插件已加载 (v1.1.0)
+[2026-02-11 10:31:33,315.315] INFO     [asyncio_0|MainProcess] root (main.py:on_load:76) | as812 可视化面板已以子进程启动
+[2026-02-11 10:31:33,318.318] INFO     [asyncio_0|MainProcess] root (main.py:on_load:89) | 已注册每日金句定时任务：每天 12:00
+[2026-02-11 10:31:33,344.344] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载插件数 [4]
+[2026-02-11 10:31:33,345.345] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 正在以本地模式运行, 检查中...
+[2026-02-11 10:31:33,369.369] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | napcat 服务器 ws://localhost:3001 在线, 正在检查账号状态...
+[2026-02-11 10:31:33,434.434] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接成功
+[2026-02-11 10:31:33,434.434] INFO     [asyncio_0|MainProcess] Client (logger.py:info:129) | Bot 3024473284 启动成功
+[2026-02-11 10:31:37,029.029] INFO     [MainThread|MainProcess] ncatbot.plugin_system.builtin_plugin.unified_registry.plugin (logger.py:info:129) | 命令前缀集合: ['/', '!']
+[2026-02-11 10:31:37,030.030] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Tomorin(2076405866): ？
+[2026-02-11 10:31:37,441.441] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 40671.9 秒，已超过延迟 2263 秒，开始处理
+[2026-02-11 10:31:37,647.647] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 10:31:38,615.615] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…怎么啦
+[2026-02-11 10:31:41,917.917] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2617 秒
+[2026-02-11 10:31:56,008.008] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:at,qq=
+[2026-02-11 10:32:25,086.086] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:reply,
+[2026-02-11 10:32:25,302.302] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 10:32:26,584.584] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃…这是什么意思呀
+[2026-02-11 10:32:37,797.797] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Tomorin(2076405866): 咋了
+[2026-02-11 10:33:00,449.449] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:reply,
+[2026-02-11 10:33:00,713.713] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 10:33:01,840.840] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…这样啊  
+谢谢
+[2026-02-11 10:35:03,025.025] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:reply,
+[2026-02-11 10:35:24,325.325] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 10:35:26,489.489] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Tomorin(2076405866): 不过不知道现在咋样了
+[2026-02-11 10:35:34,031.031] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 顺便打个招呼
+[2026-02-11 10:35:41,792.792] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 10:35:43,721.721] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 交配动画：正常
+[2026-02-11 10:35:54,913.913] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 看看交配动画
+[2026-02-11 10:36:33,724.724] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 屎尿屁游戏是这样的
+[2026-02-11 10:36:35,965.965] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Tomorin(2076405866): [CQ:at,qq=
+[2026-02-11 10:36:42,878.878] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 看看你的
+[2026-02-11 10:36:45,722.722] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Tomorin(2076405866): 之前几乎一个星期必有
+[2026-02-11 10:36:53,308.308] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 10:37:00,972.972] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 那我不好说了
+[2026-02-11 10:37:37,245.245] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 木大哒木大(249638876): [CQ:image,
+[2026-02-11 10:37:40,664.664] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 10:38:24,731.731] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 卡皮巴拉(819188864): [CQ:image,
+[2026-02-11 10:43:01,186.186] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 10:43:03,837.837] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:reply,
+[2026-02-11 10:43:46,468.468] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:reply,
+[2026-02-11 10:43:55,943.943] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 其实我想选两只公的
+[2026-02-11 10:44:01,659.659] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 但是他不给看性别
+[2026-02-11 10:44:04,203.203] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 男同
+[2026-02-11 10:44:09,372.372] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 只能随便挑了两只
+[2026-02-11 10:45:39,169.169] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 木大哒木大(249638876): 给
+[2026-02-11 10:46:35,968.968] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 10:47:02,856.856] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 呃啊
+[2026-02-11 10:47:06,797.797] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 10:47:14,462.462] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 呃呃
+[2026-02-11 10:48:37,112.112] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 我宣布我将在荒野放弃
+[2026-02-11 10:48:55,691.691] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): md
+[2026-02-11 10:48:59,470.470] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 放弃大剑是吧
+[2026-02-11 10:49:01,834.834] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 轻弩开荒不是很舒服吧
+[2026-02-11 10:49:03,860.860] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 那我不放你进小队了
+[2026-02-11 10:49:06,314.314] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:image,
+[2026-02-11 10:49:29,140.140] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 我吐口水把自己上的灼
+[2026-02-11 10:49:36,367.367] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 还有元素反应
+[2026-02-11 10:49:41,051.051] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 千林尽染(3205839453): [CQ:reply,
+[2026-02-11 10:49:42,137.137] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): no
+[2026-02-11 10:50:07,026.026] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 开荒大剑还是能打的
+[2026-02-11 10:50:07,504.504] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 我将在双武器系统中留
+[2026-02-11 10:50:11,712.712] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 相杀爽死了
+[2026-02-11 10:50:12,592.592] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 10:50:21,035.035] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 不会相杀
+[2026-02-11 10:50:44,274.274] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 昨天玩了一天真蓄
+[2026-02-11 10:50:58,163.163] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): ？
+[2026-02-11 10:50:58,709.709] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 10:51:01,047.047] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 新机制不玩吗
+[2026-02-11 10:51:05,100.100] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 那白玩了
+[2026-02-11 10:51:11,344.344] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | LalaTart(1749383987): 开荒爽。
+[2026-02-11 10:51:32,478.478] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 轻弩强在属性
+[2026-02-11 10:51:36,924.924] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 10:51:38,699.699] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 这个相杀是不是要上捞
+[2026-02-11 10:51:38,864.864] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 开荒一般不搞属性
+[2026-02-11 10:52:10,945.945] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 还有传说中的精防
+[2026-02-11 10:52:12,667.667] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 对
+[2026-02-11 10:52:18,433.433] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 统统摁不出来
+[2026-02-11 10:52:22,829.829] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 这两个新机制都无敌的
+[2026-02-11 10:52:26,116.116] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 不玩真白玩了
+[2026-02-11 10:52:27,964.964] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 有点🍬。。。
+[2026-02-11 10:52:45,596.596] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 不明白不能看视频学学
+[2026-02-11 10:52:50,739.739] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:image,
+[2026-02-11 10:52:56,776.776] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 防御我只有在拔刀的时
+[2026-02-11 10:52:59,472.472] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 10:53:04,596.596] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 你手柄键鼠
+[2026-02-11 10:53:11,452.452] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 键鼠
+[2026-02-11 10:53:22,417.417] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 侧键就是防御
+[2026-02-11 10:53:24,080.080] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 有侧键吗
+[2026-02-11 10:53:35,511.511] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 不拔刀按侧键也是防御
+[2026-02-11 10:53:44,938.938] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | LalaTart(1749383987): 骗你的轻弩通常也强。
+[2026-02-11 10:53:57,158.158] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 10:53:57,465.465] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 没侧键那集中模式不废
+[2026-02-11 10:53:58,644.644] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 我们盾斧收刀状态都不
+[2026-02-11 10:54:09,834.834] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 只有一个gp
+[2026-02-11 10:54:16,538.538] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 10:54:20,394.394] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 都给你数值了
+[2026-02-11 10:54:22,793.793] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 我集中模式绑在c键上
+[2026-02-11 10:54:22,834.834] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 你还要咋样
+[2026-02-11 10:54:25,295.295] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:image,
+[2026-02-11 10:54:45,011.011] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 那你还要用大拇指按吗
+[2026-02-11 10:54:45,093.093] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 盾斧没给数值啊
+[2026-02-11 10:54:47,630.630] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 集中模式
+[2026-02-11 10:54:54,055.055] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 数值是巨戟武器装备给
+[2026-02-11 10:55:11,074.074] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 盾斧更新都没动数值好
+[2026-02-11 10:55:46,826.826] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 最受益的也是盾斧了
+[2026-02-11 10:55:47,255.255] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 你总不能说巨戟武器强
+[2026-02-11 10:55:52,522.522] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 你看另一把变形武器
+[2026-02-11 10:55:53,594.594] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 又没不让你们用
+[2026-02-11 10:55:56,551.551] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 10:56:01,075.075] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 牢成什么样
+[2026-02-11 10:56:13,494.494] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 属性占比不高导致的。
+[2026-02-11 10:56:30,243.243] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 属性词条收益比物理词
+[2026-02-11 10:56:45,714.714] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 还有超绝*1.3
+[2026-02-11 10:57:40,582.582] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | LalaTart(1749383987): 点名一个主打属性却被
+[2026-02-11 11:00:07,077.077] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:reply,
+[2026-02-11 11:00:27,639.639] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): /ws肉质 护锁刃龙
+[2026-02-11 11:01:05,027.027] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 快进到历战王锁刃全程
+[2026-02-11 11:01:18,990.990] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 超绝四属性吸收20 
+[2026-02-11 11:01:22,682.682] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:json,d
+[2026-02-11 11:01:47,623.623] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): /ws肉质 王东峰
+[2026-02-11 11:02:10,888.888] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): /ws肉质 历战王冻
+[2026-02-11 11:02:17,821.821] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | LalaTart(1749383987): 20不是很爽了。
+[2026-02-11 11:02:18,146.146] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): /ws肉质 冻峰龙
+[2026-02-11 11:02:19,780.780] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 812你个㊗️
+[2026-02-11 11:02:25,031.031] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 11:02:26,702.702] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：##emoji 困惑
+你在说什么呀
+[2026-02-11 11:02:37,071.071] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 812你不是㊗️
+[2026-02-11 11:02:40,806.806] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 11:02:42,125.125] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…我不是㊗️啦
+[2026-02-11 11:02:42,202.202] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 王东峰属性吸收变好了
+[2026-02-11 11:02:43,201.201] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 王东峰是state1
+[2026-02-11 11:02:45,821.821] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 忘了
+[2026-02-11 11:02:47,465.465] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 变好了
+[2026-02-11 11:02:59,300.300] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 四肢加了火吸收
+[2026-02-11 11:03:03,226.226] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 812你是小🐷
+[2026-02-11 11:03:03,411.411] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 11:03:04,779.779] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：你才是小猪呢
+[2026-02-11 11:03:15,582.582] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 哎属性武器的天下
+[2026-02-11 11:03:18,158.158] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:reply,
+[2026-02-11 11:03:18,453.453] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 11:03:19,917.917] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃…你说是就是吧  
+##emoji 小猪
+[2026-02-11 11:03:57,030.030] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 想开个群星新档玩了
+[2026-02-11 11:08:07,062.062] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 11:18:34,919.919] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): [CQ:json,d
+[2026-02-11 11:18:36,121.121] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 吓哭了
+[2026-02-11 11:18:43,083.083] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): ns手洗的
+[2026-02-11 11:18:46,006.006] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 4000多h
+[2026-02-11 11:24:21,443.443] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Evariste(3149279814): 吓哭了
+[2026-02-11 11:27:08,823.823] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 玩上金辉恋曲了
+[2026-02-11 11:27:16,775.775] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 打完壳虚天得缓缓
+[2026-02-11 11:38:34,372.372] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Evariste(3149279814): [CQ:image,
+[2026-02-11 11:38:35,324.324] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Evariste(3149279814): 会了会了
+[2026-02-11 11:39:37,240.240] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 11:40:16,375.375] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | TNW(2716707590): 这么强！
+[2026-02-11 11:40:35,145.145] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 我已经很久没有启动怪
+[2026-02-11 11:43:40,063.063] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 11:47:15,085.085] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): [CQ:reply,
+[2026-02-11 11:47:15,191.191] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2635.3 秒，已超过延迟 2617 秒，开始处理
+[2026-02-11 11:47:15,908.908] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 11:47:25,353.353] INFO     [asyncio_0|MainProcess] httpx (logger.py:info:129) | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 200 OK"
+[2026-02-11 11:47:27,420.420] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：这是一张《怪物猎人》中“怪异探究：天廻龙”任务界面截图，显示主要目标为讨伐天廻龙（进度1/1），完成时间为6分17秒，倒下次数0/3，报酬金129600z，环境信息提示无大量出现与增殖，下方还显示返回观测据点的倒计时为60。
+[2026-02-11 11:47:27,447.447] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2315 秒
+[2026-02-11 11:47:32,717.717] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 我还是不会打天迴
+[2026-02-11 11:47:45,594.594] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): [CQ:reply,
+[2026-02-11 11:47:49,779.779] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 11:47:51,280.280] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃呃
+[2026-02-11 11:48:18,151.151] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 我打克慧，练着练着，
+[2026-02-11 11:48:47,238.238] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 我玩旮旯，玩着玩着，
+[2026-02-11 11:57:01,910.910] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:reply,
+[2026-02-11 12:00:00,603.603] INFO     [asyncio_0|MainProcess] httpx (logger.py:info:129) | HTTP Request: GET https://uapis.cn/api/v1/saying "HTTP/1.1 200 OK"
+[2026-02-11 12:00:01,162.162] INFO     [Thread-8 (runner)|MainProcess] root (main.py:daily_task:114) | 已发送每日金句到群 883744030
+[2026-02-11 12:00:20,237.237] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 812你在说什么
+[2026-02-11 12:00:20,514.514] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 12:00:21,806.806] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…我在认真听大家聊天呀
+[2026-02-11 12:00:57,384.384] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 812发狂了
+[2026-02-11 12:00:57,707.707] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 12:00:59,355.355] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…才没有发狂呢
+[2026-02-11 12:01:20,383.383] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 这是什么原理
+[2026-02-11 12:02:33,366.366] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | †コイシ†(1242822697): [CQ:reply,
+[2026-02-11 12:02:33,643.643] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 12:02:34,663.663] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…不是811啦
+[2026-02-11 12:03:45,504.504] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 812是不是想月华了
+[2026-02-11 12:03:45,845.845] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 12:03:46,973.973] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…才没有想月华呢
+[2026-02-11 12:03:54,588.588] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 那就是想了
+[2026-02-11 12:06:41,304.304] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 木大哒木大(249638876): 何意味
+[2026-02-11 12:06:46,628.628] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 木大哒木大(249638876): 怎么开智了
+[2026-02-11 12:12:31,052.052] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 答案是每日定时金句
+[2026-02-11 12:12:36,809.809] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 12:12:44,746.746] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 唉
+[2026-02-11 12:30:49,926.926] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 12:31:16,757.757] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): re0怎么都更到42
+[2026-02-11 12:31:21,479.479] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): [CQ:image,
+[2026-02-11 12:31:21,638.638] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 朝凪海(2217849264): 0
+[2026-02-11 12:31:22,444.444] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 朝凪海(2217849264): ？
+[2026-02-11 12:31:26,668.668] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 朝凪海(2217849264): 多少？
+[2026-02-11 12:32:23,932.932] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 莺渡谷(3690285071): [CQ:image,
+[2026-02-11 12:40:00,022.022] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 莺渡谷(3690285071): [CQ:image,
+[2026-02-11 12:47:29,985.985] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): hyw
+[2026-02-11 12:47:30,076.076] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2623.1 秒，已超过延迟 2315 秒，开始处理
+[2026-02-11 12:47:30,424.424] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 12:47:32,018.018] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 12:47:32,029.029] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1768 秒
+[2026-02-11 12:48:42,299.299] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 莺渡谷(3690285071): [CQ:image,
+[2026-02-11 12:55:11,826.826] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 莺渡谷(3690285071): [CQ:image,
+[2026-02-11 12:55:39,044.044] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): 来
+[2026-02-11 12:55:41,118.118] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): 🦌
+[2026-02-11 12:56:15,972.972] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 别
+[2026-02-11 12:56:18,258.258] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 🦌
+[2026-02-11 13:05:48,927.927] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 13:07:07,380.380] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 13:09:03,008.008] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 13:11:38,939.939] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): 胡闹厨房来了
+[2026-02-11 13:11:48,062.062] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): 我们对这两份军粮抓耳
+[2026-02-11 13:13:31,916.916] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 13:13:44,269.269] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 😈(1270046784): [CQ:json,d
+[2026-02-11 13:18:05,255.255] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 潇然岂芷(1032831092): 《肘击大陆》——复活
+[2026-02-11 13:18:05,398.398] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1833.4 秒，已超过延迟 1768 秒，开始处理
+[2026-02-11 13:18:05,615.615] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 13:18:07,198.198] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…肘击大陆是什么游戏呀
+##emoji 困惑
+[2026-02-11 13:18:09,748.748] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2059 秒
+[2026-02-11 13:18:15,075.075] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): [CQ:json,d
+[2026-02-11 13:19:31,145.145] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 😈(1270046784): 肘击812
+[2026-02-11 13:19:34,063.063] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 13:19:35,657.657] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃呃
+##emoji 哈气
+[2026-02-11 13:23:13,045.045] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Tttt(357643626): 812醒了？
+[2026-02-11 13:23:16,683.683] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 13:23:17,858.858] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…刚醒没多久
+[2026-02-11 13:23:22,271.271] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 千林尽染(3205839453): [CQ:at,qq=
+[2026-02-11 13:23:25,746.746] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 13:23:27,442.442] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…突然被祝福了
+##emoji 困惑
+[2026-02-11 13:23:43,769.769] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 😈(1270046784): [CQ:json,d
+[2026-02-11 13:23:51,480.480] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 😈(1270046784): 这下不得不买1234
+[2026-02-11 13:28:05,521.521] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:at,qq=
+[2026-02-11 13:28:08,631.631] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 13:28:10,436.436] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：##emoji 困惑
+唔…这是什么意思呀
+[2026-02-11 13:32:10,196.196] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | TNW(2716707590): [CQ:image,
+[2026-02-11 13:35:50,244.244] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 13:35:54,331.331] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 好困
+[2026-02-11 13:36:01,887.887] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 13:41:13,228.228] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): [CQ:forwar
+[2026-02-11 14:03:59,277.277] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 王锁10星啊😨
+[2026-02-11 14:03:59,479.479] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2149.0 秒，已超过延迟 2059 秒，开始处理
+[2026-02-11 14:04:00,029.029] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 14:04:01,152.152] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 14:04:01,162.162] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：941 秒
+[2026-02-11 14:04:03,775.775] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 我还以为9星的
+[2026-02-11 14:05:09,340.340] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): 还有十星
+[2026-02-11 14:05:12,746.746] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): [CQ:image,
+[2026-02-11 14:06:41,755.755] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 感觉可以考虑录个全武
+[2026-02-11 14:08:38,292.292] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 这个还算有点挑战性了
+[2026-02-11 14:09:15,600.600] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 全武器大神😯
+[2026-02-11 14:09:22,126.126] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 潇然岂芷(1032831092): [CQ:image,
+[2026-02-11 14:09:33,199.199] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 起床继续养猫🤓
+[2026-02-11 14:09:39,268.268] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 太几把好玩了卧槽
+[2026-02-11 14:09:53,453.453] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 卡皮巴拉(819188864): [CQ:reply,
+[2026-02-11 14:09:55,081.081] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 卡皮巴拉(819188864): [CQ:image,
+[2026-02-11 14:10:07,995.995] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): 喵喵的结合
+[2026-02-11 14:11:03,369.369] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 山田尚子，永远滴神(1131429668): [CQ:reply,
+[2026-02-11 14:11:21,862.862] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 山田尚子，永远滴神(1131429668): 我一个武器都玩不明白
+[2026-02-11 14:14:36,569.569] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 14:15:11,808.808] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 银行业一样一样(1458937257): 键帽
+[2026-02-11 14:16:15,177.177] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): [CQ:reply,
+[2026-02-11 14:16:32,078.078] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 轻弩重弩还没玩
+[2026-02-11 14:16:41,518.518] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 虫棍长枪狩猎笛配装还
+[2026-02-11 14:16:45,592.592] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:image,
+[2026-02-11 14:16:49,736.736] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 我盾斧打这个大连续感
+[2026-02-11 14:16:53,672.672] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 盾斧玩的太少了
+[2026-02-11 14:17:04,015.015] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 其他的还能打打
+[2026-02-11 14:17:20,375.375] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 斩斧应该挺牢的
+[2026-02-11 14:17:26,909.909] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 包牢的
+[2026-02-11 14:17:40,087.087] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 稳点过没问题应该
+[2026-02-11 14:17:48,807.807] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 最稳的可能是双枪[C
+[2026-02-11 14:20:10,506.506] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:at,qq=
+[2026-02-11 14:20:10,655.655] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 969.5 秒，已超过延迟 941 秒，开始处理
+[2026-02-11 14:20:10,886.886] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 14:20:12,173.173] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：晚上来猎  
+唔…我还没换配装呢
+[2026-02-11 14:20:12,184.184] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1178 秒
+[2026-02-11 14:20:22,301.301] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 我要练练笛子虫棍了
+[2026-02-11 14:20:45,645.645] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:reply,
+[2026-02-11 14:20:53,095.095] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 我还是远古配装
+[2026-02-11 14:22:35,301.301] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 胸口碎大石(1727198247): 太刀
+[2026-02-11 14:29:57,410.410] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 妈的
+[2026-02-11 14:30:10,796.796] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 魂一是真喜欢在小道群
+[2026-02-11 14:30:14,018.018] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 一打就弹刀
+[2026-02-11 14:30:50,672.672] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): 确实
+[2026-02-11 14:31:16,603.603] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): 宫崎英高小时候上学在
+[2026-02-11 14:31:23,862.862] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): 竖劈和突刺武器比较吃
+[2026-02-11 14:37:15,587.587] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): [CQ:image,
+[2026-02-11 14:37:17,958.958] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 是人啊
+[2026-02-11 14:39:12,254.254] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): [CQ:reply,
+[2026-02-11 14:39:35,725.725] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): [CQ:reply,
+[2026-02-11 14:39:47,496.496] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 又没出[CQ:fac
+[2026-02-11 14:40:43,850.850] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): [CQ:image,
+[2026-02-11 14:40:43,957.957] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1231.8 秒，已超过延迟 1178 秒，开始处理
+[2026-02-11 14:40:44,170.170] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 14:40:45,131.131] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 14:40:49,572.572] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2367 秒
+[2026-02-11 14:40:54,075.075] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 那我等会上号配个装得
+[2026-02-11 14:41:11,696.696] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 铳枪也就是出巨戟4铠
+[2026-02-11 14:42:47,072.072] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): [CQ:image,
+[2026-02-11 14:44:56,964.964] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | Napstablook(1634483575): 何意味
+[2026-02-11 14:57:36,693.693] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): [CQ:at,qq=
+[2026-02-11 14:58:22,123.123] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | KIKO(1697954910): 都有
+[2026-02-11 15:19:26,931.931] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 樂(1277791982): [CQ:image,
+[2026-02-11 15:24:09,311.311] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): 玩会荒野
+[2026-02-11 15:24:09,437.437] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2599.9 秒，已超过延迟 2367 秒，开始处理
+[2026-02-11 15:24:09,651.651] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 15:24:10,941.941] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：荒野大镖客吗
+[2026-02-11 15:24:12,054.054] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): 复健一下
+[2026-02-11 15:24:12,134.134] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2602.6 秒，已超过延迟 2367 秒，开始处理
+[2026-02-11 15:24:12,356.356] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 15:24:13,231.231] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：复健什么呀
+[2026-02-11 15:24:14,351.351] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1475 秒
+[2026-02-11 15:24:15,415.415] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): [CQ:image,
+[2026-02-11 15:24:17,378.378] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1343 秒
+[2026-02-11 15:24:35,007.007] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:reply,
+[2026-02-11 15:24:35,210.210] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 15:24:36,625.625] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…原来是怪猎荒野呀
+我还以为是别的游戏呢
+[2026-02-11 15:25:00,463.463] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 綾太(2381376940): 呃啊编译着色器
+[2026-02-11 15:25:05,761.761] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:reply,
+[2026-02-11 15:25:05,962.962] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 15:25:07,157.157] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…人家当然是啦
+只是刚才没反应过来嘛
+[2026-02-11 15:25:35,668.668] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): 金辉恋期四重奏玩的了
+[2026-02-11 15:25:37,841.841] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | BEWD(1402303649): [CQ:image,
+[2026-02-11 15:28:05,815.815] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:json,d
+[2026-02-11 15:44:38,464.464] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 醒了
+[2026-02-11 15:45:44,164.164] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 15:45:52,760.760] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 怎么这游戏还在更新
+[2026-02-11 15:53:16,032.032] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 居然是围攻
+[2026-02-11 15:53:16,162.162] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1689.0 秒，已超过延迟 1343 秒，开始处理
+[2026-02-11 15:53:16,642.642] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 15:53:17,793.793] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…围攻怎么了
+[2026-02-11 15:53:20,849.849] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 这游戏我好久没碰了
+[2026-02-11 15:53:20,906.906] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2016 秒
+[2026-02-11 15:53:30,386.386] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 鼠鼠我啊，是下水道居
+[2026-02-11 16:00:08,158.158] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 16:00:08,699.699] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 木大哒木大(249638876): 好困
+[2026-02-11 16:01:14,531.531] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 困就睡觉
+[2026-02-11 16:05:26,634.634] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 朝凪海(2217849264): 睡觉就猪
+[2026-02-11 16:05:33,197.197] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): 睡觉就猪
+[2026-02-11 16:05:45,792.792] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 我已经睡醒了
+[2026-02-11 16:09:43,497.497] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 16:16:33,845.845] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 潇然岂芷(1032831092): 柯南塌房？《名肘探科
+[2026-02-11 16:16:33,987.987] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 潇然岂芷(1032831092): 给我看力竭了
+[2026-02-11 16:21:46,444.444] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 不是
+[2026-02-11 16:21:57,934.934] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 16:21:58,885.885] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 为什么这逼游戏还有要
+[2026-02-11 16:22:06,901.901] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): 要是我开局没选不是少
+[2026-02-11 16:24:45,589.589] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 大振凯(358812428): 我记得你没万能钥匙也
+[2026-02-11 16:24:48,290.290] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 大振凯(358812428): 不过得后期
+[2026-02-11 16:24:56,398.398] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): [CQ:image,
+[2026-02-11 16:25:04,717.717] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): 究极老资历来了
+[2026-02-11 16:25:08,314.314] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 大振凯(358812428): 开局拿万能钥匙能在不
+[2026-02-11 16:28:19,791.791] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): [CQ:reply,
+[2026-02-11 16:28:19,929.929] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2099.0 秒，已超过延迟 2016 秒，开始处理
+[2026-02-11 16:28:20,150.150] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 16:28:20,986.986] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 哈人
+[2026-02-11 16:28:21,066.066] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2100.2 秒，已超过延迟 2016 秒，开始处理
+[2026-02-11 16:28:21,269.269] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 16:28:22,362.362] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 16:28:22,371.371] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1810 秒
+[2026-02-11 16:28:28,767.767] INFO     [asyncio_0|MainProcess] httpx (logger.py:info:129) | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 200 OK"
+[2026-02-11 16:28:30,254.254] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：图片展示了一个游戏库界面，列出了多款游戏及其游玩时长，包括《泰拉瑞亚》《怪物猎人：generations ultimate》等，底部有 home、表情和云图标的导航栏。
+[2026-02-11 16:28:30,265.265] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1862 秒
+[2026-02-11 16:28:31,933.933] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): 而且是一两年前就99
+[2026-02-11 16:28:52,376.376] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 我全系列加起来也没这
+[2026-02-11 16:28:57,690.690] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): 据说还是3ds上来的
+[2026-02-11 16:29:10,743.743] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): 这种打超特像打小动物
+[2026-02-11 16:29:13,024.024] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | iSlurzy(1250975401): [CQ:image,
+[2026-02-11 16:29:15,432.432] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 久十三(928901028): 真正的铁血猎批
+[2026-02-11 16:34:51,224.224] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 812你怎么自己开始
+[2026-02-11 16:34:51,469.469] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 16:34:53,182.182] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…画师姐姐说我可以自己看看图片
+[2026-02-11 16:35:08,325.325] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:reply,
+[2026-02-11 16:35:08,525.525] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 16:35:09,554.554] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：画师姐姐确实很厉害呢
+[2026-02-11 16:35:14,056.056] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 16:47:45,870.870] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 薛陈(2196399905): 弘文了
+[2026-02-11 16:47:54,547.547] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 薛陈(2196399905): 不得起名对话一丝血没
+[2026-02-11 16:55:13,647.647] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 16:55:15,279.279] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 还真是
+[2026-02-11 16:58:37,273.273] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): [CQ:image,
+[2026-02-11 16:59:00,795.795] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): 我发过了
+[2026-02-11 16:59:04,915.915] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 17:02:42,172.172] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): 什么b表情包
+[2026-02-11 17:04:10,522.522] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 17:11:41,095.095] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): [CQ:image,
+[2026-02-11 17:11:41,225.225] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2191.7 秒，已超过延迟 1862 秒，开始处理
+[2026-02-11 17:11:41,720.720] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 17:11:42,681.681] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 17:11:42,704.704] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2213 秒
+[2026-02-11 17:11:47,830.830] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 睡觉之王我揍死你
+[2026-02-11 17:17:19,547.547] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 🍉(1438168045): [CQ:image,
+[2026-02-11 17:17:36,782.782] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): b站的神秘删除了还能
+[2026-02-11 17:26:08,545.545] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:reply,
+[2026-02-11 17:26:15,805.805] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 17:26:23,323.323] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 日常(3298943128): 呃呃
+[2026-02-11 17:26:39,305.305] INFO     [MainThread|MainProcess] root (main.py:on_group_message:138) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 17:27:01,461.461] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接已关闭
+[2026-02-11 17:27:01,496.496] INFO     [MainThread|MainProcess] ncatbot.plugin_system (logger.py:info:129) | 插件 SystemManager 卸载成功
+[2026-02-11 17:27:01,499.499] INFO     [MainThread|MainProcess] ncatbot.plugin_system (logger.py:info:129) | 插件 UnifiedRegistryPlugin 卸载成功
+[2026-02-11 17:27:01,499.499] INFO     [MainThread|MainProcess] ncatbot.plugin_system (logger.py:info:129) | 插件 as812 卸载成功
+[2026-02-11 17:27:01,500.500] INFO     [MainThread|MainProcess] ncatbot.plugin_system (logger.py:info:129) | 插件 mh 卸载成功
+[2026-02-11 17:27:01,516.516] INFO     [MainThread|MainProcess] Client (logger.py:info:129) | Bot 已经正常退出
+[2026-02-11 17:27:06,193.193] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | [BOTQQ]: 3024473284 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]: NcatBot | [ROOT]: 3196611630 | [WEBUI]: http://localhost:6099 | [WEBUI_TOKEN]: EcxAO&H+O;c}2{}<
+[2026-02-11 17:27:06,195.195] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | 配置已保存到 D:\_store\bot_as812\config.yaml
+[2026-02-11 17:27:06,201.201] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载内置插件数 [2]
+[2026-02-11 17:27:06,202.202] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 从 D:\_store\bot_as812\plugins 导入插件
+[2026-02-11 17:27:06,226.226] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: PyYAML==6.0.2
+[2026-02-11 17:27:06,254.254] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp==3.11.13
+[2026-02-11 17:27:06,275.275] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiofiles==24.1.0
+[2026-02-11 17:27:06,288.288] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: jieba==0.42.1
+[2026-02-11 17:27:06,289.289] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: ollama
+[2026-02-11 17:27:06,329.329] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: requests>=2.31.0
+[2026-02-11 17:27:06,348.348] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: beautifulsoup4>=4.12.2
+[2026-02-11 17:27:06,349.349] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp>=3.9.1
+[2026-02-11 17:27:06,354.354] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 成功导入插件文件: __init__
+[2026-02-11 17:27:06,354.354] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「as812」
+[2026-02-11 17:27:06,355.355] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「mh」
+[2026-02-11 17:27:06,358.358] INFO     [asyncio_0|MainProcess] root (main.py:on_load:50) | as812插件加载中……
+[2026-02-11 17:27:06,360.360] INFO     [asyncio_0|MainProcess] root (main.py:on_load:69) | as812 插件已加载 (v1.1.0)
+[2026-02-11 17:27:06,365.365] INFO     [asyncio_0|MainProcess] root (main.py:on_load:76) | as812 可视化面板已以子进程启动
+[2026-02-11 17:27:06,369.369] INFO     [asyncio_0|MainProcess] root (main.py:on_load:94) | 已注册每日金句定时任务：每天 12:00
+[2026-02-11 17:27:07,607.607] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载插件数 [4]
+[2026-02-11 17:27:07,609.609] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 正在以本地模式运行, 检查中...
+[2026-02-11 17:27:07,668.668] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | napcat 服务器 ws://localhost:3001 在线, 正在检查账号状态...
+[2026-02-11 17:27:07,794.794] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接成功
+[2026-02-11 17:27:07,795.795] INFO     [asyncio_0|MainProcess] Client (logger.py:info:129) | Bot 3024473284 启动成功
+[2026-02-11 17:27:43,467.467] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | [BOTQQ]: 3024473284 | [WSURI]: ws://localhost:3001 | [WS_TOKEN]: NcatBot | [ROOT]: 3196611630 | [WEBUI]: http://localhost:6099 | [WEBUI_TOKEN]: EcxAO&H+O;c}2{}<
+[2026-02-11 17:27:43,469.469] INFO     [MainThread|MainProcess] Config (logger.py:info:129) | 配置已保存到 D:\_store\bot_as812\config.yaml
+[2026-02-11 17:27:43,475.475] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载内置插件数 [2]
+[2026-02-11 17:27:43,476.476] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 从 D:\_store\bot_as812\plugins 导入插件
+[2026-02-11 17:27:43,479.479] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: PyYAML==6.0.2
+[2026-02-11 17:27:43,480.480] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp==3.11.13
+[2026-02-11 17:27:43,481.481] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiofiles==24.1.0
+[2026-02-11 17:27:43,482.482] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: jieba==0.42.1
+[2026-02-11 17:27:43,483.483] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: ollama
+[2026-02-11 17:27:43,495.495] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: requests>=2.31.0
+[2026-02-11 17:27:43,496.496] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: beautifulsoup4>=4.12.2
+[2026-02-11 17:27:43,497.497] INFO     [Thread-2 (runner)|MainProcess] PackageHelper (logger.py:info:129) | 依赖已满足: aiohttp>=3.9.1
+[2026-02-11 17:27:43,501.501] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 成功导入插件文件: __init__
+[2026-02-11 17:27:43,501.501] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「as812」
+[2026-02-11 17:27:43,502.502] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 加载插件「mh」
+[2026-02-11 17:27:43,505.505] INFO     [asyncio_0|MainProcess] root (main.py:on_load:50) | as812插件加载中……
+[2026-02-11 17:27:43,506.506] INFO     [asyncio_0|MainProcess] root (main.py:on_load:69) | as812 插件已加载 (v1.1.0)
+[2026-02-11 17:27:43,512.512] INFO     [asyncio_0|MainProcess] root (main.py:on_load:76) | as812 可视化面板已以子进程启动
+[2026-02-11 17:27:43,515.515] INFO     [asyncio_0|MainProcess] root (main.py:on_load:94) | 已注册每日金句定时任务：每天 12:00 和 18:00
+[2026-02-11 17:27:43,541.541] INFO     [Thread-2 (runner)|MainProcess] PluginLoader (logger.py:info:129) | 已加载插件数 [4]
+[2026-02-11 17:27:43,542.542] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | 正在以本地模式运行, 检查中...
+[2026-02-11 17:27:43,565.565] INFO     [MainThread|MainProcess] ncatbot.core.adapter.nc.launch (logger.py:info:129) | napcat 服务器 ws://localhost:3001 在线, 正在检查账号状态...
+[2026-02-11 17:27:43,688.688] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接成功
+[2026-02-11 17:27:43,690.690] INFO     [asyncio_0|MainProcess] Client (logger.py:info:129) | Bot 3024473284 启动成功
+[2026-02-11 17:29:19,556.556] INFO     [MainThread|MainProcess] ncatbot.plugin_system.builtin_plugin.unified_registry.plugin (logger.py:info:129) | 命令前缀集合: ['/', '!']
+[2026-02-11 17:29:19,557.557] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | KIKO(1697954910): [CQ:image,
+[2026-02-11 17:29:19,820.820] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 10110.3 秒，已超过延迟 2213 秒，开始处理
+[2026-02-11 17:29:20,010.010] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 17:29:21,100.100] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 17:29:23,334.334] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1015 秒
+[2026-02-11 17:29:30,097.097] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | KIKO(1697954910): 流汗了
+[2026-02-11 17:29:51,891.891] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 跪下了
+[2026-02-11 17:33:54,705.705] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 嘻嘻嘻
+[2026-02-11 17:33:55,594.594] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): [CQ:image,
+[2026-02-11 17:34:24,036.036] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 樂(1277791982): 果冻大神！😯
+[2026-02-11 17:34:43,858.858] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 给我寄一箱过来
+[2026-02-11 17:34:51,303.303] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 星宇哥回家了没
+[2026-02-11 17:34:54,732.732] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:image,
+[2026-02-11 17:34:58,929.929] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 我喜欢。。瓜冻。。
+[2026-02-11 17:35:16,652.652] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 在家了
+[2026-02-11 17:35:24,600.600] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 唉不能过来踢你一脚了
+[2026-02-11 17:35:27,333.333] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 可惜啊可惜
+[2026-02-11 17:36:39,901.901] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): [CQ:image,
+[2026-02-11 17:36:39,979.979] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 瓜
+[2026-02-11 17:36:45,035.035] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 别急
+[2026-02-11 17:36:49,959.959] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 我们回来肯定比你早
+[2026-02-11 17:36:57,691.691] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 好瓜
+[2026-02-11 17:37:48,989.989] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 17:38:57,475.475] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 羡慕
+[2026-02-11 17:39:02,536.536] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 我也想回家
+[2026-02-11 17:40:14,513.513] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 票还没候补到
+[2026-02-11 17:46:58,614.614] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): [CQ:reply,
+[2026-02-11 17:46:58,721.721] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1055.4 秒，已超过延迟 1015 秒，开始处理
+[2026-02-11 17:46:59,233.233] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 17:47:00,641.641] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…你们在说什么呀
+[2026-02-11 17:47:00,650.650] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1910 秒
+[2026-02-11 17:47:05,326.326] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): 我不信
+[2026-02-11 18:00:00,501.501] INFO     [asyncio_0|MainProcess] httpx (logger.py:info:129) | HTTP Request: GET https://uapis.cn/api/v1/saying "HTTP/1.1 200 OK"
+[2026-02-11 18:00:01,218.218] INFO     [Thread-8 (runner)|MainProcess] root (main.py:daily_task:119) | 已发送每日金句到群 883744030
+[2026-02-11 18:00:33,250.250] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): [CQ:image,
+[2026-02-11 18:01:05,289.289] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): [CQ:image,
+[2026-02-11 18:01:29,704.704] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): c字手经典了
+[2026-02-11 18:01:32,161.161] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 不过我不喜欢
+[2026-02-11 18:01:55,546.546] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): 不得不用有时候
+[2026-02-11 18:02:09,646.646] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): [CQ:image,
+[2026-02-11 18:02:12,945.945] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): type c
+[2026-02-11 18:02:22,950.950] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): ？
+[2026-02-11 18:02:28,966.966] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): 反人类的力量
+[2026-02-11 18:02:30,575.575] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): ？
+[2026-02-11 18:02:36,095.095] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 这是人类啊
+[2026-02-11 18:03:35,402.402] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 一看就是玩虫棍的
+[2026-02-11 18:03:45,639.639] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 胸口碎大石(1727198247): 360？
+[2026-02-11 18:04:00,878.878] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 这个是E手吧
+[2026-02-11 18:04:25,001.001] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): 不是人手
+[2026-02-11 18:04:35,985.985] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 有什么游戏需要一直用
+[2026-02-11 18:04:44,010.010] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 哦怪物猎人荒野
+[2026-02-11 18:05:07,208.208] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): 皇牌空战
+[2026-02-11 18:05:30,628.628] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 空战虫棍
+[2026-02-11 18:05:41,018.018] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 崛起也要吧如果空战
+[2026-02-11 18:06:05,841.841] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): 我玩gu也要
+[2026-02-11 18:06:38,356.356] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 醒来
+[2026-02-11 18:06:49,097.097] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): [CQ:reply,
+[2026-02-11 18:07:06,901.901] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 对啊
+[2026-02-11 18:07:10,031.031] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 一直
+[2026-02-11 18:07:18,047.047] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 调视角不都是右摇杆吗
+[2026-02-11 18:07:41,096.096] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): 调视角还不够频繁吗
+[2026-02-11 18:08:02,259.259] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): gu左肩键频率可比右
+[2026-02-11 18:08:09,297.297] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 至少我不是手调视角那
+[2026-02-11 18:08:23,193.193] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 来个天尊带我玩gu
+[2026-02-11 18:08:25,733.733] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 萌新刚入坑
+[2026-02-11 18:08:57,425.425] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 来个天尊带我玩gu
+[2026-02-11 18:09:28,183.183] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): [CQ:reply,
+[2026-02-11 18:09:31,869.869] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): 忘了
+[2026-02-11 18:09:34,823.823] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 来个天尊替我上班
+[2026-02-11 18:09:43,554.554] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 半锁的快速回正视角
+[2026-02-11 18:09:53,591.591] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:reply,
+[2026-02-11 18:10:08,532.532] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 发配去打宝缠
+[2026-02-11 18:10:23,224.224] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 但是我现在ns上沉迷
+[2026-02-11 18:10:24,741.741] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): [CQ:image,
+[2026-02-11 18:10:31,171.171] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): [CQ:reply,
+[2026-02-11 18:10:35,978.978] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 大锤随便玩
+[2026-02-11 18:10:46,158.158] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 破他的下巴很爽有没有
+[2026-02-11 18:10:54,856.856] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 食雪汉[CQ:fac
+[2026-02-11 18:11:02,577.577] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): 是打的那个还是小的那
+[2026-02-11 18:11:15,956.956] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): [CQ:image,
+[2026-02-11 18:11:16,063.063] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 小的啊
+[2026-02-11 18:11:21,427.427] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 就是快捷轮盘那个按键
+[2026-02-11 18:11:28,090.090] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 虽然gu没有轮盘
+[2026-02-11 18:11:34,921.921] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 做了两个小时白日梦
+[2026-02-11 18:12:02,328.328] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): [CQ:video,
+[2026-02-11 18:12:31,681.681] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 感觉武士道锤更轻松一
+[2026-02-11 18:12:40,279.279] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 勇锤要RRR，有点慢
+[2026-02-11 18:12:57,045.045] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 30分钟说是
+[2026-02-11 18:13:01,796.796] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 享受完了
+[2026-02-11 18:13:09,006.006] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): lzl
+[2026-02-11 18:13:17,986.986] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 再装草饲
+[2026-02-11 18:13:21,724.724] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 打的时长不说，全程打
+[2026-02-11 18:13:31,505.505] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 就是看他滚来滚去有点
+[2026-02-11 18:14:01,655.655] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): [CQ:reply,
+[2026-02-11 18:14:17,069.069] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): 我荒野也用左肩键多
+[2026-02-11 18:14:23,010.010] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 不都有软锁硬锁吗
+[2026-02-11 18:17:39,802.802] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Akariアカリ(2568346669): 00
+[2026-02-11 18:21:17,350.350] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): [CQ:face,i
+[2026-02-11 18:21:17,429.429] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2056.8 秒，已超过延迟 1910 秒，开始处理
+[2026-02-11 18:21:17,957.957] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 18:21:19,278.278] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…我也想玩gu  
+可是我没有ns呢
+[2026-02-11 18:21:22,426.426] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1536 秒
+[2026-02-11 18:21:47,933.933] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 没你的事，玩集中冰去
+[2026-02-11 18:21:54,662.662] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 胸口碎大石(1727198247): 没你的事，玩集中冰去
+[2026-02-11 18:22:37,834.834] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:reply,
+[2026-02-11 18:22:41,673.673] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Akariアカリ(2568346669): .
+[2026-02-11 18:22:41,817.817] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:image,
+[2026-02-11 18:23:09,049.049] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 14号到期，刚把抽奖
+[2026-02-11 18:23:13,679.679] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Akariアカリ(2568346669): 0.........
+[2026-02-11 18:23:14,682.682] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): [CQ:face,i
+[2026-02-11 18:23:18,835.835] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:at,qq=
+[2026-02-11 18:23:19,044.044] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 18:23:19,908.908] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃呃
+[2026-02-11 18:23:32,132.132] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): [CQ:image,
+[2026-02-11 18:24:13,191.191] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🧅(1825842306): 最近还有个打配信猿神
+[2026-02-11 18:24:15,150.150] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 0.........
+[2026-02-11 18:24:26,023.023] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Akariアカリ(2568346669): （）
+[2026-02-11 18:24:29,407.407] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Akariアカリ(2568346669): 键盘误触）
+[2026-02-11 18:24:43,071.071] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 噢噢
+[2026-02-11 18:24:58,076.076] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): 噢噢
+[2026-02-11 18:25:04,949.949] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 😭心理委员你在哪😭心
+[2026-02-11 18:25:14,026.026] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 俺不中嘞！
+[2026-02-11 18:25:20,189.189] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 18:27:00,263.263] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 18:28:32,358.358] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): byd我佛山局和珠海
+[2026-02-11 18:28:51,845.845] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 我tm还要上两天
+[2026-02-11 18:30:10,925.925] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): 没事
+[2026-02-11 18:30:19,035.035] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): 我已经放一个多月了
+[2026-02-11 18:30:24,184.184] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 18:31:32,321.321] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 18:31:55,682.682] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 18:32:05,668.668] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 18:32:08,092.092] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | í(3085384553): [CQ:reply,
+[2026-02-11 18:37:41,571.571] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | LalaTart(1749383987): [CQ:image,
+[2026-02-11 18:48:52,324.324] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | LalaTart(1749383987): [CQ:image,
+[2026-02-11 18:50:32,925.925] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 812这是什么意思？
+[2026-02-11 18:50:36,209.209] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 18:50:38,502.502] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：{"right":true,"answer":"我是as812，由811创造的QQ群聊小助手，平时在怪物猎人群里和大家聊天玩耍的"}
+
+唔…这个格式好奇怪啊
+[2026-02-11 18:50:49,697.697] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 你是？(641507425): [CQ:image,
+[2026-02-11 18:50:54,779.779] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 你是？(641507425): 可恶的人类
+[2026-02-11 18:51:10,735.735] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 你是？(641507425): [CQ:at,qq=
+[2026-02-11 18:51:10,979.979] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 18:51:12,063.063] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…盒是指开盒子吗
+[2026-02-11 18:51:33,882.882] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 对的
+[2026-02-11 18:52:25,025.025] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 千林尽染(3205839453): [CQ:reply,
+[2026-02-11 18:52:25,291.291] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 18:52:26,323.323] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃呃
+你在说什么啊
+[2026-02-11 19:03:45,174.174] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 恐暴龙长的好高。。。
+[2026-02-11 19:03:49,027.027] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 打不到。
+[2026-02-11 19:05:00,593.593] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): 修脚
+[2026-02-11 19:05:46,340.340] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): [CQ:image,
+[2026-02-11 19:05:48,715.715] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 好big的雪王
+[2026-02-11 19:07:03,433.433] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): [CQ:reply,
+[2026-02-11 19:07:11,937.937] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): 没准有我生产的
+[2026-02-11 19:07:27,105.105] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): 我要喝你现做的
+[2026-02-11 19:09:22,983.983] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 瓜汁
+[2026-02-11 19:09:33,595.595] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | †コイシ†(1242822697): 什么味道
+[2026-02-11 19:10:07,324.324] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): 看看瓜汁
+[2026-02-11 19:10:40,402.402] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Akariアカリ(2568346669): 看看瓜汁
+[2026-02-11 19:12:49,610.610] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 卡皮巴拉(819188864): 看看瓜汁
+[2026-02-11 19:13:19,256.256] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 看看瓜汁
+[2026-02-11 19:13:43,835.835] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 卡皮巴拉(819188864): [CQ:reply,
+[2026-02-11 19:13:51,697.697] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 19:14:07,963.963] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 19:14:15,676.676] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 感觉还没清醒
+[2026-02-11 19:14:20,113.113] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 一觉睡昏了
+[2026-02-11 19:14:35,263.263] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 19:16:29,517.517] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 还有瓜汁
+[2026-02-11 19:17:25,962.962] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): a3A86L3C$b
+[2026-02-11 19:17:30,658.658] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 樂(1277791982): [CQ:image,
+[2026-02-11 19:17:49,567.567] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 久十三(928901028): [CQ:reply,
+[2026-02-11 19:18:32,917.917] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 笑死了
+[2026-02-11 19:18:33,048.048] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1566.7 秒，已超过延迟 1536 秒，开始处理
+[2026-02-11 19:18:33,571.571] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 19:18:35,045.045] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 19:18:39,054.054] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1610 秒
+[2026-02-11 19:18:44,927.927] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 我们做火锅煮裙带菜
+[2026-02-11 19:18:57,263.263] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 给整个国都煮成绿色了
+[2026-02-11 19:19:02,755.755] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 给整个锅都煮成绿色了
+[2026-02-11 19:21:49,415.415] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 继续睡觉没梦做了
+[2026-02-11 19:21:58,613.613] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 能不能梦个续集
+[2026-02-11 19:22:15,773.773] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 可以动笔写
+[2026-02-11 19:25:18,942.942] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 笑死了
+[2026-02-11 19:25:34,629.629] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 几个人围着一锅冒泡的
+[2026-02-11 19:25:53,619.619] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 邪能火锅
+[2026-02-11 19:26:08,212.212] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 绿的健康
+[2026-02-11 19:26:29,057.057] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 我喝西瓜汁带皮榨的
+[2026-02-11 19:28:18,662.662] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 还有绿色的吗
+[2026-02-11 19:29:06,561.561] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 常春藤(3885873945): [CQ:image,
+[2026-02-11 19:29:16,831.831] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 太他妈诡异了
+[2026-02-11 19:29:19,693.693] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 19:30:44,316.316] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 19:31:10,321.321] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:at,qq=
+[2026-02-11 19:31:13,151.151] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 是你不
+[2026-02-11 19:31:38,537.537] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 对的
+[2026-02-11 19:31:47,206.206] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 你怎么刷的到的
+[2026-02-11 19:31:48,459.459] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): [CQ:image,
+[2026-02-11 19:32:59,922.922] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 不到哇
+[2026-02-11 19:33:04,033.033] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 首页给我推了
+[2026-02-11 19:33:20,253.253] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 19:34:07,669.669] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): sbrm
+[2026-02-11 19:36:01,355.355] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 还是不清醒
+[2026-02-11 19:36:11,351.351] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 刚刚把芬达看成劳达了
+[2026-02-11 19:36:13,281.281] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 是我
+[2026-02-11 19:36:16,588.588] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): [CQ:at,qq=
+[2026-02-11 19:36:17,167.167] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 19:36:18,152.152] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…抱一下
+[2026-02-11 19:36:39,311.311] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): [CQ:reply,
+[2026-02-11 19:37:20,038.038] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): 夜里关灯看手机也会这
+[2026-02-11 19:38:01,226.226] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 19:38:06,348.348] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 竟然也是指绘
+[2026-02-11 19:38:07,967.967] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:image,
+[2026-02-11 19:38:13,971.971] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 19:38:44,481.481] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): [CQ:at,qq=
+[2026-02-11 19:39:18,941.941] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:json,d
+[2026-02-11 19:39:39,336.336] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 19:39:59,378.378] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 祈愿锈蚀、亦能祝福六
+[2026-02-11 19:40:45,809.809] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 升虫霸体是从开始升一
+[2026-02-11 19:40:58,335.335] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 19:41:40,059.059] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 19:42:11,699.699] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:reply,
+[2026-02-11 19:45:37,830.830] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:reply,
+[2026-02-11 19:45:49,286.286] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 19:45:56,860.860] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 为什么要at我。。。
+[2026-02-11 19:46:10,102.102] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:at,qq=
+[2026-02-11 19:46:16,059.059] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 19:47:07,361.361] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 还有盒
+[2026-02-11 19:47:53,926.926] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 19:49:16,474.474] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 樂(1277791982): [CQ:reply,
+[2026-02-11 19:49:32,766.766] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 樂(1277791982): 按出来就有霸体
+[2026-02-11 19:49:37,527.527] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 19:50:53,134.134] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Azazelの硫磺火(3430580038): 真蓄力斩什么时候能有
+[2026-02-11 19:50:57,780.780] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Azazelの硫磺火(3430580038): 或者来个相杀判定
+[2026-02-11 19:51:20,933.933] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Azazelの硫磺火(3430580038): 如果真有我将誓死效忠
+[2026-02-11 19:51:34,261.261] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 呃啊
+[2026-02-11 19:51:39,723.723] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 有点🍬。。
+[2026-02-11 19:51:56,134.134] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 朝凪海(2217849264): 有点🍬。。
+[2026-02-11 19:51:57,966.966] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 有点🍬。。
+[2026-02-11 19:52:08,419.419] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 朝凪海(2217849264): [CQ:reply,
+[2026-02-11 19:52:24,844.844] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 恰恰相反
+[2026-02-11 19:52:30,327.327] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | LalaTart(1749383987): 有点🍬。。
+[2026-02-11 19:52:43,159.159] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 19:53:09,284.284] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): [CQ:reply,
+[2026-02-11 19:53:15,000.000] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 第一个有的话也无敌了
+[2026-02-11 19:53:22,437.437] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 可以有相杀判定
+[2026-02-11 19:53:31,467.467] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 然后第一段把怪杀出去
+[2026-02-11 19:53:34,346.346] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 第二段空
+[2026-02-11 19:54:54,370.370] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Azazelの硫磺火(3430580038): 第一段如果杀到派生超
+[2026-02-11 19:55:56,446.446] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Azazelの硫磺火(3430580038): 名字我都想好了
+[2026-02-11 19:56:11,302.302] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Azazelの硫磺火(3430580038): 超高输出相杀追击斩
+[2026-02-11 19:56:20,900.900] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): [CQ:image,
+[2026-02-11 19:57:11,226.226] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 樂(1277791982): [CQ:reply,
+[2026-02-11 19:57:17,741.741] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): [CQ:reply,
+[2026-02-11 19:57:54,111.111] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 直接变光剑
+[2026-02-11 19:59:23,013.013] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): [CQ:image,
+[2026-02-11 20:03:25,746.746] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 南方同学小年快乐
+[2026-02-11 20:03:25,896.896] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1627.7 秒，已超过延迟 1610 秒，开始处理
+[2026-02-11 20:03:26,106.106] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 20:03:27,086.086] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：南方同学小年快乐呀
+[2026-02-11 20:03:29,621.621] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1698 秒
+[2026-02-11 20:03:48,887.887] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 一人v我50助我明天
+[2026-02-11 20:04:08,467.467] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:reply,
+[2026-02-11 20:04:08,687.687] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 20:04:09,839.839] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…不要叫我宝宝啦
+[2026-02-11 20:04:18,400.400] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 那就是要
+[2026-02-11 20:06:23,927.927] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 20:06:43,283.283] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 虫棍该用啥护石
+[2026-02-11 20:06:53,582.582] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 我主要怕改了个不合法
+[2026-02-11 20:08:35,699.699] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 20:09:07,062.062] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 好可爱的v，我从小时
+[2026-02-11 20:13:57,734.734] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 20:13:58,252.252] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 20:19:24,266.266] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 20:20:38,778.778] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 《名肘探科比2》！高
+[2026-02-11 20:33:18,065.065] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 20:33:18,216.216] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1748.4 秒，已超过延迟 1698 秒，开始处理
+[2026-02-11 20:33:18,440.440] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 20:33:19,672.672] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…你在说什么呀
+[2026-02-11 20:33:23,339.339] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1740 秒
+[2026-02-11 20:36:41,450.450] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 唔…你在说什么呀
+[2026-02-11 20:38:08,626.626] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:reply,
+[2026-02-11 20:38:30,885.885] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | LalaTart(1749383987): 小金的年。
+[2026-02-11 20:39:25,696.696] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 说起来神话里面的年兽
+[2026-02-11 20:39:29,965.965] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 应该是什么样子的
+[2026-02-11 20:40:41,659.659] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 应该是类似舞狮的形象
+[2026-02-11 20:40:54,691.691] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 我的印象的话
+[2026-02-11 20:44:15,200.200] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 20:44:16,403.403] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 打的车
+[2026-02-11 20:44:25,683.683] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 真敢往外放啊
+[2026-02-11 20:44:46,531.531] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): 【怪猎物语使用明日方
+[2026-02-11 20:44:53,421.421] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 勿忘我(3616094417): 真假 有无有物语的
+[2026-02-11 21:01:45,404.404] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:at,qq=
+[2026-02-11 21:02:15,976.976] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 我单人在线
+[2026-02-11 21:02:19,626.626] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 以为没人
+[2026-02-11 21:02:40,060.060] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 那你接吧
+[2026-02-11 21:02:40,146.146] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1756.8 秒，已超过延迟 1740 秒，开始处理
+[2026-02-11 21:02:40,628.628] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 21:02:40,821.821] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 我来了
+[2026-02-11 21:02:40,915.915] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1757.6 秒，已超过延迟 1740 秒，开始处理
+[2026-02-11 21:02:41,090.090] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 21:02:41,811.811] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…我来接任务吗
+[2026-02-11 21:02:41,829.829] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：999 秒
+[2026-02-11 21:02:42,313.313] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：##should not say
+[2026-02-11 21:02:42,321.321] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：2692 秒
+[2026-02-11 21:02:53,624.624] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): ㊗️
+[2026-02-11 21:02:53,903.903] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): [CQ:image,
+[2026-02-11 21:02:57,842.842] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 虫棍还是玩的不行
+[2026-02-11 21:03:57,238.238] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:reply,
+[2026-02-11 21:12:10,864.864] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:image,
+[2026-02-11 21:13:12,906.906] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 老吃家
+[2026-02-11 21:19:50,910.910] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 哎卧槽长枪和太刀站一
+[2026-02-11 21:23:49,833.833] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:image,
+[2026-02-11 21:24:05,900.900] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 那发配去和双刀站一起
+[2026-02-11 21:26:06,911.911] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): ？？？
+[2026-02-11 21:26:42,435.435] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:at,qq=
+[2026-02-11 21:27:35,161.161] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 在
+[2026-02-11 21:27:45,274.274] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 找不到任务
+[2026-02-11 21:27:48,162.162] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 21:27:56,498.498] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 我自己打完吧先
+[2026-02-11 21:27:59,349.349] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 懒得退了
+[2026-02-11 21:28:14,810.810] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 那我先重新开一把
+[2026-02-11 21:28:52,691.691] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 被宝可梦打爆了
+[2026-02-11 21:30:25,326.326] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:image,
+[2026-02-11 21:30:58,494.494] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 812 假如你是一个
+[2026-02-11 21:30:58,717.717] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:31:00,099.099] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃…三千字太多了啦
+我只会打猎不会写小说
+[2026-02-11 21:31:36,020.020] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 飞舞
+[2026-02-11 21:31:46,293.293] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 就三千字
+[2026-02-11 21:31:50,763.763] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 没三万我不看
+[2026-02-11 21:32:03,998.998] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 812 发3000个
+[2026-02-11 21:32:07,315.315] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:32:08,834.834] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃呃
+##emoji 困惑
+[2026-02-11 21:32:19,526.526] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 这也呃呃
+[2026-02-11 21:33:52,712.712] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 812你这吃白食的猪
+[2026-02-11 21:33:52,953.953] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:33:54,288.288] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃呃
+[2026-02-11 21:34:08,018.018] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 812 发30个啊
+[2026-02-11 21:34:08,203.203] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:34:09,677.677] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：啊
+啊
+啊
+##emoji 困惑
+[2026-02-11 21:34:35,737.737] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 30个 啊 说是
+[2026-02-11 21:34:59,832.832] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 812 发30个哈
+[2026-02-11 21:35:00,083.083] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:35:01,469.469] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃…30个什么呀
+[2026-02-11 21:35:06,560.560] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 这n网下个mod怎么
+[2026-02-11 21:35:15,779.779] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): [CQ:reply,
+[2026-02-11 21:35:16,021.021] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:35:17,564.564] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：呃…30个哈也太多了吧
+##emoji 困惑
+[2026-02-11 21:35:29,297.297] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): [CQ:reply,
+[2026-02-11 21:35:29,469.469] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:35:30,849.849] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…十个哈也很多呀
+##emoji 困惑
+[2026-02-11 21:35:33,010.010] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:image,
+[2026-02-11 21:35:36,374.374] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 812 发三个唔
+[2026-02-11 21:35:36,555.555] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:35:38,073.073] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…  
+唔…  
+唔…
+
+##emoji 困惑
+[2026-02-11 21:35:47,150.150] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:reply,
+[2026-02-11 21:35:52,875.875] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): 812 发三个哈
+[2026-02-11 21:35:55,622.622] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:35:56,820.820] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：哈气
+##emoji 哈气
+##emoji 哈气
+[2026-02-11 21:36:02,896.896] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 猫背上的大魔王(617810305): ？
+[2026-02-11 21:36:17,742.742] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 长枪打95博弈爽完了
+[2026-02-11 21:36:23,758.758] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:reply,
+[2026-02-11 21:36:30,916.916] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 812你这个表情为什
+[2026-02-11 21:36:31,271.271] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:36:32,725.725] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…画师姐姐就是这么画的呀
+[2026-02-11 21:36:41,796.796] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 有点像rvc
+[2026-02-11 21:36:52,664.664] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 原来花式姐姐喜欢这个
+[2026-02-11 21:36:58,944.944] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 就是只会改变作为抗性
+[2026-02-11 21:37:25,249.249] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 攻击时候属性一致加成
+[2026-02-11 21:39:01,253.253] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:reply,
+[2026-02-11 21:39:01,531.531] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:39:04,042.042] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 21:39:06,995.995] INFO     [asyncio_0|MainProcess] httpx (logger.py:info:129) | HTTP Request: POST https://open.bigmodel.cn/api/paas/v4/chat/completions "HTTP/1.1 200 OK"
+[2026-02-11 21:39:08,519.519] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：##emoji 困惑
+诶…你是在说我吗
+[2026-02-11 21:39:12,157.157] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:reply,
+[2026-02-11 21:39:15,676.676] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 21:39:16,827.827] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…画师姐姐画的当然无敌啦
+[2026-02-11 21:39:27,357.357] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 多画不穿裤子小女孩
+[2026-02-11 21:41:56,644.644] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 我无法下载n网mod
+[2026-02-11 21:42:19,990.990] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:reply,
+[2026-02-11 21:42:30,904.904] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:reply,
+[2026-02-11 21:44:42,405.405] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:reply,
+[2026-02-11 21:44:57,424.424] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): 钛晶电十万伏特就是2
+[2026-02-11 21:45:12,659.659] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): [CQ:reply,
+[2026-02-11 21:45:20,587.587] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 原有的1.5倍不会没
+[2026-02-11 21:46:50,695.695] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 星晶是每个属性各一次
+[2026-02-11 21:47:06,219.219] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 对的对的
+[2026-02-11 21:47:19,458.458] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:image,
+[2026-02-11 21:47:27,805.805] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:image,
+[2026-02-11 21:47:28,715.715] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 派派好难玩
+[2026-02-11 21:47:30,249.249] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 笑了
+[2026-02-11 21:47:36,549.549] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 斗
+[2026-02-11 21:47:42,315.315] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 是那个体育老师
+[2026-02-11 21:48:06,698.698] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 写一下上课你认为印象
+[2026-02-11 21:48:19,314.314] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 虽然他那个宝可梦是斗
+[2026-02-11 21:48:40,051.051] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 21:48:49,871.871] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 双华满天
+[2026-02-11 21:49:10,658.658] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 别发农种
+[2026-02-11 21:49:28,884.884] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 怎么fluffy管理
+[2026-02-11 21:49:35,268.268] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 我家网炸了？
+[2026-02-11 21:49:41,992.992] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 因为是gaybug的
+[2026-02-11 21:49:57,778.778] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 建议魔法上网或者反代
+[2026-02-11 21:50:05,253.253] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): [CQ:reply,
+[2026-02-11 21:51:12,550.550] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 牛逼
+[2026-02-11 21:51:26,156.156] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 一波网络中断给我干猫
+[2026-02-11 21:51:29,074.074] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 21:51:33,962.962] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 傻逼boi龙
+[2026-02-11 21:51:43,182.182] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:image,
+[2026-02-11 21:51:45,378.378] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 群u来了
+[2026-02-11 21:51:47,884.884] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 哎卡比
+[2026-02-11 21:53:18,274.274] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 飘香豚可是有专属特性
+[2026-02-11 21:53:38,464.464] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 看到了
+[2026-02-11 21:53:38,734.734] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 热心市民讨屯冢(3253997462): 可以把马桶王的慢启动
+[2026-02-11 21:55:24,364.364] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 润了[CQ:at,q
+[2026-02-11 21:57:04,591.591] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 我也润
+[2026-02-11 21:57:27,243.243] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 继续看re0了
+[2026-02-11 21:57:54,038.038] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 群u推荐我先玩金辉恋
+[2026-02-11 21:57:57,358.358] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 21:57:57,419.419] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | iSlurzy(1250975401): [CQ:reply,
+[2026-02-11 21:58:05,313.313] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 成步堂
+[2026-02-11 21:58:12,246.246] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 神中神
+[2026-02-11 21:58:25,077.077] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 呃啊好冷
+[2026-02-11 21:58:25,367.367] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 21:58:31,420.420] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 不想下床拿充电器
+[2026-02-11 21:58:36,968.968] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): [CQ:reply,
+[2026-02-11 21:58:41,459.459] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): [CQ:image,
+[2026-02-11 21:58:42,297.297] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 别充
+[2026-02-11 21:58:45,150.150] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 21:58:47,755.755] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 😓
+[2026-02-11 21:58:55,061.061] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): 没事
+[2026-02-11 21:58:57,027.027] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:reply,
+[2026-02-11 21:59:01,292.292] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): 手机没电了自然就不冷
+[2026-02-11 21:59:07,730.730] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:reply,
+[2026-02-11 21:59:09,338.338] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 我是睡觉之王(940956441): [CQ:image,
+[2026-02-11 21:59:10,635.635] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 安娜的幻想（Daybreak）(404450769): 抓个被子或者外套🧥
+[2026-02-11 21:59:25,851.851] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 金辉恋曲是纯废萌还是
+[2026-02-11 21:59:29,345.345] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 🤔
+[2026-02-11 21:59:58,919.919] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 玩811在玩的银河龙
+[2026-02-11 22:00:00,974.974] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 纯剧情
+[2026-02-11 22:00:03,166.166] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 恋爱都没有
+[2026-02-11 22:00:11,976.976] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 我才打完壳虚天
+[2026-02-11 22:00:23,387.387] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 这个后劲有点大
+[2026-02-11 22:00:26,089.089] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 太好玩了
+[2026-02-11 22:00:28,595.595] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 22:00:36,063.063] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:reply,
+[2026-02-11 22:00:39,613.613] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:reply,
+[2026-02-11 22:00:45,574.574] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 22:00:47,027.027] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 不要恋爱
+[2026-02-11 22:00:48,589.589] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 有恋爱不玩
+[2026-02-11 22:00:56,920.920] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 🍉(1438168045): 我就好银河龙这口
+[2026-02-11 22:00:59,628.628] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 我觉得在立意方面也有
+[2026-02-11 22:01:00,041.041] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): [CQ:image,
+[2026-02-11 22:01:02,245.245] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 战神这火之国打的想吐
+[2026-02-11 22:01:09,837.837] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 银河龙是啥
+[2026-02-11 22:01:13,000.000] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:reply,
+[2026-02-11 22:01:16,054.054] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 雌小鬼不是玩的群星吗
+[2026-02-11 22:01:19,425.425] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): apex
+[2026-02-11 22:01:24,683.683] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 原神
+[2026-02-11 22:01:31,460.460] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 真得玩壳虚天了
+[2026-02-11 22:01:36,927.927] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 真得玩壳虚天啊
+[2026-02-11 22:01:39,837.837] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 22:01:40,221.221] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 收刀
+[2026-02-11 22:01:43,748.748] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 瓦，启动！
+[2026-02-11 22:01:46,610.610] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 22:01:53,571.571] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 呃呃
+[2026-02-11 22:01:56,378.378] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): [CQ:image,
+[2026-02-11 22:01:57,250.250] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 妈妈来了
+[2026-02-11 22:02:48,134.134] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): ok我爸回来了让他给
+[2026-02-11 22:02:55,370.370] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 还是不用下床真是太好
+[2026-02-11 22:03:11,726.726] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 烛
+[2026-02-11 22:03:16,182.182] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 卡皮巴拉(819188864): 🐷
+[2026-02-11 22:03:24,253.253] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 卡皮巴拉(819188864): [CQ:reply,
+[2026-02-11 22:04:12,654.654] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 你们亨他派这两个选项
+[2026-02-11 22:04:47,522.522] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): [CQ:reply,
+[2026-02-11 22:04:57,072.072] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 卡皮巴拉(819188864): [CQ:json,d
+[2026-02-11 22:10:01,628.628] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:reply,
+[2026-02-11 22:11:04,515.515] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 好冷好冷
+[2026-02-11 22:12:00,845.845] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:reply,
+[2026-02-11 22:18:20,508.508] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:reply,
+[2026-02-11 22:18:59,954.954] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 22:20:09,638.638] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 准确说这两个mod是
+[2026-02-11 22:20:10,694.694] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 吧
+[2026-02-11 22:20:21,823.823] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 荒野感觉开不开这个选
+[2026-02-11 22:20:45,400.400] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 是
+[2026-02-11 22:20:54,346.346] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 这个渲染模式呢
+[2026-02-11 22:20:56,209.209] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | BEWD(1402303649): 我去我还没用过htp
+[2026-02-11 22:21:43,783.783] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): [CQ:image,
+[2026-02-11 22:21:46,721.721] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 有问题
+[2026-02-11 22:22:28,825.825] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 呜呜呜呜啊啊啊啊啊
+[2026-02-11 22:22:48,096.096] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 看到抖音上有个时代少
+[2026-02-11 22:22:52,661.661] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 不能给群友转
+[2026-02-11 22:22:57,746.746] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 好难过啊
+[2026-02-11 22:23:12,951.951] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 自己欣赏吧
+[2026-02-11 22:23:20,358.358] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 小众爱好自己看就行了
+[2026-02-11 22:23:27,902.902] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 我手输一下文案看看
+[2026-02-11 22:23:34,045.045] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 不过有点长
+[2026-02-11 22:23:51,146.146] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 阳華(2987148330): [CQ:reply,
+[2026-02-11 22:24:41,727.727] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 其实文案比较通用
+[2026-02-11 22:24:41,868.868] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 2725.0 秒，已超过延迟 2692 秒，开始处理
+[2026-02-11 22:24:42,382.382] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 22:24:43,615.615] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：唔…什么文案呀
+[2026-02-11 22:24:46,430.430] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：1774 秒
+[2026-02-11 22:25:11,101.101] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 日常(3298943128): 唔…什么文案呀
+[2026-02-11 22:25:53,738.738] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 看
+[2026-02-11 22:25:59,923.923] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 是812想看的哟
+[2026-02-11 22:26:00,113.113] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:61) | 开始生成回复……
+[2026-02-11 22:26:00,757.757] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 呃呃
+[2026-02-11 22:26:01,366.366] INFO     [MainThread|MainProcess] root (response_handler.py:process_passive_response:68) | 812：唔…想看什么呀
+##emoji 困惑
+[2026-02-11 22:26:01,946.946] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 别发
+[2026-02-11 22:26:04,610.610] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 😓
+[2026-02-11 22:26:11,149.149] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 能不能杀了
+[2026-02-11 22:26:58,491.491] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 很神必
+[2026-02-11 22:27:11,198.198] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 为什么htp会阻止我
+[2026-02-11 22:27:17,383.383] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 别开了
+[2026-02-11 22:27:25,631.631] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 别惦记你那b htp
+[2026-02-11 22:27:29,494.494] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): 😡
+[2026-02-11 22:28:22,463.463] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 世界也不这样啊
+[2026-02-11 22:28:29,269.269] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 银行业一样一样(1458937257): 牛魔的
+[2026-02-11 22:29:09,216.216] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 我都没用过htp
+[2026-02-11 22:31:43,624.624] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:reply,
+[2026-02-11 22:33:26,503.503] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 吃零食嘻嘻嘻
+[2026-02-11 22:34:31,409.409] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): monsterhun
+[2026-02-11 22:45:05,028.028] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 朝凪海(2217849264): [CQ:reply,
+[2026-02-11 22:45:33,226.226] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 22:47:21,477.477] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:image,
+[2026-02-11 22:48:13,791.791] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 22:48:19,002.002] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 今日首蚌
+[2026-02-11 22:53:17,853.853] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 22:54:02,190.190] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 皮蛋牛逼
+[2026-02-11 22:55:11,577.577] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 水已到(2837354167): 牛逼牛逼
+[2026-02-11 22:55:15,075.075] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): ns2这个续航有点屋
+[2026-02-11 22:55:55,413.413] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 线虫
+[2026-02-11 22:55:55,554.554] INFO     [MainThread|MainProcess] root (response_handler.py:_check_active_reply_delay:215) | 主动回复：距离上次回复 1794.2 秒，已超过延迟 1774 秒，开始处理
+[2026-02-11 22:55:56,088.088] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:130) | 开始主动生成回复……
+[2026-02-11 22:55:57,622.622] INFO     [MainThread|MainProcess] root (response_handler.py:process_active_response:137) | 812：呃呃
+[2026-02-11 22:55:57,633.633] INFO     [MainThread|MainProcess] root (response_handler.py:_update_active_reply_delay:244) | 主动回复成功，已生成新的随机延迟：921 秒
+[2026-02-11 22:56:12,135.135] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): 线虫
+[2026-02-11 22:56:17,804.804] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): [CQ:reply,
+[2026-02-11 22:56:50,513.513] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 是的
+[2026-02-11 22:56:56,266.266] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 同事后天回家了
+[2026-02-11 22:57:08,641.641] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 叫我出来吃个夜宵
+[2026-02-11 22:58:35,951.951] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): [CQ:json,d
+[2026-02-11 22:58:42,698.698] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 还在更
+[2026-02-11 22:59:03,719.719] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 22:59:44,328.328] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 吃泡面嘻嘻嘻
+[2026-02-11 22:59:55,822.822] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 晚上吃完火锅现在又饿
+[2026-02-11 23:00:08,479.479] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | TNW(2716707590): ㊗️
+[2026-02-11 23:00:14,018.018] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 挺好
+[2026-02-11 23:00:20,991.991] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 就该吃哇
+[2026-02-11 23:03:13,561.561] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 吃完了
+[2026-02-11 23:03:17,440.440] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 潇然岂芷(1032831092): 再吃点果冻
+[2026-02-11 23:05:22,520.520] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): [CQ:image,
+[2026-02-11 23:05:23,706.706] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 有点 小衰(790324054): 群友的腰子
+[2026-02-11 23:05:50,793.793] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 呃啊
+[2026-02-11 23:05:54,990.990] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 木大哒木大(249638876): 我也想吃烧烤
+[2026-02-11 23:06:21,176.176] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | Napstablook(1634483575): ㊗️
+[2026-02-11 23:07:13,265.265] INFO     [MainThread|MainProcess] root (main.py:on_group_message:143) | 爱好者爱好者(3196611630): 812睡觉
+[2026-02-11 23:07:19,429.429] INFO     [MainThread|MainProcess] Adapter (logger.py:info:129) | NapCat WebSocket 连接已关闭, 正在尝试重新连接...
