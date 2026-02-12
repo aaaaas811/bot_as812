@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -124,3 +125,15 @@ config.yaml
 *.json
 *.yml
 *.yaml
+=======
+/napcat/
+
+# Ignore log files and log directories
+*.log
+*.log.*
+logs/
+**/logs/
+plugins/*/logs/
+!plugins/CatCat/logs/
+napcat/logs/
+>>>>>>> parent of a45ceccb (日志更新，本仓库以后为本地设备交换用)
