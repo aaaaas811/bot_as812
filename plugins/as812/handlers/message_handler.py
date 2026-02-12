@@ -262,16 +262,6 @@ class MessageHandler:
         current_user_name = current_message.user.nickname or current_message.user.qq
         current_user_qq = str(current_message.user.qq)
 
-        rules = (
-            f"你是群聊机器人。当前与你对话的用户是：{current_user_name}\n\n"
-            "规则：\n"
-            "1. 只回答最新的一条用户消息\n"
-            "2. 忽略历史消息中其他用户之间的对话\n"
-            "3. 回复时不要加用户名前缀"
-        )
-
-        messages.append({"role": "system", "content": rules})
-
         # 加载群历史并合并为一条（只保留机器人和当前用户的消息）
         group_messages = self.log_manager.load_group_history(group_id, chat_config.context_history)
         bot_qq = str(self.config_manager.get_bt_uin())
@@ -296,7 +286,11 @@ class MessageHandler:
         # history_lines 已是时间顺序（旧->新），因为我们从 reversed(group_messages) 收集后未再反转
         if history_lines:
             merged = "\n".join(history_lines)
-            messages.append({"role": "user", "content": "以下是最新几条对话历史：\n" + merged})
+            messages.append({"role": "user", "content": "以下是最新几条对话历史：\n" + 
+                             "==================\n"+merged
+                             + "\n==================\n" +
+                             "请只回答最新一条消息，忽略其他历史对话，不要复读"
+                             })
 
         # 添加当前时间显示
         try:
@@ -310,7 +304,9 @@ class MessageHandler:
             if personality_summary:
                 ps = personality_summary.strip()
                 if ps:
-                    messages.append({"role": "user", "content": f"用户个性总结：\n{ps}"})
+                    messages.append({"role": "user", "content": "==============\n"+
+                                     f"用户个性总结：\n{ps}"
+                                     + "\n==============\n"})
         except Exception:
             pass
 

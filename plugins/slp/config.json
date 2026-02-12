@@ -1,0 +1,15 @@
+{
+    "llm": {
+    "provider": "deepseek",
+    "model": "deepseek-chat",
+    "api_key": "sk-fe78045dba8649898c5605fae73cf0de"
+  },
+  "servers": {
+     "mcpServers": {
+    "MCPTheSpire": {
+      "type": "sse",
+      "url": "http://127.0.0.1:8080/mcp"
+    }
+  }
+  }
+}

@@ -5,6 +5,7 @@ import os
 import base64
 import sys
 import subprocess
+import random
 from pathlib import Path
 from ncatbot.plugin import BasePlugin, CompatibleEnrollment
 from ncatbot.plugin_system import filter_registry
@@ -86,7 +87,12 @@ class as812(BasePlugin):
                 "daily_task",
                 "12:00",
             )
-            _log.info("已注册每日金句定时任务：每天 12:00")
+            self.add_scheduled_task(
+                self.daily_task,
+                "daily_task2",
+                "18:00",
+            )
+            _log.info("已注册每日金句定时任务：每天 12:00 和 18:00")
         except Exception as e:
             _log.warning(f"注册每日金句定时任务失败: {e}")
 
@@ -99,7 +105,13 @@ class as812(BasePlugin):
                 return client.poem.get_saying()
 
             result = await asyncio.to_thread(fetch)
-            text = result if isinstance(result, str) else str(result)
+            # 如果 API 返回字典并含有 text 字段，则优先使用该字段的内容；否则按字符串处理
+            if isinstance(result, dict):
+                text = result.get('text') or str(result)
+            elif isinstance(result, str):
+                text = result
+            else:
+                text = str(result)
 
             active_group_id = self.config_manager.get_active_group_id()
             if active_group_id:
@@ -228,7 +240,12 @@ class as812(BasePlugin):
         )
         
         if response:
-            await self._send_response(msg.group_id, response)
+            # 根据配置的概率决定是否引用消息
+            reply_id = None
+            random_response_way = self.config_manager.get_random_response_way()
+            if random.random() < random_response_way:
+                reply_id = msg.message_id
+            await self._send_response(msg.group_id, response, reply_id)
         else:
             # 尝试主动回复
             active_group_id = self.config_manager.get_active_group_id()
@@ -255,7 +272,7 @@ class as812(BasePlugin):
             msg.raw_message.strip()
         )
     
-    async def _send_response(self, group_id: int, response: str):
+    async def _send_response(self, group_id: int, response: str, reply_id: str = None):
         """发送回复消息"""
         try:
             pause_multiplier, line_pause_multiplier = self.config_manager.get_pause_multipliers()
@@ -284,7 +301,7 @@ class as812(BasePlugin):
                                     try:
                                         data = img_path.read_bytes()
                                         b64 = base64.b64encode(data).decode()
-                                        res = await self.api.post_group_msg(group_id, image=f"base64://{b64}")
+                                        res = await self.api.post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id)
                                     except Exception as e:
                                         _log.error(f"发送表情包失败: {e}")
                                         res = None
@@ -305,7 +322,7 @@ class as812(BasePlugin):
                             if not sent:
                                 # 未找到对应文件，发送提示文本
                                 try:
-                                    res = await self.api.post_group_msg(group_id, f"表情包不存在: {emoji_name}")
+                                    res = await self.api.post_group_msg(group_id, text=f"表情包不存在: {emoji_name}", reply=reply_id)
                                 except Exception as e:
                                     _log.error(f"发送消息失败: {e}")
                                     res = None
@@ -344,7 +361,7 @@ class as812(BasePlugin):
                             _log.warning(f"处理 ##set_emotion 指令失败: {e}")
                         continue
                     try:
-                        res = await self.api.post_group_msg(group_id, line)
+                        res = await self.api.post_group_msg(group_id, text=line, reply=reply_id)
                     except Exception as e:
                         _log.error(f"发送消息失败: {e}")
                         res = None

@@ -1,32 +1,156 @@
 import json
 import os
 
-class MonsterAnalyzer:
-    def __init__(self, data_dir):
-        self.data_dir = os.path.join(data_dir, 'data')
-        self.monster_list = self._load_monster_list()
-        self.meat_data = self._load_meat_data()
 
-    def _load_monster_list(self):
-        list_path = os.path.join(self.data_dir, 'monster_list.json')
+class MonsterAnalyzer:
+    """支持多个数据源（例如 data/mhws 和 data/mhwi）的分析器。
+    方法支持传入 source 参数来选择数据源；若未提供则在所有源中查找并使用第一个匹配项。"""
+
+    def __init__(self, data_dir):
+        base = os.path.join(data_dir, 'data')
+        self.base_data_dir = base
+        self.sources = []  # 可用数据源目录名
+        self.monster_list = []
+        self.meat_data = {}  # { source: { name: [...parts...] } }
+
+        # 探测子目录作为各数据源
+        try:
+            for name in os.listdir(self.base_data_dir):
+                path = os.path.join(self.base_data_dir, name)
+                if os.path.isdir(path):
+                    self.sources.append(name)
+            # 加载每个源的 monster_list.json 和肉质数据
+            for src in self.sources:
+                src_dir = os.path.join(self.base_data_dir, src)
+                lst = self._load_monster_list_for(src_dir)
+                # 将来源信息注入到条目中，便于展示
+                for it in lst:
+                    if isinstance(it, dict):
+                        it.setdefault('source', src)
+                    self.monster_list.append(it)
+
+                self.meat_data[src] = self._load_meat_data_for(src_dir)
+        except Exception:
+            # 兼容老结构：直接在 data 下寻找文件
+            self.sources = []
+            self.monster_list = self._load_monster_list_fallback(data_dir)
+            self.meat_data = {'default': self._load_meat_data_fallback(data_dir)}
+
+    def _load_monster_list_for(self, src_dir):
+        list_path = os.path.join(src_dir, 'monster_list.json')
         try:
             with open(list_path, 'r', encoding='utf-8') as f:
                 return json.load(f)
-        except Exception as e:
-            print(f"怪物列表加载失败: {e}")
+        except Exception:
             return []
 
-    def _load_meat_data(self):
+    def _load_meat_data_for(self, src_dir):
         meat_data = {}
-        for fname in os.listdir(self.data_dir):
-            if fname.endswith('.json') and fname != 'monster_list.json':
-                with open(os.path.join(self.data_dir, fname), 'r', encoding='utf-8') as f:
-                    monster = json.load(f)
-                    meat_data[monster['name']] = monster.get('hitzone_data', [])
+        try:
+            for fname in os.listdir(src_dir):
+                if fname.endswith('.json') and fname != 'monster_list.json':
+                    with open(os.path.join(src_dir, fname), 'r', encoding='utf-8') as f:
+                        monster = json.load(f)
+                        data = monster.get('hitzone_data', [])
+                        # 如果是 mhwi 数据源，进行归一化以兼容旧分析逻辑
+                        if os.path.basename(src_dir).lower() == 'mhwi':
+                            data = [self._normalize_mhwi_entry(e) for e in data]
+                        meat_data[monster.get('name', '')] = data
+        except Exception:
+            pass
+        return meat_data
+
+    def _normalize_mhwi_entry(self, entry):
+        """将 mhwi 格式的单条部位数据转换为兼容旧逻辑的字段。
+
+        转换规则（基于用户提供的映射说明）：
+        - Part -> 部位（去掉括号内的状态）
+        - 括号内内容 -> 列1（状态）
+        - 切断 -> 斩 / 列2
+        - 打击 -> 打 / 列3
+        - 遥远 -> 弹 / 列4
+        - col4 -> 火 / 列5
+        - col5 -> 水 / 列6
+        - col6 -> 雷 / 列7
+        - col7 -> 冰 / 列8
+        - col8 -> 龙 / 列9
+        - col9 -> 晕 / 列10
+        其余字段原样保留（如 耐力）。
+        """
+        out = {}
+        # 处理 Part 与状态
+        part = entry.get('Part', '')
+        status = ''
+        if part and '(' in part and ')' in part:
+            try:
+                name = part[:part.rfind('(')].strip()
+                status = part[part.rfind('(')+1:part.rfind(')')].strip()
+            except Exception:
+                name = part
+        else:
+            name = part
+        out['部位'] = name
+        out['列1'] = status
+
+        def _num(v):
+            try:
+                if v is None:
+                    return ''
+                s = str(v).strip()
+                return s
+            except:
+                return ''
+
+        # 数值映射
+        mapping = [
+            ('切断', '斩', '列2'),
+            ('打击', '打', '列3'),
+            ('遥远', '弹', '列4'),
+            ('col4', '火', '列5'),
+            ('col5', '水', '列6'),
+            ('col6', '雷', '列7'),
+            ('col7', '冰', '列8'),
+            ('col8', '龙', '列9'),
+            ('col9', '晕', '列10')
+        ]
+        for src_key, chi_key, col_key in mapping:
+            val = entry.get(src_key)
+            v = _num(val)
+            out[chi_key] = v
+            out[col_key] = v
+
+        # 复制其他可能的字段
+        for k, v in entry.items():
+            if k in ('Part', '切断', '打击', '遥远', 'col4', 'col5', 'col6', 'col7', 'col8', 'col9'):
+                continue
+            out[k] = v
+
+        return out
+
+    # 兼容性后备（当没有子目录时）
+    def _load_monster_list_fallback(self, data_dir):
+        list_path = os.path.join(data_dir, 'data', 'monster_list.json')
+        try:
+            with open(list_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            return []
+
+    def _load_meat_data_fallback(self, data_dir):
+        meat_data = {}
+        base = os.path.join(data_dir, 'data')
+        try:
+            for fname in os.listdir(base):
+                if fname.endswith('.json') and fname != 'monster_list.json':
+                    with open(os.path.join(base, fname), 'r', encoding='utf-8') as f:
+                        monster = json.load(f)
+                        meat_data[monster.get('name', '')] = monster.get('hitzone_data', [])
+        except Exception:
+            pass
         return meat_data
 
     def get_monster_intro(self, monster_name):
-        # 查找怪物信息
+        # 查找怪物信息（在已加载的 monster_list 中查找）
         monster_info = None
         for m in self.monster_list:
             if m.get('name') == monster_name:
@@ -35,16 +159,18 @@ class MonsterAnalyzer:
         if not monster_info:
             return "未找到该怪物信息"
 
-        # 查找base_data
-        json_path = os.path.join(self.data_dir, f'{monster_name}.json')
+        # 查找对应源下的 json 文件（优先使用 monster_info 中的 source）
         base_data = None
-        if os.path.exists(json_path):
-            try:
-                with open(json_path, 'r', encoding='utf-8') as f:
-                    monster_json = json.load(f)
-                    base_data = monster_json.get('base_data', {})
-            except Exception as e:
-                base_data = None
+        src = monster_info.get('source')
+        if src:
+            json_path = os.path.join(self.base_data_dir, src, f"{monster_name}.json")
+            if os.path.exists(json_path):
+                try:
+                    with open(json_path, 'r', encoding='utf-8') as f:
+                        monster_json = json.load(f)
+                        base_data = monster_json.get('base_data', {})
+                except Exception:
+                    base_data = None
 
         # 组装输出
         lines = [f"图片: {monster_info.get('image','')}",
@@ -61,16 +187,26 @@ class MonsterAnalyzer:
                 v = base_data.get(k, "")
                 if v != "":
                     lines.append(f"{key_map.get(k, k)}：{v}")
-        # 添加弱点查询提示
-        lines.append(f"输入/肉质 {monster_name}查看相应肉质表\n输入/弱点 {monster_name}查看弱点简析")
+        # 添加弱点/肉质查询提示（指示不同数据源命令）
+        lines.append(f"输入/ws肉质 {monster_name} 或 /wi肉质 {monster_name} 查看不同数据源的肉质表\n输入/ws弱点 {monster_name} 或 /wi弱点 {monster_name} 查看弱点简析")
         return "\n".join(lines)
 
-    def get_monster_weakness(self, monster_name):
-        if monster_name not in self.meat_data:
+    def get_monster_weakness(self, monster_name, source=None):
+        # 若指定 source，则从指定的源读取；否则在所有源中查找第一个匹配
+        data = None
+        if source:
+            data = self.meat_data.get(source, {}).get(monster_name)
+        else:
+            for s, table in self.meat_data.items():
+                if monster_name in table:
+                    data = table.get(monster_name)
+                    break
+
+        if not data:
             return "未找到该怪物的肉质数据"
 
         parts = []
-        for part in self.meat_data[monster_name]:
+        for part in data:
             part_name = part.get("部位", "")
             modifier = part.get("列1", "")
             if not modifier:
@@ -199,14 +335,24 @@ class MonsterAnalyzer:
 
         return f"{monster_name}：\n" + "\n".join(lines)
 
-    def get_monster_meat(self, monster_name):
-        if monster_name not in self.meat_data:
+    def get_monster_meat(self, monster_name, source=None):
+        # 同上，支持 source 指定
+        data = None
+        if source:
+            data = self.meat_data.get(source, {}).get(monster_name)
+        else:
+            for s, table in self.meat_data.items():
+                if monster_name in table:
+                    data = table.get(monster_name)
+                    break
+
+        if not data:
             return "未找到该怪物的肉质数据"
 
         parts = []
         header = "从左到右依次为：\n部位 斩 打 弹 火 水 雷 冰 龙"
         lines = [header]
-        for part in self.meat_data[monster_name]:
+        for part in data:
             part_name = part.get("部位", "")
             modifier = part.get("列1", "")
             if not modifier:
@@ -254,6 +400,9 @@ class MonsterAnalyzer:
                 group = state_map[st]
                 for g in group:
                     vals = [g.get(k, -999) for k in ['斩', '打', '弹', '火', '水', '雷', '冰', '龙']]
+                    # 如果这一行所有值均为 -999（即无有效数值），则跳过（避免输出全 '-' 的占位行）
+                    if all(v == -999 for v in vals):
+                        continue
                     vals_str = ' '.join(str(int(v)) if v != -999 else '-' for v in vals)
                     lines.append(f"{g['部位']} {vals_str}")
 

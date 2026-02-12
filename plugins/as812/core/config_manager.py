@@ -84,6 +84,10 @@ class ConfigManager:
     def update_active_delay(self, new_delay: int) -> bool:
         """更新当前主动回复延迟"""
         return self.set("current_active_delay", new_delay)
+    
+    def get_random_response_way(self) -> float:
+        """获取随机回复方式概率"""
+        return float(self.get("random_response_way", 0.0))
 
 
 class PromptManager:

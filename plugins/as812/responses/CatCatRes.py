@@ -120,7 +120,7 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
         tool_instr = (
             "如果需要对消息中的图片进行识别，请输出单独一行 JSON："
             "{\"tool_call\": {\"name\": \"vision_recognize\", \"image_index\": <图片索引>}}。"
-            " 否则直接给出回复文本。"
+            "否则直接给出回复文本。"
         )
         messages.append({"role": "system", "content": tool_instr})
 
@@ -228,8 +228,10 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
                 try:
                         # 指令明确要求：将识图信息自然地融入回复中，不要复读识图列表，不要以“图片识别结果”开头
                     sys_msg = (
+                        "==================================\n" +
                         "识图信息（仅供参考）：\n" + str(tool_result) +
-                        "\n【重要】不要输出识图信息，而是根据当前人设输出。"
+                        "\n【重要】不要输出识图信息，而是根据当前人设，以自然语言输出，可适当概括。"+
+                        "\n=================================="
                     )
                     messages.append({"role": "system", "content": sys_msg})
                 except Exception:
