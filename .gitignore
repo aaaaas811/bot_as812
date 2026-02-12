@@ -126,3 +126,5 @@ config.yaml
 *.yml
 *.yaml
 plugins/as812/config/
+plugins/mh/data/
+plugins/mh/image_cache/
