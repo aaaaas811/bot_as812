@@ -280,6 +280,7 @@ class as812(BasePlugin):
             # 将回复按空行分段
             paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", response) if p.strip()]
             last_sent_id = None
+            is_first_message = True  # 标记是否为第一条消息
             
             for para in paragraphs:
                 # 段内若有多行，则按行分别发送
@@ -301,7 +302,7 @@ class as812(BasePlugin):
                                     try:
                                         data = img_path.read_bytes()
                                         b64 = base64.b64encode(data).decode()
-                                        res = await self.api.post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id)
+                                        res = await self.api.post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
                                     except Exception as e:
                                         _log.error(f"发送表情包失败: {e}")
                                         res = None
@@ -315,6 +316,7 @@ class as812(BasePlugin):
                                             self.log_manager.save_bot_response(str(group_id), bot_resp)
                                         except Exception as e:
                                             _log.warning(f"保存机器人回复日志失败: {e}")
+                                        is_first_message = False  # 发送成功后，标记不再是第一条消息
 
                                     sent = True
                                     break
@@ -322,13 +324,14 @@ class as812(BasePlugin):
                             if not sent:
                                 # 未找到对应文件，发送提示文本
                                 try:
-                                    res = await self.api.post_group_msg(group_id, text=f"表情包不存在: {emoji_name}", reply=reply_id)
+                                    res = await self.api.post_group_msg(group_id, text=f"表情包不存在: {emoji_name}", reply=reply_id if is_first_message else None)
                                 except Exception as e:
                                     _log.error(f"发送消息失败: {e}")
                                     res = None
 
                                 if res:
                                     last_sent_id = str(res)
+                                    is_first_message = False  # 发送成功后，标记不再是第一条消息
 
                             # 表情包指令处理完毕，继续下一行
                         except Exception as e:
@@ -361,7 +364,7 @@ class as812(BasePlugin):
                             _log.warning(f"处理 ##set_emotion 指令失败: {e}")
                         continue
                     try:
-                        res = await self.api.post_group_msg(group_id, text=line, reply=reply_id)
+                        res = await self.api.post_group_msg(group_id, text=line, reply=reply_id if is_first_message else None)
                     except Exception as e:
                         _log.error(f"发送消息失败: {e}")
                         res = None
@@ -377,6 +380,7 @@ class as812(BasePlugin):
                             self.log_manager.save_bot_response(str(group_id), bot_resp)
                         except Exception as e:
                             _log.warning(f"保存机器人回复日志失败: {e}")
+                        is_first_message = False  # 发送成功后，标记不再是第一条消息
                     
                     await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
                 
