@@ -46,26 +46,6 @@ log_manager = LogManager()
 # 配置：名言警句间隔时间（秒）
 famous_words_time = 3600  # 默认1小时
 
-# 名言警句定时任务##############未完成#############
-async def send_famous_words():
-    client = UapiClient("https://uapis.cn")
-    while True:
-        try:
-            result = client.poem.get_saying()
-            # 获取活跃群ID
-            try:
-                with open("config.yaml", "r", encoding="utf-8") as f:
-                    root_config = yaml.safe_load(f)
-                    active_group_id = root_config.get("active_group_id")
-                if active_group_id:
-                    await bot.api.post_group_msg(active_group_id, text=result)
-            except Exception as e:
-                print(f"发送名言警句失败: {e}")
-        except UapiError as exc:
-            print(f"API error: {exc}")
-        await asyncio.sleep(famous_words_time)
-
-
 def load_cat_prompt():
     """从 plugins/as812/config/cat_prompt.txt 文件中读取人设 prompt"""
     try:
@@ -164,31 +144,6 @@ async def on_group_message(msg: GroupMessage):
         bot_state.set_sleep(False)
         await bot.api.post_group_msg(msg.group_id, text="嗯——早上好喵呜喵呜~")
 
-    if text.startswith("/名言警句"):
-        try:
-            file_path = os.path.join(os.path.dirname(__file__), "data", "rgl.txt")
-            with open(file_path, "r", encoding="utf-8") as f:
-                lines = [line.strip() for line in f.readlines() if line.strip()]
-            if not lines:
-                await bot.api.post_group_msg(msg.group_id, text="无话可说")
-                return
-            
-            # 解析次数
-            parts = text.split()
-            count = 1
-            if len(parts) > 1 and parts[1].isdigit():
-                count = int(parts[1])
-                if count > 10:  # 限制最大次数，避免滥用
-                    count = 10
-            
-            # 发送指定次数的名言警句
-            for _ in range(count):
-                quote = random.choice(lines)
-                await bot.api.post_group_msg(msg.group_id, text=quote)
-                if count > 1:
-                    await asyncio.sleep(0.5)  # 避免发送太快
-        except FileNotFoundError:
-            await bot.api.post_group_msg(msg.group_id, text="文件不存在")
 @bot.on_notice() # type: ignore
 @bot_state.ignore_if_sleeping()
 async def on_notice1(event: NoticeEvent):

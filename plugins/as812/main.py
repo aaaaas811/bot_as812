@@ -80,53 +80,6 @@ class as812(BasePlugin):
         except Exception as e:
             _log.warning(f"准备启动 visual_panel 失败: {e}")
     
-        # 注册每日定时任务：每天 12:00 调用每日金句 API 并发送到激活群
-        try:
-            self.add_scheduled_task(
-                self.daily_task,
-                "daily_task",
-                "12:00",
-            )
-            self.add_scheduled_task(
-                self.daily_task,
-                "daily_task2",
-                "18:00",
-            )
-            _log.info("已注册每日金句定时任务：每天 12:00 和 18:00")
-        except Exception as e:
-            _log.warning(f"注册每日金句定时任务失败: {e}")
-
-    async def daily_task(self):
-        """每天定时任务：调用每日金句 API 并发送到激活群"""
-        try:
-            # 使用线程执行同步客户端调用
-            def fetch():
-                client = UapiClient("https://uapis.cn")
-                return client.poem.get_saying()
-
-            result = await asyncio.to_thread(fetch)
-            # 如果 API 返回字典并含有 text 字段，则优先使用该字段的内容；否则按字符串处理
-            if isinstance(result, dict):
-                text = result.get('text') or str(result)
-            elif isinstance(result, str):
-                text = result
-            else:
-                text = str(result)
-
-            active_group_id = self.config_manager.get_active_group_id()
-            if active_group_id:
-                try:
-                    await self.api.post_group_msg(int(active_group_id), text=text)
-                    _log.info(f"已发送每日金句到群 {active_group_id}")
-                except Exception as e:
-                    _log.error(f"发送每日金句失败: {e}")
-            else:
-                _log.warning("未配置 active_group_id，跳过发送每日金句")
-
-        except UapiError as exc:
-            _log.error(f"每日金句 API 错误: {exc}")
-        except Exception as exc:
-            _log.error(f"获取每日金句失败: {exc}")
     @filter_registry.group_filter
     @bot_state.ignore_if_sleeping()
     async def on_group_event(self, msg: GroupMessage):
@@ -146,7 +99,9 @@ class as812(BasePlugin):
         # 检查机器人是否被禁言
         if await self.mood_handler.is_bot_muted(self.api, msg.group_id):
             return
-        
+        text = msg.raw_message
+        if text.startswith("/"):
+            return  # 以 / 开头的消息视为命令，交由命令处理器处理，不进入后续流程
         # 处理心情计数
         try:
             await self.mood_handler.process_mood_on_message(self.api, msg.group_id)
