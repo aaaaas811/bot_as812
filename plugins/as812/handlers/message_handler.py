@@ -288,8 +288,7 @@ class MessageHandler:
             merged = "\n".join(history_lines)
             messages.append({"role": "user", "content": "以下是最新几条对话历史：\n" + 
                              "==================\n"+merged
-                             + "\n==================\n" +
-                             "请只回答最新一条消息，忽略其他历史对话，不要复读"
+                             + "\n==================\n" 
                              })
 
         # 添加当前时间显示

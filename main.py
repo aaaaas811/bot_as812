@@ -17,6 +17,7 @@ import random
 import os
 import yaml
 import re
+from collections import defaultdict
 from plugins.as812.responses.CatCatRes import cat_cat_response
 from plugins.as812.core.log_manager import LogManager
 from plugins.as812.core.config_manager import ConfigManager
@@ -45,6 +46,11 @@ config_manager = ConfigManager()
 log_manager = LogManager()
 # 配置：名言警句间隔时间（秒）
 famous_words_time = 3600  # 默认1小时
+
+# 配置：群聊复读功能
+repeat_enabled = True
+# 每个群的复读状态：last_text(上一条消息), streak(连续次数), repeated(当前连续段是否已复读)
+repeat_state = defaultdict(lambda: {"last_text": None, "streak": 0, "repeated": False})
 
 def load_cat_prompt():
     """从 plugins/as812/config/cat_prompt.txt 文件中读取人设 prompt"""
@@ -139,10 +145,29 @@ async def on_group_message(msg: GroupMessage):
             return
         await bot.api.post_group_msg(msg.group_id, text="哦呀斯密....")
         bot_state.set_sleep(True)
+        return
 
     if text == "812起床" and bot_state.is_sleeping():
         bot_state.set_sleep(False)
         await bot.api.post_group_msg(msg.group_id, text="嗯——早上好喵呜喵呜~")
+        return
+
+    # 复读逻辑：连续四条消息完全一致时复读一次；同一连续段只复读一次，避免不断复读
+    if repeat_enabled and text:
+        state = repeat_state[str(msg.group_id)]
+        if text == state["last_text"]:
+            state["streak"] += 1
+        else:
+            state["last_text"] = text
+            state["streak"] = 1
+            state["repeated"] = False
+
+        if state["streak"] >= 4 and not state["repeated"]:
+            try:
+                await bot.api.post_group_msg(msg.group_id, text=text)
+            except Exception:
+                pass
+            state["repeated"] = True
 
 @bot.on_notice() # type: ignore
 @bot_state.ignore_if_sleeping()

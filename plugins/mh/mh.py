@@ -160,24 +160,18 @@ class mh(NcatBotPlugin):
     async def on_group_message(self, msg: GroupMessage):
         text = msg.raw_message
         text = text.replace("&amp;", "&") 
-        if text == "/helpMH":
+        if text == "/helpMH" or text == "/helpmh":
             menu_text = \
             "直接发送集会码即可记录喵~\n" \
             "/查询 获取集会列表\n" \
             "/删除mhw 删除最近一个 MHW 集会码\n" \
             "/删除mhr 删除最近一个 MHR 集会码\n" \
             "/清空 清空所有集会码\n"\
-            "🔻以下功能暂时仅限wilds🔻\n" \
-            "/爬取ws 更新最新数据\n" \
+            "/爬取ws(wi) 更新最新数据\n" \
             "/怪物列表 列出已收录的怪物名称\n" \
-            "/简介 怪物名字 查询该怪物的信息（等同于 /ws简介）\n" \
-            "/弱点 怪物名字 查询该怪物的弱点简析（等同于 /ws弱点）\n" \
-            "/ws简介 怪物名字 使用 mhws 数据源显示怪物信息\n" \
-            "/wi简介 怪物名字 使用 mhwi 数据源显示怪物信息\n" \
-            "/ws弱点 怪物名字 使用 mhws 数据源显示弱点简析\n" \
-            "/wi弱点 怪物名字 使用 mhwi 数据源显示弱点简析\n" \
-            "/ws肉质 怪物名字 查询 mhws 数据源的肉质表\n" \
-            "/wi肉质 怪物名字 查询 mhwi 数据源的肉质表" 
+            "/ws(wi)简介 怪物名字 查询该怪物的信息\n" \
+            "/ws(wi)弱点 怪物名字 查询该怪物的弱点简析\n" \
+            "/ws(wi)肉质 怪物名字 查询 mhws(mhwi) 数据源的肉质表"
             await msg.reply(text = menu_text, at = False)
         if self.is_mhw_team_code.match(text):
             self.mhw.append(text)

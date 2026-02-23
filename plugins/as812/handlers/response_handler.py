@@ -23,6 +23,8 @@ class ResponseHandler:
         self.message_handler = message_handler
         # 缓存每个群组机器人最后一条消息的时间戳，避免每次从日志中遍历查找
         self._last_bot_message_time = {}
+        # 按群组维护主动回复互斥锁，避免并发消息导致主动回复重复触发
+        self._active_reply_locks = {}
     
     async def process_passive_response(self, 
                                       api_key: str, 
@@ -91,79 +93,89 @@ class ResponseHandler:
                                      cat_prompt: str, 
                                      group_id: str) -> Optional[str]:
         """处理主动回复"""
-        # 检查延迟
-        if not await self._check_active_reply_delay(group_id):
+        group_lock = self._active_reply_locks.get(group_id)
+        if group_lock is None:
+            group_lock = asyncio.Lock()
+            self._active_reply_locks[group_id] = group_lock
+
+        # 避免并发消息同时进入主动回复链路
+        if group_lock.locked():
             return None
+
+        async with group_lock:
+            # 检查延迟
+            if not await self._check_active_reply_delay(group_id):
+                return None
         
-        # 获取最新的用户消息
-        current_message, user_qq = self._get_latest_user_message(group_id)
-        if not current_message:
-            _log.warning("无合适的新消息，无法主动回复")
-            return None
+            # 获取最新的用户消息
+            current_message, user_qq = self._get_latest_user_message(group_id)
+            if not current_message:
+                _log.warning("无合适的新消息，无法主动回复")
+                return None
         
-        # 加载个人数据
-        personal_history, user_info_str, personality_summary, personal_log_file = \
-            await self._load_personal_data(group_id, user_qq)
+            # 加载个人数据
+            personal_history, user_info_str, personality_summary, personal_log_file = \
+                await self._load_personal_data(group_id, user_qq)
         
-        # 记录用户消息到个人日志
-        self._append_to_personal_chat_history(personal_log_file, current_message["message"])
+            # 记录用户消息到个人日志
+            self._append_to_personal_chat_history(personal_log_file, current_message["message"])
         
-        # 更新用户信息
-        current_user_info = (
-            f"QQ昵称: {current_message['nickname']}, "
-            f"QQ号: {current_message['qq']}, "
-            f"群昵称: {current_message['card']}, "
-            f"群权限: {self.message_handler.map_role(current_message['role'])}, "
-            f"群头衔: {current_message['title']}"
-        )
+            # 更新用户信息
+            current_user_info = (
+                f"QQ昵称: {current_message['nickname']}, "
+                f"QQ号: {current_message['qq']}, "
+                f"群昵称: {current_message['card']}, "
+                f"群权限: {self.message_handler.map_role(current_message['role'])}, "
+                f"群头衔: {current_message['title']}"
+            )
         
-        if user_info_str != current_user_info:
-            self.log_manager.update_personal_log_header(personal_log_file, current_user_info)
+            if user_info_str != current_user_info:
+                self.log_manager.update_personal_log_header(personal_log_file, current_user_info)
         
-        # 构建聊天历史
-        chat_message = ChatMessage.from_dict(current_message)
-        chat_history, summary_threshold = self.message_handler.build_chat_history(
-            group_id, chat_message, personality_summary
-        )
+            # 构建聊天历史
+            chat_message = ChatMessage.from_dict(current_message)
+            chat_history, summary_threshold = self.message_handler.build_chat_history(
+                group_id, chat_message, personality_summary
+            )
         
-        # 生成回复
-        _log.info("开始主动生成回复……")
-        image_api_key = self.config_manager.get_image_api_key()
-        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key)
+            # 生成回复
+            _log.info("开始主动生成回复……")
+            image_api_key = self.config_manager.get_image_api_key()
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key)
         
-        if not response:
-            return None
+            if not response:
+                return None
         
-        _log.info(f"812：{response}")
+            _log.info(f"812：{response}")
         
-        # 检查是否需要总结
-        if len(personal_history) >= summary_threshold:
-            await summarize_personality(personal_log_file, api_key, user_info_str)
-            self.log_manager.clear_personal_chat_history(personal_log_file)
+            # 检查是否需要总结
+            if len(personal_history) >= summary_threshold:
+                await summarize_personality(personal_log_file, api_key, user_info_str)
+                self.log_manager.clear_personal_chat_history(personal_log_file)
         
-        # 保存机器人回复
-        bot_qq = self.config_manager.get_bt_uin()
-        bot_response = BotResponse(
-            timestamp=time.time(),
-            message=response,
-            qq=bot_qq
-        )
+            # 保存机器人回复
+            bot_qq = self.config_manager.get_bt_uin()
+            bot_response = BotResponse(
+                timestamp=time.time(),
+                message=response,
+                qq=bot_qq
+            )
         
-        # 保存到群历史
-        self.log_manager.save_bot_response(group_id, bot_response)
+            # 保存到群历史
+            self.log_manager.save_bot_response(group_id, bot_response)
         
-        # 保存到个人日志
-        self._append_to_personal_chat_history(personal_log_file, f"812：{response}")
-        # 记录内存中的最后回复时间，优先使用此时间判断主动回复延迟
-        try:
-            self._last_bot_message_time[group_id] = bot_response.timestamp
-        except Exception:
-            pass
+            # 保存到个人日志
+            self._append_to_personal_chat_history(personal_log_file, f"812：{response}")
+            # 记录内存中的最后回复时间，优先使用此时间判断主动回复延迟
+            try:
+                self._last_bot_message_time[group_id] = bot_response.timestamp
+            except Exception:
+                pass
         
-        # 更新延迟
-        self._update_active_reply_delay()
+            # 更新延迟
+            self._update_active_reply_delay()
         
-        return response
+            return response
     
     async def _load_personal_data(self, group_id: str, user_qq: str) -> Tuple[list, str, str, str]:
         """加载个人数据（异步包装）"""
