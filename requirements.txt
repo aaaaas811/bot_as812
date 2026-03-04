@@ -5,4 +5,5 @@ jieba==0.42.1
 requests>=2.31.0
 beautifulsoup4>=4.12.2
 aiohttp>=3.9.1
+Pillow>=10.0.0
 uapi

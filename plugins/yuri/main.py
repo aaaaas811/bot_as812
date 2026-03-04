@@ -161,9 +161,6 @@ class Yuri(BasePlugin):
             images = await self.get_images(1, None)
             if images:
                 await self.api.post_group_msg(int(self.ACTIVE_GROUP_ID), image=images[0])
-        elif cmd == '一言':
-            quote = await self.get_daily_quote()
-            await self.api.post_group_msg(int(self.ACTIVE_GROUP_ID), text=quote)
         elif cmd == 'yuriwords':
             words = await self.get_yuri_words()
             await self.api.post_group_msg(int(self.ACTIVE_GROUP_ID), text=words)

@@ -65,7 +65,7 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复。"
         
-        instruction = "请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。"
+        instruction = "请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。不直接输出识图结果。"
         responsetimes = "每行只说一句话。根据问题确定回复多少行。尽量不超过五行。##之后的内容表示特殊行为，不算做回复内容。不要复读。"
         
         messages = [{"role": "system", "content": persona}]
@@ -230,7 +230,7 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
                     sys_msg = (
                         "==================================\n" +
                         "识图信息（仅供参考）：\n" + str(tool_result) +
-                        "\n【重要】不要输出识图信息，而是根据当前人设，以自然语言输出，可适当概括。"+
+                        "\n【重要】不要直输出识图信息，而是根据当前人设，以自然语言输出，可适当概括。"+
                         "\n=================================="
                     )
                     messages.append({"role": "system", "content": sys_msg})
