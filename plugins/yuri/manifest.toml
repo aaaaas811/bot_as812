@@ -1,0 +1,9 @@
+name = "Yuri"
+version = "1.0"
+main = "main.py"
+author = "as811"
+description = "Yuri 图片与文案插件"
+entry_class = "Yuri"
+pip_dependencies = []
+
+[dependencies]

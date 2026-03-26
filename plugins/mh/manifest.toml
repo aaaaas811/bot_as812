@@ -1,0 +1,9 @@
+name = "mh"
+version = "0.0.3"
+main = "mh.py"
+author = "as811"
+description = "怪物猎人相关插件"
+entry_class = "mh"
+pip_dependencies = []
+
+[dependencies]

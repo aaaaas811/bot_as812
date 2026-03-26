@@ -1,6 +1,8 @@
-from ncatbot.plugin_system import NcatBotPlugin, filter_registry
+﻿import sdk_compat  # noqa: F401
+from ncatbot.plugin import NcatBotPlugin
+from ncatbot.core import registrar
+from ncatbot.event.qq import GroupMessageEvent
 from ncatbot.utils import get_log
-from ncatbot.core import GroupMessage
 from ncatbot.core import MessageChain, Image
 import re
 import json
@@ -26,6 +28,10 @@ class mh(NcatBotPlugin):
     mhw=list()
     mhr=list()
     analyzer = None
+
+    @registrar.qq.on_group_message()
+    async def _v5_group_event_entry(self, event: GroupMessageEvent):
+        await self.on_group_message(event)
 
     async def on_load(self):
         print(f"{self.name} 插件已加载")
@@ -111,7 +117,7 @@ class mh(NcatBotPlugin):
         lines.append(f"输入/ws肉质 {monster_name} 或 /wi肉质 {monster_name} 查看不同数据源的肉质表\n输入/弱点 {monster_name} 查看弱点简析")
         return "\n".join(lines)
 
-    async def _send_intro_reply(self, msg: GroupMessage, reply: str):
+    async def _send_intro_reply(self, msg: GroupMessageEvent, reply: str):
         """将简介字符串解析为图片+文本并发送到群。"""
         lines = reply.split('\n')
         image_url = None
@@ -134,8 +140,14 @@ class mh(NcatBotPlugin):
             msg_chain.append(text_reply)
 
         if msg_chain:
+            has_image = cache_path is not None
+            has_text = bool(text_reply.strip())
             try:
-                await self.api.post_group_msg(group_id=msg.group_id, rtf=MessageChain(msg_chain))
+                await self.api.qq.post_group_msg(
+                    group_id=msg.group_id,
+                    image=str(cache_path) if has_image else None,
+                    text=text_reply if has_text else None,
+                )
             except Exception as e:
                 LOG.error(f"发送消息失败: {e}")
                 if cache_path and cache_path.exists():
@@ -144,18 +156,21 @@ class mh(NcatBotPlugin):
                         LOG.info(f"已删除缓存图片: {cache_path}")
                         cache_path = await self._download_image(image_url)
                         if cache_path:
-                            msg_chain[0] = Image(str(cache_path))
-                            await self.api.post_group_msg(group_id=msg.group_id, rtf=MessageChain(msg_chain))
+                            await self.api.qq.post_group_msg(
+                                group_id=msg.group_id,
+                                image=str(cache_path),
+                                text=text_reply if has_text else None,
+                            )
                         else:
-                            await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
+                            await self.api.qq.post_group_msg(group_id=msg.group_id, text=text_reply)
                     except Exception as retry_e:
                         LOG.error(f"重试发送失败: {retry_e}")
-                        await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
+                        await self.api.qq.post_group_msg(group_id=msg.group_id, text=text_reply)
                 else:
-                    await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
+                    await self.api.qq.post_group_msg(group_id=msg.group_id, text=text_reply)
         else:
             # 仅文本（或没有内容）
-            await self.api.post_group_msg(group_id=msg.group_id, text=text_reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=text_reply)
 
     def _build_meat_table_payload(self, monster_name: str, source: str):
         """构建肉质表图片所需的数据结构。"""
@@ -377,12 +392,12 @@ class mh(NcatBotPlugin):
         image.save(output_path)
         return output_path
 
-    async def _send_meat_table_image(self, msg: GroupMessage, monster_name: str, source: str, tip_text: str = ""):
+    async def _send_meat_table_image(self, msg: GroupMessageEvent, monster_name: str, source: str, tip_text: str = ""):
         """发送肉质 PNG，失败时回退到文本。"""
         payload, err = self._build_meat_table_payload(monster_name, source)
         if err:
             reply = f"{tip_text}\n{err}" if tip_text else err
-            await self.api.post_group_msg(group_id=msg.group_id, text=reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
 
         background_url = self._find_monster_image_url(monster_name, source)
@@ -398,22 +413,24 @@ class mh(NcatBotPlugin):
             fallback_text = f"{tip_text}\n{fallback_text}"
 
         if not image_path:
-            await self.api.post_group_msg(group_id=msg.group_id, text=fallback_text)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=fallback_text)
             return
 
-        msg_chain = [Image(str(image_path))]
-        if tip_text:
-            msg_chain.append(tip_text)
+        image_arg = str(image_path)
+        text_arg = tip_text if tip_text else None
 
         try:
-            await self.api.post_group_msg(group_id=msg.group_id, rtf=MessageChain(msg_chain))
+            await self.api.qq.post_group_msg(
+                group_id=msg.group_id,
+                image=image_arg,
+                text=text_arg,
+            )
         except Exception as e:
             LOG.error(f"发送肉质 PNG 失败: {e}")
-            await self.api.post_group_msg(group_id=msg.group_id, text=fallback_text)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=fallback_text)
 
-    @filter_registry.group_filter
     @bot_state.ignore_if_sleeping()
-    async def on_group_message(self, msg: GroupMessage):
+    async def on_group_message(self, msg: GroupMessageEvent):
         text = msg.raw_message
         text = text.replace("&amp;", "&") 
         if text == "/helpMH" or text == "/helpmh":
@@ -431,41 +448,41 @@ class mh(NcatBotPlugin):
             await msg.reply(text = menu_text, at = False)
         if self.is_mhw_team_code.match(text):
             self.mhw.append(text)
-            await self.api.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
         if self.is_mhr_team_code.match(text):
                 self.mhr.append(text)
-                await self.api.post_group_msg(group_id=msg.group_id,text=f"收到 MHR 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
+                await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHR 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
         if text == "/查询":
             mhw_codes = "\n".join(self.mhw) if len(self.mhw) > 0 else "暂无 MHW 集会码"
             mhr_codes = "\n".join(self.mhr) if len(self.mhr) > 0 else "暂无 MHR 集会码"
-            await self.api.post_group_msg(group_id=msg.group_id,text=f"MHW集会码：\n{mhw_codes}\nMHR 集会码：\n{mhr_codes} ")
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"MHW集会码：\n{mhw_codes}\nMHR 集会码：\n{mhr_codes} ")
         if text == "/删除mhw":
             if len(self.mhw) == 0:
-                await self.api.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHW 集会码喵~")
+                await self.api.qq.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHW 集会码喵~")
                 return
-            await self.api.post_group_msg(group_id=msg.group_id,text="已删除一个 MHW 集会码"+self.mhw[-1]+"喵~")
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text="已删除一个 MHW 集会码"+self.mhw[-1]+"喵~")
             self.mhw.pop()
         if text == "/删除mhr":
             if len(self.mhr) == 0:
-                await self.api.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHR 集会码喵~")
+                await self.api.qq.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHR 集会码喵~")
                 return
-            await self.api.post_group_msg(group_id=msg.group_id,text="已删除一个 MHR 集会码"+self.mhr[-1]+"喵~")
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text="已删除一个 MHR 集会码"+self.mhr[-1]+"喵~")
             self.mhr.pop()
         if text == "/清空":
             self.mhw.clear()
             self.mhr.clear()
-            await self.api.post_group_msg(group_id=msg.group_id,text="已清空所有集会码喵~")
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text="已清空所有集会码喵~")
         if text == "/爬取ws":
             # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
             os.system(f"{sys.executable} plugins/mh/mhws_Wiki_Crawler/src/mhws_crawler.py")
             self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
-            await self.api.post_group_msg(group_id=msg.group_id, text="已爬取并更新ws肉质表数据")
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新ws肉质表数据")
             return
         if text == "/爬取wi":
             # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
             os.system(f"{sys.executable} plugins/mh/mhwi_Wiki_Crawler/src/mhwi_crawler.py")
             self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
-            await self.api.post_group_msg(group_id=msg.group_id, text="已爬取并更新wi肉质表数据")
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新wi肉质表数据")
             return
         if text.strip() == "/怪物列表":
             # 按数据源分组输出，优先显示 mhwi，然后 mhws
@@ -503,7 +520,7 @@ class mh(NcatBotPlugin):
                 parts.append(' '.join(uniq))
 
             reply = '\n'.join(parts) if parts else '暂无已收录的怪物'
-            await self.api.post_group_msg(group_id=msg.group_id, text=reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
         
         # 支持按数据源查询简介
@@ -521,26 +538,26 @@ class mh(NcatBotPlugin):
         if text.startswith("/ws弱点 "):
             monster_name = text[len("/ws弱点 "):].strip()
             reply = self.analyzer.get_monster_weakness(monster_name, source='mhws')
-            await self.api.post_group_msg(group_id=msg.group_id, text=reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
         if text.startswith("/wi弱点 "):
             monster_name = text[len("/wi弱点 "):].strip()
             reply = self.analyzer.get_monster_weakness(monster_name, source='mhwi')
-            await self.api.post_group_msg(group_id=msg.group_id, text=reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
         # 向后兼容旧命令 /简介 —— 映射到 mhws 并给出提示
         if text.startswith("/简介 "):
             monster_name = text[3:].strip()
             reply = self.analyzer.get_monster_intro(monster_name)
             reply = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi简介 )\n" + reply
-            await self.api.post_group_msg(group_id=msg.group_id, text=reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
         # 向后兼容旧命令 /弱点 —— 映射到 mhws 并给出提示
         if text.startswith("/弱点 "):
             monster_name = text[len("/弱点 "):].strip()
             reply = self.analyzer.get_monster_weakness(monster_name, source='mhws')
             reply = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi弱点 )\n" + reply
-            await self.api.post_group_msg(group_id=msg.group_id, text=reply)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
         # 支持两个肉质命令，分别对应 mhws 与 mhwi 数据源
         if text.startswith("/ws肉质 "):

@@ -1,11 +1,33 @@
-"""简化的API工具函数"""
-"""简化的API工具函数：支持 DeepSeek (HTTP) 和本地 Ollama 模型调用"""
+"""简化的API工具函数：支持兼容 OpenAI 的 HTTP 模型与本地 Ollama 调用"""
 import aiohttp
-import json
+from pathlib import Path
 from typing import Optional
+
+import yaml
 from ncatbot.utils.logger import get_log
 
 _log = get_log()
+
+DEFAULT_HTTP_BASE_URL = "http://172.22.2.242:3010/v1"
+DEFAULT_HTTP_MODEL = "Qwen3.5-Plus"
+
+
+def _get_http_chat_config() -> tuple[str, str]:
+    """读取 HTTP 聊天模型的 base_url 与 model 配置。"""
+    cfg_path = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
+    try:
+        if not cfg_path.exists():
+            return DEFAULT_HTTP_BASE_URL, DEFAULT_HTTP_MODEL
+
+        with open(cfg_path, "r", encoding="utf-8") as f:
+            cfg = yaml.safe_load(f) or {}
+
+        base_url = str(cfg.get("api_base_url", DEFAULT_HTTP_BASE_URL)).strip()
+        model = str(cfg.get("api_model", DEFAULT_HTTP_MODEL)).strip()
+        return base_url or DEFAULT_HTTP_BASE_URL, model or DEFAULT_HTTP_MODEL
+    except Exception as e:
+        _log.warning(f"读取 HTTP 模型配置失败，使用默认值: {e}")
+        return DEFAULT_HTTP_BASE_URL, DEFAULT_HTTP_MODEL
 
 # 尝试导入 ollama SDK（AsyncClient）用于本地模型 qwen3:8b
 try:
@@ -17,19 +39,20 @@ except Exception:
 
 
 async def call_deepseek_chat_api(api_key: str, messages: list) -> Optional[str]:
-    """调用 DeepSeek HTTP API（保留旧实现）"""
+    """调用兼容 OpenAI 的 HTTP Chat API。"""
     if not api_key:
         _log.error("API密钥为空")
         return None
 
-    url = "https://api.deepseek.com/chat/completions"
+    base_url, model_name = _get_http_chat_config()
+    url = f"{base_url.rstrip('/')}/chat/completions"
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
     }
 
     data = {
-        "model": "deepseek-chat",
+        "model": model_name,
         "messages": messages,
         "temperature": 0.3,
         "frequency_penalty": 1.3,
@@ -46,10 +69,10 @@ async def call_deepseek_chat_api(api_key: str, messages: list) -> Optional[str]:
                     return result.get("choices", [{}])[0].get("message", {}).get("content", "")
                 else:
                     error_text = await response.text()
-                    _log.error(f"DeepSeek API错误: {response.status} - {error_text}")
+                    _log.error(f"HTTP Chat API错误: {response.status} - {error_text}")
                     return None
     except Exception as e:
-        _log.error(f"调用DeepSeek API失败: {e}")
+        _log.error(f"调用HTTP Chat API失败: {e}")
         return None
 
 

@@ -15,22 +15,61 @@ class MoodHandler:
     
     def __init__(self, config_manager: ConfigManager):
         self.config_manager = config_manager
+        self._mute_api_missing_warned = False
+
+    async def _get_group_shut_list(self, api, group_id: int):
+        """兼容不同 SDK 版本的禁言列表查询入口。"""
+        # 旧版/兼容层入口
+        if hasattr(api, "get_group_shut_list"):
+            return await api.get_group_shut_list(group_id=group_id)
+
+        # v5 推荐入口：api.qq.query.get_group_shut_list
+        qq_api = getattr(api, "qq", None)
+        if qq_api is not None:
+            query_api = getattr(qq_api, "query", None)
+            if query_api is not None and hasattr(query_api, "get_group_shut_list"):
+                return await query_api.get_group_shut_list(group_id)
+            if hasattr(qq_api, "get_group_shut_list"):
+                return await qq_api.get_group_shut_list(group_id)
+
+        if not self._mute_api_missing_warned:
+            _log.warning("当前 SDK 未提供禁言列表查询接口，已跳过禁言检测")
+            self._mute_api_missing_warned = True
+        return None
+
+    def _get_bot_uin(self) -> Optional[str]:
+        """获取机器人 QQ 号，兼容 bot_uin / bt_uin 两种配置键。"""
+        try:
+            with open("config.yaml", "r", encoding="utf-8") as f:
+                root_config = yaml.safe_load(f) or {}
+        except Exception as e:
+            _log.warning(f"读取根配置失败: {e}")
+            root_config = {}
+
+        bot_uin = root_config.get("bot_uin") or root_config.get("bt_uin")
+        if not bot_uin:
+            bot_uin = self.config_manager.get_bt_uin()
+
+        if not bot_uin:
+            _log.warning("未找到机器人 QQ 配置（bot_uin/bt_uin）")
+            return None
+        return str(bot_uin)
     
     async def is_bot_muted(self, api, group_id: int) -> bool:
         """检查机器人是否被禁言"""
         try:
-            # 从根目录 config.yaml 获取 bt_uin
-            with open("config.yaml", "r", encoding="utf-8") as f:
-                root_config = yaml.safe_load(f)
-            bt_uin = root_config.get("bt_uin")
-            if not bt_uin:
-                _log.warning("未找到 bt_uin 配置")
+            bot_uin = self._get_bot_uin()
+            if not bot_uin:
                 return False
-            
-            shut_list = await api.get_group_shut_list(group_id=group_id)
+
+            shut_list = await self._get_group_shut_list(api, group_id)
+            if shut_list is None:
+                return False
             # 尝试访问数据
             members = None
-            if hasattr(shut_list, 'members'):
+            if isinstance(shut_list, list):
+                members = shut_list
+            elif hasattr(shut_list, 'members'):
                 members = shut_list.members
             elif hasattr(shut_list, 'data'):
                 members = shut_list.data
@@ -47,17 +86,17 @@ class MoodHandler:
                 return False
             
             for member in members:
-                if isinstance(member, dict) and member.get('uin') == str(bt_uin):
+                if isinstance(member, dict) and member.get('uin') == bot_uin:
                     shut_up_time = member.get('shutUpTime', 0)
                     _log.debug(f"找到机器人成员，shutUpTime={shut_up_time}, current_time={time.time()}")
                     if shut_up_time > time.time():
-                        _log.info(f"812 {bt_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
+                        _log.info(f"812 {bot_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
                         return True
-                elif hasattr(member, 'user_id') and str(member.user_id) == str(bt_uin):
+                elif hasattr(member, 'user_id') and str(member.user_id) == bot_uin:
                     shut_up_time = getattr(member, 'shut_up_timestamp', 0)
                     _log.debug(f"找到机器人成员，shut_up_timestamp={shut_up_time}, current_time={time.time()}")
                     if shut_up_time > time.time():
-                        _log.info(f"812 {bt_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
+                        _log.info(f"812 {bot_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
                         return True
         except Exception as e:
             _log.warning(f"检查禁言状态失败: {e}")
@@ -153,24 +192,35 @@ class MoodHandler:
     async def _update_group_card(self, api, group_id: int, mood: str) -> None:
         """更新群名片"""
         try:
-            # 获取机器人QQ
-            with open("config.yaml", "r", encoding="utf-8") as f:
-                root_config = yaml.safe_load(f)
-            bt_uin = root_config.get("bt_uin")
-            
-            if not bt_uin:
-                _log.warning("未找到 bt_uin 配置，无法更新群名片")
+            bot_uin = self._get_bot_uin()
+
+            if not bot_uin:
+                _log.warning("未找到机器人 QQ 配置，无法更新群名片")
                 return
             
             # 构建新的群名片
             new_card = f"812(bot)({mood})"
-            
-            # 更新群名片
-            await api.set_group_card(
-                group_id=group_id,
-                user_id=int(bt_uin),
-                card=new_card
-            )
+
+            # 更新群名片（优先 v5 路径，回退旧路径）
+            qq_api = getattr(api, "qq", None)
+            if qq_api is not None:
+                manage_api = getattr(qq_api, "manage", None)
+                if manage_api is not None and hasattr(manage_api, "set_group_card"):
+                    await manage_api.set_group_card(group_id, int(bot_uin), new_card)
+                elif hasattr(qq_api, "set_group_card"):
+                    await qq_api.set_group_card(group_id=group_id, user_id=int(bot_uin), card=new_card)
+                else:
+                    raise AttributeError("qq api 未提供 set_group_card")
+            elif hasattr(api, "manage") and hasattr(api.manage, "set_group_card"):
+                await api.manage.set_group_card(group_id, int(bot_uin), new_card)
+            elif hasattr(api, "set_group_card"):
+                await api.set_group_card(
+                    group_id=group_id,
+                    user_id=int(bot_uin),
+                    card=new_card
+                )
+            else:
+                raise AttributeError("当前 SDK 未提供 set_group_card 接口")
             _log.info(f"已更新群名片为: {new_card}")
             
         except Exception as e:

@@ -1,0 +1,9 @@
+name = "_31966_plugin"
+version = "0.2.0"
+main = "plugin.py"
+author = "31966"
+description = "legacy main.py 逻辑迁移示例插件"
+entry_class = "PluginPlugin"
+pip_dependencies = []
+
+[dependencies]

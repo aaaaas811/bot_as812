@@ -1,4 +1,6 @@
 """as812插件主入口（重构版）"""
+import sdk_compat  # noqa: F401
+
 import asyncio
 import re
 import os
@@ -6,10 +8,11 @@ import base64
 import sys
 import subprocess
 import random
+from types import SimpleNamespace
 from pathlib import Path
-from ncatbot.plugin import BasePlugin, CompatibleEnrollment
-from ncatbot.plugin_system import filter_registry
-from ncatbot.core.message import GroupMessage, PrivateMessage
+from ncatbot.core import registrar
+from ncatbot.event.qq import GroupMessageEvent, PrivateMessageEvent
+from ncatbot.plugin import NcatBotPlugin
 from ncatbot.utils.logger import get_log
 
 from .core.config_manager import ConfigManager, PromptManager
@@ -26,10 +29,8 @@ from uapi.errors import UapiError
 
 _log = get_log()
 
-bot = CompatibleEnrollment()  # 兼容回调函数注册器
 
-
-class as812(BasePlugin):
+class as812(NcatBotPlugin):
     """as812插件主类"""
     
     name = "as812"  # 插件名称
@@ -80,20 +81,75 @@ class as812(BasePlugin):
         except Exception as e:
             _log.warning(f"准备启动 visual_panel 失败: {e}")
     
-    @filter_registry.group_filter
+    def _adapt_group_event(self, event: GroupMessageEvent):
+        """将 v5 事件适配为旧逻辑可用的数据结构。"""
+        sender = getattr(event, "sender", None)
+        if sender is None:
+            sender = SimpleNamespace(
+                nickname=getattr(event, "nickname", ""),
+                user_id=getattr(event, "user_id", None),
+                card=getattr(event, "card", ""),
+                role=getattr(event, "role", ""),
+                title=getattr(event, "title", ""),
+            )
+        return SimpleNamespace(
+            raw_message=getattr(event, "raw_message", "") or "",
+            user_id=getattr(event, "user_id", None),
+            group_id=getattr(event, "group_id", None),
+            message=getattr(event, "message", []) or [],
+            message_id=getattr(event, "message_id", None),
+            sender=sender,
+            timestamp=getattr(event, "timestamp", None),
+            time=getattr(event, "time", None),
+        )
+
+    async def _qq_get_msg(self, message_id):
+        """兼容不同 SDK 版本的取消息接口。"""
+        qq_api = getattr(self.api, "qq", None)
+        if qq_api is not None:
+            query_api = getattr(qq_api, "query", None)
+            if query_api is not None and hasattr(query_api, "get_msg"):
+                return await query_api.get_msg(message_id)
+            if hasattr(qq_api, "get_msg"):
+                return await qq_api.get_msg(message_id)
+        if hasattr(self.api, "get_msg"):
+            return await self.api.get_msg(message_id)
+        raise AttributeError("当前 SDK 未提供 get_msg 接口")
+
+    async def _qq_post_group_msg(self, group_id, **kwargs):
+        """兼容不同 SDK 版本的群消息发送接口。"""
+        qq_api = getattr(self.api, "qq", None)
+        if qq_api is not None and hasattr(qq_api, "post_group_msg"):
+            return await qq_api.post_group_msg(group_id, **kwargs)
+        if hasattr(self.api, "post_group_msg"):
+            return await self.api.post_group_msg(group_id, **kwargs)
+        raise AttributeError("当前 SDK 未提供 post_group_msg 接口")
+
+    async def _qq_delete_msg(self, message_id):
+        """兼容不同 SDK 版本的撤回消息接口。"""
+        qq_api = getattr(self.api, "qq", None)
+        if qq_api is not None and hasattr(qq_api, "delete_msg"):
+            return await qq_api.delete_msg(message_id)
+        if hasattr(self.api, "delete_msg"):
+            return await self.api.delete_msg(message_id)
+        raise AttributeError("当前 SDK 未提供 delete_msg 接口")
+
+    @registrar.qq.on_group_command("测试as812")
     @bot_state.ignore_if_sleeping()
-    async def on_group_event(self, msg: GroupMessage):
+    async def on_group_event(self, event: GroupMessageEvent):
         """群事件处理"""
+        msg = self._adapt_group_event(event)
         if msg.raw_message == "测试as812" and msg.user_id == bot_state.MASTER_UIN:
             try:
-                await self.api.post_group_msg(msg.group_id, text="NCatBot插件as812测试成功喵")
+                await self._qq_post_group_msg(msg.group_id, text="NCatBot插件as812测试成功喵")
             except Exception as e:
                 _log.error(f"发送测试消息失败: {e}")
     
-    @filter_registry.group_filter
+    @registrar.qq.on_group_message()
     @bot_state.ignore_if_sleeping()
-    async def on_group_message(self, msg: GroupMessage):
+    async def on_group_message(self, event: GroupMessageEvent):
         """群消息处理"""
+        msg = self._adapt_group_event(event)
         _log.info(f"{msg.sender.nickname}({msg.sender.user_id}): {msg.raw_message[:10]}")
         
         # 检查机器人是否被禁言
@@ -124,7 +180,7 @@ class as812(BasePlugin):
         try:
             if getattr(chat_message, "reply_id", None):
                 try:
-                    orig_event = await self.api.get_msg(chat_message.reply_id)
+                    orig_event = await self._qq_get_msg(chat_message.reply_id)
                     # 优先使用 raw_message（若存在），否则尝试展平 message 段数组
                     orig_text = None
                     if hasattr(orig_event, "raw_message") and orig_event.raw_message:
@@ -213,16 +269,17 @@ class as812(BasePlugin):
                 if active_response:
                     await self._send_response(msg.group_id, active_response)
     
-    @filter_registry.private_filter
+    @registrar.qq.on_private_message()
     @bot_state.ignore_if_sleeping()
-    async def on_private_message(self, msg: PrivateMessage):
+    async def on_private_message(self, event: PrivateMessageEvent):
         """私聊消息处理"""
+        msg = event
         super_user = self.config_manager.get_super_user()
         if str(msg.user_id) != super_user:
             return
         
         await self.command_handler.handle_private_command(
-            self.api, 
+            self.api.qq,
             msg.user_id, 
             msg.raw_message.strip()
         )
@@ -257,7 +314,7 @@ class as812(BasePlugin):
                                     try:
                                         data = img_path.read_bytes()
                                         b64 = base64.b64encode(data).decode()
-                                        res = await self.api.post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
+                                        res = await self._qq_post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
                                     except Exception as e:
                                         _log.error(f"发送表情包失败: {e}")
                                         res = None
@@ -279,7 +336,7 @@ class as812(BasePlugin):
                             if not sent:
                                 # 未找到对应文件，发送提示文本
                                 try:
-                                    res = await self.api.post_group_msg(group_id, text=f"表情包不存在: {emoji_name}", reply=reply_id if is_first_message else None)
+                                    res = await self._qq_post_group_msg(group_id, text=f"表情包不存在: {emoji_name}", reply=reply_id if is_first_message else None)
                                 except Exception as e:
                                     _log.error(f"发送消息失败: {e}")
                                     res = None
@@ -295,7 +352,7 @@ class as812(BasePlugin):
                     if line == "##revoke":
                         if last_sent_id:
                             try:
-                                await self.api.delete_msg(last_sent_id)
+                                await self._qq_delete_msg(last_sent_id)
                             except Exception as e:
                                 _log.error(f"撤回消息失败: {e}")
                         continue
@@ -319,7 +376,7 @@ class as812(BasePlugin):
                             _log.warning(f"处理 ##set_emotion 指令失败: {e}")
                         continue
                     try:
-                        res = await self.api.post_group_msg(group_id, text=line, reply=reply_id if is_first_message else None)
+                        res = await self._qq_post_group_msg(group_id, text=line, reply=reply_id if is_first_message else None)
                     except Exception as e:
                         _log.error(f"发送消息失败: {e}")
                         res = None

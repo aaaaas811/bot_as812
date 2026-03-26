@@ -1,7 +1,9 @@
 """消息处理器"""
+import os
 import jieba
 import html
 import random
+import yaml
 from datetime import datetime
 from collections import Counter
 from typing import List, Dict, Any, Tuple
@@ -31,6 +33,80 @@ class MessageHandler:
             "owner": "群主"
         }
         return role_mapping.get(role, role)
+
+    @staticmethod
+    def _detect_segment_type(message) -> str | None:
+        """检测消息段类型，兼容旧 dict 段与 v5 pydantic 段。"""
+        # 1) 旧式 dict 段
+        try:
+            if isinstance(message, dict):
+                mtype = message.get("type")
+                if mtype:
+                    return str(mtype)
+        except Exception:
+            pass
+
+        # 2) 旧式对象段
+        mtype = getattr(message, "msg_seg_type", None)
+        if mtype:
+            return str(mtype)
+
+        # 3) v5 pydantic 段（无 type 字段）
+        cls_name = message.__class__.__name__.lower()
+        class_map = {
+            "plaintext": "text",
+            "text": "text",
+            "at": "at",
+            "reply": "reply",
+            "image": "image",
+            "record": "record",
+            "video": "video",
+            "file": "file",
+            "face": "face",
+            "emoji": "face",
+            "forward": "forward",
+        }
+        if cls_name in class_map:
+            return class_map[cls_name]
+
+        # 4) 字段兜底推断
+        if hasattr(message, "user_id"):
+            return "at"
+        if hasattr(message, "text"):
+            return "text"
+        if hasattr(message, "id"):
+            return "reply"
+        if hasattr(message, "file"):
+            return "image"
+
+        return None
+
+    def _resolve_bot_uin(self) -> str | None:
+        """解析机器人 QQ 号，兼容不同配置来源。"""
+        bot_uin = getattr(bot_config, "bot_uin", None) or getattr(bot_config, "bt_uin", None)
+        if bot_uin:
+            return str(bot_uin)
+
+        # 插件配置中可能存在 bt_uin
+        try:
+            cfg_uin = self.config_manager.get_bt_uin()
+            if cfg_uin:
+                return str(cfg_uin)
+        except Exception:
+            pass
+
+        # 根配置兜底：config.yaml
+        try:
+            if os.path.exists("config.yaml"):
+                with open("config.yaml", "r", encoding="utf-8") as f:
+                    root_cfg = yaml.safe_load(f) or {}
+                root_uin = root_cfg.get("bot_uin") or root_cfg.get("bt_uin")
+                if root_uin:
+                    return str(root_uin)
+        except Exception:
+            pass
+
+        return None
     
     def parse_group_message(self, msg: GroupMessage) -> ChatMessage:
         """解析GroupMessage为ChatMessage对象"""
@@ -53,10 +129,7 @@ class MessageHandler:
         
         # 提取消息内容
         for message in msg.message:
-            try:
-                mtype = message["type"]
-            except Exception:
-                mtype = getattr(message, "msg_seg_type", None)
+            mtype = self._detect_segment_type(message)
 
             if mtype == "text":
                 txt = None
@@ -75,16 +148,21 @@ class MessageHandler:
                         pass
 
             if mtype == "at":
-                qq_val = None
-                if hasattr(message, "qq"):
-                    qq_val = getattr(message, "qq")
+                at_target = None
+                if hasattr(message, "user_id"):
+                    at_target = getattr(message, "user_id")
+                elif hasattr(message, "qq"):
+                    at_target = getattr(message, "qq")
                 else:
                     try:
-                        qq_val = message.get("data", {}).get("qq")
+                        data = message.get("data", {})
+                        at_target = data.get("user_id") or data.get("qq")
                     except Exception:
-                        qq_val = None
-                if qq_val is not None and str(qq_val) == str(bot_config.bt_uin):
-                    text_content = f"@812({bot_config.bt_uin}) " + text_content
+                        at_target = None
+
+                bot_uin = self._resolve_bot_uin()
+                if at_target is not None and bot_uin is not None and str(at_target) == str(bot_uin):
+                    text_content = f"@812({bot_uin}) " + text_content
                     force_reply = True
 
             # Reply 段：尝试将被引用的消息文本抽取并附加到当前文本中，便于保存与后续处理
