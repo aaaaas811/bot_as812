@@ -174,28 +174,6 @@ class PluginPlugin(NcatBotPlugin):
             bot_state.set_sleep(False)
             await self.api.qq.post_group_msg(msg.group_id, text="嗯——早上好喵呜喵呜~")
 
-        if text.startswith("/名言警句"):
-            try:
-                file_path = PROJECT_ROOT / "data" / "rgl.txt"
-                with open(file_path, "r", encoding="utf-8") as f:
-                    lines = [line.strip() for line in f.readlines() if line.strip()]
-                if not lines:
-                    await self.api.qq.post_group_msg(msg.group_id, text="无话可说")
-                    return
-
-                parts = text.split()
-                count = 1
-                if len(parts) > 1 and parts[1].isdigit():
-                    count = min(10, int(parts[1]))
-
-                for _ in range(count):
-                    quote = random.choice(lines)
-                    await self.api.qq.post_group_msg(msg.group_id, text=quote)
-                    if count > 1:
-                        await asyncio.sleep(0.5)
-            except FileNotFoundError:
-                await self.api.qq.post_group_msg(msg.group_id, text="文件不存在")
-
     @registrar.qq.on_poke()
     @bot_state.ignore_if_sleeping()
     async def on_poke(self, event: NoticeEvent):

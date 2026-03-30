@@ -34,7 +34,7 @@ class Yuri(NcatBotPlugin):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.image_cache_dir = Path(__file__).parent / "image_cache"
-        self.data_dir = Path(__file__).parent.parent.parent / "data"
+        self.data_dir = Path(__file__).parent / "data"
         self.image_cache_dir.mkdir(parents=True, exist_ok=True)
 
     async def on_load(self):
@@ -54,7 +54,7 @@ class Yuri(NcatBotPlugin):
             print(f"已注册定时任务：每隔{time_interval}小时发布一次")
         except Exception as e:
             print(f"注册定时任务失败: {e}")
-
+    @bot_state.ignore_if_sleeping()
     async def daily_task(self):
         """定时任务：随机执行一个指令"""
         await self.execute_random_command()
@@ -296,7 +296,7 @@ class Yuri(NcatBotPlugin):
         except Exception as e:
             _log.error(f"获取百合台词异常: {e}")
             return None
-
+    @bot_state.ignore_if_sleeping()
     async def execute_random_command(self):
         """随机执行一个指令"""
         commands = ['yuri', 'yuriwords', '名言警句']

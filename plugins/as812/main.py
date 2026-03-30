@@ -8,6 +8,7 @@ import base64
 import sys
 import subprocess
 import random
+from typing import Any
 from types import SimpleNamespace
 from pathlib import Path
 from ncatbot.core import registrar
@@ -21,6 +22,7 @@ from .handlers.message_handler import MessageHandler
 from .handlers.response_handler import ResponseHandler
 from .handlers.mood_handler import MoodHandler
 from .handlers.command_handler import CommandHandler
+from .handlers.bilibili_handler import BilibiliHandler
 from .models.message_models import BotResponse
 
 import bot_state
@@ -28,6 +30,20 @@ from uapi import UapiClient
 from uapi.errors import UapiError
 
 _log = get_log()
+
+
+class _NoopRegistrar:
+    """当未提供 bilibili 注册器时，保证装饰器不报错。"""
+
+    def __getattr__(self, _name):
+        def _decorator_factory(*_args, **_kwargs):
+            def _decorator(func):
+                return func
+            return _decorator
+        return _decorator_factory
+
+
+bili_registrar = getattr(registrar, "bilibili", _NoopRegistrar())
 
 
 class as812(NcatBotPlugin):
@@ -45,6 +61,7 @@ class as812(NcatBotPlugin):
         self.response_handler = None
         self.mood_handler = None
         self.command_handler = None
+        self.bilibili_handler = None
         self._assets_dir = Path(__file__).parent / "assests"
     
     async def on_load(self):
@@ -67,6 +84,8 @@ class as812(NcatBotPlugin):
             self.prompt_manager,
             self.log_manager
         )
+        self.bilibili_handler = BilibiliHandler(self.config_manager)
+        await self.bilibili_handler.on_load(self.api)
         
         _log.info(f"{self.name} 插件已加载 (v{self.version})")
         # 以子进程方式启动可视化面板，避免在主进程导入 tkinter/PIL
@@ -80,6 +99,11 @@ class as812(NcatBotPlugin):
                 _log.warning(f"启动 as812 可视化面板失败: {e}")
         except Exception as e:
             _log.warning(f"准备启动 visual_panel 失败: {e}")
+
+    async def on_unload(self):
+        """插件卸载时清理资源。"""
+        if self.bilibili_handler is not None:
+            await self.bilibili_handler.on_unload(self.api)
     
     def _adapt_group_event(self, event: GroupMessageEvent):
         """将 v5 事件适配为旧逻辑可用的数据结构。"""
@@ -283,6 +307,41 @@ class as812(NcatBotPlugin):
             msg.user_id, 
             msg.raw_message.strip()
         )
+
+    @bili_registrar.on_danmu()
+    async def on_bilibili_danmu(self, event: Any):
+        """Bilibili 弹幕事件入口（骨架）。"""
+        if self.bilibili_handler is None:
+            return
+        await self.bilibili_handler.handle_danmu(event)
+
+    @bili_registrar.on_private_message()
+    async def on_bilibili_private_message(self, event: Any):
+        """Bilibili 私信事件入口（骨架）。"""
+        if self.bilibili_handler is None:
+            return
+        await self.bilibili_handler.handle_private_message(event)
+
+    @bili_registrar.on_live_start()
+    async def on_bilibili_live_start(self, event: Any):
+        """Bilibili 开播事件入口（骨架）。"""
+        if self.bilibili_handler is None:
+            return
+        await self.bilibili_handler.handle_live_start(event)
+
+    @bili_registrar.on_live_end()
+    async def on_bilibili_live_end(self, event: Any):
+        """Bilibili 下播事件入口（骨架）。"""
+        if self.bilibili_handler is None:
+            return
+        await self.bilibili_handler.handle_live_end(event)
+
+    @bili_registrar.on_dynamic_new()
+    async def on_bilibili_dynamic_new(self, event: Any):
+        """Bilibili 新动态事件入口（骨架）。"""
+        if self.bilibili_handler is None:
+            return
+        await self.bilibili_handler.handle_dynamic_new(event)
     
     async def _send_response(self, group_id: int, response: str, reply_id: str = None):
         """发送回复消息"""
