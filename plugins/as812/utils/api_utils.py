@@ -8,26 +8,22 @@ from ncatbot.utils.logger import get_log
 
 _log = get_log()
 
-DEFAULT_HTTP_BASE_URL = "http://172.22.2.242:3010/v1"
-DEFAULT_HTTP_MODEL = "Qwen3.5-Plus"
 
 
 def _get_http_chat_config() -> tuple[str, str]:
     """读取 HTTP 聊天模型的 base_url 与 model 配置。"""
     cfg_path = Path(__file__).resolve().parents[1] / "config" / "config.yaml"
     try:
-        if not cfg_path.exists():
-            return DEFAULT_HTTP_BASE_URL, DEFAULT_HTTP_MODEL
 
         with open(cfg_path, "r", encoding="utf-8") as f:
             cfg = yaml.safe_load(f) or {}
 
-        base_url = str(cfg.get("api_base_url", DEFAULT_HTTP_BASE_URL)).strip()
-        model = str(cfg.get("api_model", DEFAULT_HTTP_MODEL)).strip()
-        return base_url or DEFAULT_HTTP_BASE_URL, model or DEFAULT_HTTP_MODEL
+        base_url = str(cfg.get("api_base_url")).strip()
+        model = str(cfg.get("api_model")).strip()
+        return base_url, model
     except Exception as e:
-        _log.warning(f"读取 HTTP 模型配置失败，使用默认值: {e}")
-        return DEFAULT_HTTP_BASE_URL, DEFAULT_HTTP_MODEL
+        _log.warning(f"读取 HTTP 模型配置失败")
+        return None, None
 
 # 尝试导入 ollama SDK（AsyncClient）用于本地模型 qwen3:8b
 try:
