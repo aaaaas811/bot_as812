@@ -342,7 +342,7 @@ class MessageHandler:
 
         # 加载群历史并合并为一条（只保留机器人和当前用户的消息）
         group_messages = self.log_manager.load_group_history(group_id, chat_config.context_history)
-        bot_qq = str(self.config_manager.get_bt_uin())
+        bot_qq = str(self.config_manager.get_bt_uin() or "")
 
         history_lines: List[str] = []
         # 遍历历史（从近到远），但我们最后希望按时间顺序展示，因此先收集再反转

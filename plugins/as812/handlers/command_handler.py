@@ -1,5 +1,6 @@
 """命令处理器"""
 import os
+import time
 from typing import Dict, Any
 from ncatbot.utils.logger import get_log
 from ..core.config_manager import ConfigManager, PromptManager
@@ -11,11 +12,12 @@ _log = get_log()
 
 class CommandHandler:
     """命令处理器类"""
-    
-    def __init__(self, config_manager: ConfigManager, prompt_manager: PromptManager, log_manager: LogManager):
+
+    def __init__(self, config_manager: ConfigManager, prompt_manager: PromptManager, log_manager: LogManager, rag_manager=None):
         self.config_manager = config_manager
         self.prompt_manager = prompt_manager
         self.log_manager = log_manager
+        self.rag_manager = rag_manager
     
     async def handle_private_command(self, api, user_id: int, message: str) -> None:
         """处理私聊命令"""
@@ -31,6 +33,23 @@ class CommandHandler:
             await self._handle_manual_summary(api, user_id)
         elif message.startswith("reset_summary "):
             await self._handle_reset_summary(api, user_id, message)
+        # RAG 命令
+        elif message == "rag_stats":
+            await self._handle_rag_stats(api, user_id)
+        elif message == "rag_list":
+            await self._handle_rag_list(api, user_id)
+        elif message.startswith("rag_add "):
+            await self._handle_rag_add(api, user_id, message)
+        elif message.startswith("rag_import "):
+            await self._handle_rag_import(api, user_id, message)
+        elif message.startswith("rag_remove "):
+            await self._handle_rag_remove(api, user_id, message)
+        elif message == "rag_clear":
+            await self._handle_rag_clear(api, user_id)
+        elif message == "rag_enable":
+            await self._handle_rag_enable(api, user_id, True)
+        elif message == "rag_disable":
+            await self._handle_rag_enable(api, user_id, False)
     
     async def _handle_view_config(self, api, user_id: int) -> None:
         """查看配置"""
@@ -63,11 +82,11 @@ class CommandHandler:
         if key in self.config_manager.config and key != "api_key":
             # 尝试转换类型
             if key in ["active_group_id", "super_user"]:
-                self.config_manager.config[key] = str(value)
+                normalized_value = str(value)
             else:
-                self.config_manager.config[key] = value
+                normalized_value = value
             
-            if self.config_manager.save_config():
+            if self.config_manager.set(key, normalized_value):
                 await api.post_private_msg(user_id, text=f"{key} 设置为 {value} 成功")
             else:
                 await api.post_private_msg(user_id, text=f"{key} 设置失败")
@@ -182,3 +201,95 @@ class CommandHandler:
             await api.post_private_msg(user_id, text=f"已重置用户 {target_qq} 的个性总结")
         else:
             await api.post_private_msg(user_id, text=f"未找到用户 {target_qq} 的日志文件")
+
+    # -- RAG 命令处理 --
+
+    async def _handle_rag_stats(self, api, user_id: int) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        stats = self.rag_manager.get_stats()
+        lines = [
+            f"RAG 知识库统计：",
+            f"文档数: {stats['total_documents']}",
+            f"Chunk 数: {stats['total_chunks']}",
+            f"状态: {'启用' if self.rag_manager.enabled else '禁用'}",
+        ]
+        await api.post_private_msg(user_id, text="\n".join(lines))
+
+    async def _handle_rag_list(self, api, user_id: int) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        docs = self.rag_manager.list_knowledge()
+        if not docs:
+            await api.post_private_msg(user_id, text="知识库为空")
+            return
+        lines = [f"知识库文档列表（共 {len(docs)} 个）："]
+        for doc in docs:
+            lines.append(f"  - [{doc['chunk_count']} chunks] {doc['title']} (id: {doc['source_id']})")
+        await api.post_private_msg(user_id, text="\n".join(lines))
+
+    async def _handle_rag_add(self, api, user_id: int, message: str) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        parts = message.split(" ", 1)
+        if len(parts) < 2:
+            await api.post_private_msg(user_id, text="格式: rag_add <标题> <内容>")
+            return
+        # 解析标题和内容
+        content = parts[1].strip()
+        # 尝试按空格拆分标题和内容
+        space_idx = content.find(" ")
+        if space_idx > 0:
+            title = content[:space_idx].strip()
+            body = content[space_idx + 1:].strip()
+        else:
+            title = f"手动添加_{int(time.time())}"
+            body = content
+
+        count = await self.rag_manager.add_text(body, title=title)
+        await api.post_private_msg(user_id, text=f"已添加文档 '{title}'，共 {count} 个 chunks")
+
+    async def _handle_rag_import(self, api, user_id: int, message: str) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        parts = message.split(" ", 1)
+        if len(parts) < 2:
+            await api.post_private_msg(user_id, text="格式: rag_import <文件路径> [标题]")
+            return
+        args = parts[1].strip().split(" ", 1)
+        filepath = args[0]
+        title = args[1] if len(args) > 1 else ""
+        count = await self.rag_manager.import_file(filepath, title)
+        await api.post_private_msg(user_id, text=f"已从文件导入 {count} 个 chunks")
+
+    async def _handle_rag_remove(self, api, user_id: int, message: str) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        parts = message.split(" ", 1)
+        if len(parts) < 2:
+            await api.post_private_msg(user_id, text="格式: rag_remove <source_id>")
+            return
+        source_id = parts[1].strip()
+        count = self.rag_manager.remove(source_id)
+        await api.post_private_msg(user_id, text=f"已删除 {count} 个 chunks（source_id: {source_id}）")
+
+    async def _handle_rag_clear(self, api, user_id: int) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        self.rag_manager.clear()
+        await api.post_private_msg(user_id, text="知识库已清空")
+
+    async def _handle_rag_enable(self, api, user_id: int, enable: bool) -> None:
+        if not self.rag_manager:
+            await api.post_private_msg(user_id, text="RAG 管理器未初始化")
+            return
+        self.rag_manager.enabled = enable
+        self.config_manager.set("rag_enabled", enable)
+        status = "启用" if enable else "禁用"
+        await api.post_private_msg(user_id, text=f"RAG 已{status}")

@@ -16,11 +16,12 @@ _log = get_log()
 
 class ResponseHandler:
     """响应处理器类"""
-    
-    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, message_handler: MessageHandler):
+
+    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, message_handler: MessageHandler, rag_manager=None):
         self.config_manager = config_manager
         self.log_manager = log_manager
         self.message_handler = message_handler
+        self.rag_manager = rag_manager
         # 缓存每个群组机器人最后一条消息的时间戳，避免每次从日志中遍历查找
         self._last_bot_message_time = {}
         # 按群组维护主动回复互斥锁，避免并发消息导致主动回复重复触发
@@ -59,10 +60,15 @@ class ResponseHandler:
             self.log_manager.clear_personal_chat_history(personal_log_file)
             personal_history = []
         
+        # RAG 检索
+        rag_context = ""
+        if self.rag_manager and self.rag_manager.should_retrieve(msg.message):
+            rag_context, _ = await self.rag_manager.retrieve(msg.message)
+
         # 生成回复
         _log.info("开始生成回复……")
         image_api_key = self.config_manager.get_image_api_key()
-        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key)
+        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
         
         if not response:
             return None
@@ -137,11 +143,46 @@ class ResponseHandler:
             chat_history, summary_threshold = self.message_handler.build_chat_history(
                 group_id, chat_message, personality_summary
             )
+
+            # 主动回复场景：若当前消息无文本但包含图片/表情段，提示模型优先考虑识图工具。
+            try:
+                raw_text = str(current_message.get("message", "") or "").strip()
+                msg_arr = current_message.get("message_array") or []
+                has_visual_segment = False
+                for seg in msg_arr:
+                    if not isinstance(seg, dict):
+                        continue
+                    seg_type = str(seg.get("type", "") or "").lower()
+                    if (
+                        "image" in seg_type
+                        or seg_type in ("face", "sticker")
+                        or seg.get("url")
+                        or seg.get("file")
+                        or seg.get("image_url")
+                        or seg.get("file_url")
+                    ):
+                        has_visual_segment = True
+                        break
+
+                if not raw_text and has_visual_segment:
+                    chat_history.append(
+                        {
+                            "role": "system",
+                            "content": "当前触发消息没有文本，仅包含图片/表情。请优先考虑调用 vision_recognize 分析图片后再回复。",
+                        }
+                    )
+            except Exception:
+                pass
         
+            # RAG 检索
+            rag_context = ""
+            if self.rag_manager and self.rag_manager.should_retrieve(current_message.get("message", "")):
+                rag_context, _ = await self.rag_manager.retrieve(current_message.get("message", ""))
+
             # 生成回复
             _log.info("开始主动生成回复……")
             image_api_key = self.config_manager.get_image_api_key()
-            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key)
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
         
             if not response:
                 return None
@@ -204,10 +245,10 @@ class ResponseHandler:
         last_bot_message_time = self._last_bot_message_time.get(group_id, 0)
 
         if last_bot_message_time == 0:
-            bot_qq = self.config_manager.get_bt_uin()
+            bot_qq = str(self.config_manager.get_bt_uin() or "")
             messages = self.log_manager.load_group_history(group_id, limit=100)
             for msg in reversed(messages):
-                if msg.get("qq") == bot_qq:
+                if str(msg.get("qq", "")) == bot_qq:
                     timestamp = msg.get("timestamp")
                     if timestamp:
                         last_bot_message_time = float(timestamp)
@@ -215,6 +256,7 @@ class ResponseHandler:
 
         # 如果从未发送过消息，跳过本次主动回复
         if last_bot_message_time == 0:
+            _log.info("主动回复跳过：未找到机器人历史回复时间")
             return False
         
         # 检查延迟
@@ -222,6 +264,9 @@ class ResponseHandler:
         time_since_last_reply = current_time - last_bot_message_time
         
         if time_since_last_reply < current_delay:
+            _log.info(
+                f"主动回复跳过：距离上次回复 {time_since_last_reply:.1f} 秒，未达到延迟 {current_delay} 秒"
+            )
             return False
         
         _log.info(f"主动回复：距离上次回复 {time_since_last_reply:.1f} 秒，已超过延迟 {current_delay} 秒，开始处理")
@@ -229,11 +274,11 @@ class ResponseHandler:
     
     def _get_latest_user_message(self, group_id: str) -> Tuple[Optional[dict], Optional[str]]:
         """获取最新的用户消息"""
-        bot_qq = self.config_manager.get_bt_uin()
+        bot_qq = str(self.config_manager.get_bt_uin() or "")
         messages = self.log_manager.load_group_history(group_id, limit=100)
         
         for msg in messages:
-            msg_qq = msg.get("qq")
+            msg_qq = str(msg.get("qq", ""))
             msg_content = msg.get("message", "")
             
             # 排除机器人自己的消息和命令消息

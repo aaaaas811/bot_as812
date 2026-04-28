@@ -3,3 +3,4 @@ aiohttp==3.11.13
 aiofiles==24.1.0
 jieba==0.42.1
 ollama
+numpy==2.2.6

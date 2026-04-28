@@ -24,6 +24,23 @@ class LogManager:
         group_dir = os.path.join(self.base_log_dir, str(group_id))
         os.makedirs(group_dir, exist_ok=True)
         return os.path.join(group_dir, f"{user_qq}.log")
+
+    def _read_text_with_fallback(self, file_path: str) -> str:
+        """读取文本文件，优先 UTF-8，失败时回退到常见中文编码。"""
+        with open(file_path, "rb") as f:
+            raw = f.read()
+
+        for encoding in ("utf-8", "utf-8-sig", "gb18030"):
+            try:
+                text = raw.decode(encoding)
+                if encoding != "utf-8":
+                    _log.warning(f"检测到非 UTF-8 文件，已使用 {encoding} 读取: {file_path}")
+                return text
+            except UnicodeDecodeError:
+                continue
+
+        _log.warning(f"文件编码异常，已使用替换模式读取: {file_path}")
+        return raw.decode("utf-8", errors="replace")
     
     def save_group_message(self, group_id: str, message: ChatMessage) -> bool:
         """保存群消息到群历史"""
@@ -55,16 +72,16 @@ class LogManager:
         
         messages = []
         try:
-            with open(log_path, "r", encoding="utf-8") as f:
-                lines = f.readlines()
-                for line in reversed(lines):
-                    if len(messages) >= limit:
-                        break
-                    try:
-                        message_data = json.loads(line.strip())
-                        messages.append(message_data)
-                    except json.JSONDecodeError:
-                        continue
+            content = self._read_text_with_fallback(log_path)
+            lines = content.splitlines()
+            for line in reversed(lines):
+                if len(messages) >= limit:
+                    break
+                try:
+                    message_data = json.loads(line.strip())
+                    messages.append(message_data)
+                except json.JSONDecodeError:
+                    continue
         except Exception as e:
             _log.error(f"加载群历史失败: {e}")
         
@@ -83,8 +100,7 @@ class LogManager:
         
         if os.path.exists(log_path):
             try:
-                with open(log_path, "r", encoding="utf-8") as f:
-                    content = f.read()
+                content = self._read_text_with_fallback(log_path)
                 
                 # 解析基本信息
                 if "该用户的基本信息：" in content:
@@ -137,9 +153,8 @@ class LogManager:
         try:
             if not os.path.exists(log_path):
                 return False
-            
-            with open(log_path, "r", encoding="utf-8") as f:
-                content = f.read()
+
+            content = self._read_text_with_fallback(log_path)
             
             # 更新用户信息
             if "该用户的基本信息：" in content:
@@ -172,9 +187,8 @@ class LogManager:
         try:
             if not os.path.exists(log_path):
                 return False
-            
-            with open(log_path, "r", encoding="utf-8") as f:
-                content = f.read()
+
+            content = self._read_text_with_fallback(log_path)
             
             # 分割内容，保留头部，清空聊天记录
             parts = content.split("\n\n过往聊天记录：\n")

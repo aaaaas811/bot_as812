@@ -60,7 +60,7 @@ def format_group_chat(messages):
     return out
 
 
-async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
+async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, rag_context=""):
     try:
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复。"
@@ -76,6 +76,8 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
             messages.append({"role": "system", "content": instruction})
         if responsetimes:
             messages.append({"role": "system", "content": responsetimes})
+        if rag_context:
+            messages.append({"role": "system", "content": rag_context})
         try:
             # 在 messages 中加入当前 assests 根目录下的表情包列表（作为 system 行）
             try:
@@ -187,12 +189,79 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
                     tool_result = "[识图失败：未找到对应图片]"
                 else:
                     # 获取图片数据：支持 http(s) 下载或本地文件读取或直接 base64 字符串
-                    async def _fetch_image_b64(u: str) -> str:
+                    async def _fetch_image_b64(u: str) -> list[str]:
+                        import base64
+                        import io
+
+                        def _ext_to_mime(path_or_url: str) -> str:
+                            low = (path_or_url or "").lower()
+                            if ".gif" in low:
+                                return "image/gif"
+                            if ".png" in low:
+                                return "image/png"
+                            if ".webp" in low:
+                                return "image/webp"
+                            if ".jpeg" in low or ".jpg" in low:
+                                return "image/jpeg"
+                            return "image/jpeg"
+
+                        def _gif_to_frame_data_urls(data: bytes, max_frames: int = 4) -> list[str]:
+                            """将 GIF 均匀抽样拆帧，转成 PNG data URL 列表。"""
+                            try:
+                                from PIL import Image
+
+                                urls: list[str] = []
+                                with Image.open(io.BytesIO(data)) as im:
+                                    n_frames = max(1, int(getattr(im, "n_frames", 1) or 1))
+                                    sample_count = min(max_frames, n_frames)
+                                    if sample_count == 1:
+                                        frame_indexes = [0]
+                                    else:
+                                        step = (n_frames - 1) / (sample_count - 1)
+                                        frame_indexes = sorted({int(round(i * step)) for i in range(sample_count)})
+
+                                    for frame_idx in frame_indexes:
+                                        im.seek(frame_idx)
+                                        rgb = im.convert("RGB")
+                                        out = io.BytesIO()
+                                        rgb.save(out, format="PNG")
+                                        b64 = base64.b64encode(out.getvalue()).decode("utf-8")
+                                        urls.append(f"data:image/png;base64,{b64}")
+
+                                return urls
+                            except Exception:
+                                return []
+
+                        def _bytes_to_data_urls(data: bytes, mime_hint: str = "image/jpeg") -> list[str]:
+                            if not data:
+                                return []
+
+                            if "gif" in (mime_hint or "").lower():
+                                frames = _gif_to_frame_data_urls(data)
+                                if frames:
+                                    return frames
+
+                            b64 = base64.b64encode(data).decode("utf-8")
+                            return [f"data:{mime_hint or 'image/jpeg'};base64,{b64}"]
+
                         u = u or ''
                         u = u.strip()
+                        if not u:
+                            return []
+
+                        # 已经是 data URL，直接返回。
+                        if u.startswith('data:image'):
+                            return [u]
+
+                        # 兼容 base64:// 前缀。
+                        if u.startswith('base64://'):
+                            raw = u[len('base64://'):]
+                            if raw:
+                                return [f"data:image/jpeg;base64,{raw}"]
+
                         # 已是 base64（较长且无 http 开头），直接返回
                         if len(u) > 100 and not u.startswith('http') and not u.startswith('/'):
-                            return u
+                            return [f"data:image/jpeg;base64,{u}"]
                         # HTTP 下载
                         if u.startswith('http'):
                             try:
@@ -200,10 +269,11 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
                                     async with session.get(u, timeout=15) as resp:
                                         if resp.status == 200:
                                             data = await resp.read()
-                                            import base64
-                                            return base64.b64encode(data).decode('utf-8')
+                                            ctype = (resp.headers.get('Content-Type') or '').split(';', 1)[0].strip().lower()
+                                            mime = ctype if ctype.startswith('image/') else _ext_to_mime(u)
+                                            return _bytes_to_data_urls(data, mime)
                             except Exception:
-                                return ''
+                                return []
                         # 本地文件
                         try:
                             # 相对路径优先到 assests 目录
@@ -211,15 +281,15 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None):
                             fp = os.path.join(base, u) if not os.path.isabs(u) else u
                             if os.path.exists(fp):
                                 with open(fp, 'rb') as f:
-                                    import base64
-                                    return base64.b64encode(f.read()).decode('utf-8')
+                                    data = f.read()
+                                    return _bytes_to_data_urls(data, _ext_to_mime(fp))
                         except Exception:
-                            return ''
-                        return ''
+                            return []
+                        return []
 
-                    img_b64 = await _fetch_image_b64(img_url)
-                    if img_b64:
-                        tool_result = await call_image_recognition(image_api_key or api_key, img_b64)
+                    img_inputs = await _fetch_image_b64(img_url)
+                    if img_inputs:
+                        tool_result = await call_image_recognition(image_api_key or api_key, img_inputs)
                     else:
                         tool_result = "[识图失败：无法获取图片数据]"
 

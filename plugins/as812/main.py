@@ -24,6 +24,7 @@ from .handlers.mood_handler import MoodHandler
 from .handlers.command_handler import CommandHandler
 from .handlers.bilibili_handler import BilibiliHandler
 from .models.message_models import BotResponse
+from .rag import RAGManager, RAGConfig
 
 import bot_state
 from uapi import UapiClient
@@ -62,6 +63,7 @@ class as812(NcatBotPlugin):
         self.mood_handler = None
         self.command_handler = None
         self.bilibili_handler = None
+        self.rag_manager = None
         self._assets_dir = Path(__file__).parent / "assests"
     
     async def on_load(self):
@@ -72,17 +74,38 @@ class as812(NcatBotPlugin):
         self.config_manager = ConfigManager()
         self.prompt_manager = PromptManager()
         self.log_manager = LogManager()
+
+        # 初始化 RAG 管理器
+        rag_enabled = self.config_manager.get("rag_enabled", False)
+        rag_config = RAGConfig(
+            enabled=rag_enabled,
+            embedding_mode=self.config_manager.get("rag_embedding_mode", "api"),
+            embedding_model=self.config_manager.get("rag_embedding_model", "text-embedding-3-small"),
+            embedding_dim=int(self.config_manager.get("rag_embedding_dim", 1536)),
+            top_k=int(self.config_manager.get("rag_top_k", 5)),
+            similarity_threshold=float(self.config_manager.get("rag_similarity_threshold", 0.5)),
+            chunk_size=int(self.config_manager.get("rag_chunk_size", 512)),
+            chunk_overlap=int(self.config_manager.get("rag_chunk_overlap", 64)),
+            chunk_strategy=self.config_manager.get("rag_chunk_strategy", "paragraph"),
+            trigger_mode=self.config_manager.get("rag_trigger_mode", "keyword"),
+            trigger_keywords=self.config_manager.get("rag_trigger_keywords", ["什么是", "怎么", "如何", "攻略", "帮助", "help"]),
+        )
+        self.rag_manager = RAGManager(config=rag_config)
+        _log.info(f"RAG 管理器已初始化 (enabled={rag_enabled})")
+
         self.message_handler = MessageHandler(self.config_manager, self.log_manager)
         self.response_handler = ResponseHandler(
-            self.config_manager, 
-            self.log_manager, 
-            self.message_handler
+            self.config_manager,
+            self.log_manager,
+            self.message_handler,
+            self.rag_manager
         )
         self.mood_handler = MoodHandler(self.config_manager)
         self.command_handler = CommandHandler(
             self.config_manager,
             self.prompt_manager,
-            self.log_manager
+            self.log_manager,
+            self.rag_manager
         )
         self.bilibili_handler = BilibiliHandler(self.config_manager)
         await self.bilibili_handler.on_load(self.api)
@@ -292,6 +315,12 @@ class as812(NcatBotPlugin):
                 )
                 if active_response:
                     await self._send_response(msg.group_id, active_response)
+                else:
+                    _log.info("未发送主动回复：延迟条件未满足或无可用用户消息")
+            else:
+                _log.info(
+                    f"未进入主动回复：当前群 {msg.group_id} 不是 active_group_id({active_group_id})"
+                )
     
     @registrar.qq.on_private_message()
     @bot_state.ignore_if_sleeping()
@@ -301,11 +330,38 @@ class as812(NcatBotPlugin):
         super_user = self.config_manager.get_super_user()
         if str(msg.user_id) != super_user:
             return
+
+        raw_text = (msg.raw_message or "").strip()
+        match = re.match(r"^帮我说[：:]\s*(.+)$", raw_text)
+        if match:
+            active_group_id = self.config_manager.get_active_group_id()
+            qq_api = getattr(self.api, "qq", None)
+            if not active_group_id:
+                if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                    await qq_api.post_private_msg(msg.user_id, text="active_group_id 未配置，转述失败")
+                return
+
+            content = match.group(1).strip()
+            if not content:
+                if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                    await qq_api.post_private_msg(msg.user_id, text="格式错误，请使用：帮我说：内容")
+                return
+
+            say_text = f"811说\"{content}\""
+            try:
+                await self._qq_post_group_msg(active_group_id, text=say_text)
+                if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                    await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}")
+            except Exception as e:
+                _log.error(f"私聊转述到群失败: {e}")
+                if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                    await qq_api.post_private_msg(msg.user_id, text=f"转述失败: {e}")
+            return
         
         await self.command_handler.handle_private_command(
             self.api.qq,
             msg.user_id, 
-            msg.raw_message.strip()
+            raw_text
         )
 
     @bili_registrar.on_danmu()
@@ -367,7 +423,7 @@ class as812(NcatBotPlugin):
                         try:
                             # 只在 assests 根目录查找（不递归子目录）
                             sent = False
-                            for ext in (".png", ".jpg", ".jpeg"):
+                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
                                 img_path = self._assets_dir / f"{emoji_name}{ext}"
                                 if img_path.exists() and img_path.is_file():
                                     try:
@@ -408,6 +464,91 @@ class as812(NcatBotPlugin):
                         except Exception as e:
                             _log.warning(f"处理表情包指令失败: {e}")
                         continue
+
+                    # 处理行内表情：例如“唔...我不太懂呢[奶龙大笑]”
+                    # 仅当中括号内容能匹配到本地表情文件时，才拆分为文本+表情发送。
+                    inline_matches = list(re.finditer(r"\[([^\[\]\s]+)\]", line))
+                    if inline_matches:
+                        cursor = 0
+                        handled_inline_emoji = False
+
+                        for inline_match in inline_matches:
+                            emoji_name = inline_match.group(1)
+                            emoji_path = None
+                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
+                                candidate = self._assets_dir / f"{emoji_name}{ext}"
+                                if candidate.exists() and candidate.is_file():
+                                    emoji_path = candidate
+                                    break
+
+                            # 未命中本地表情文件时，保留原文本，不将 [] 视为表情指令。
+                            if emoji_path is None:
+                                continue
+
+                            text_chunk = line[cursor:inline_match.start()].strip()
+                            if text_chunk:
+                                try:
+                                    res = await self._qq_post_group_msg(group_id, text=text_chunk, reply=reply_id if is_first_message else None)
+                                except Exception as e:
+                                    _log.error(f"发送消息失败: {e}")
+                                    res = None
+
+                                if res:
+                                    last_sent_id = str(res)
+                                    try:
+                                        import time as _time
+                                        bot_qq = self.config_manager.get_bt_uin() or "812"
+                                        bot_resp = BotResponse(timestamp=float(_time.time()), message=text_chunk, qq=str(bot_qq))
+                                        self.log_manager.save_bot_response(str(group_id), bot_resp)
+                                    except Exception as e:
+                                        _log.warning(f"保存机器人回复日志失败: {e}")
+                                    is_first_message = False
+
+                            try:
+                                data = emoji_path.read_bytes()
+                                b64 = base64.b64encode(data).decode()
+                                res = await self._qq_post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
+                            except Exception as e:
+                                _log.error(f"发送表情包失败: {e}")
+                                res = None
+
+                            if res:
+                                last_sent_id = str(res)
+                                try:
+                                    import time as _time
+                                    bot_qq = self.config_manager.get_bt_uin() or "812"
+                                    bot_resp = BotResponse(timestamp=float(_time.time()), message=f"[EMOJI]{emoji_name}", qq=str(bot_qq))
+                                    self.log_manager.save_bot_response(str(group_id), bot_resp)
+                                except Exception as e:
+                                    _log.warning(f"保存机器人回复日志失败: {e}")
+                                is_first_message = False
+
+                            handled_inline_emoji = True
+                            cursor = inline_match.end()
+
+                        if handled_inline_emoji:
+                            tail_text = line[cursor:].strip()
+                            if tail_text:
+                                try:
+                                    res = await self._qq_post_group_msg(group_id, text=tail_text, reply=reply_id if is_first_message else None)
+                                except Exception as e:
+                                    _log.error(f"发送消息失败: {e}")
+                                    res = None
+
+                                if res:
+                                    last_sent_id = str(res)
+                                    try:
+                                        import time as _time
+                                        bot_qq = self.config_manager.get_bt_uin() or "812"
+                                        bot_resp = BotResponse(timestamp=float(_time.time()), message=tail_text, qq=str(bot_qq))
+                                        self.log_manager.save_bot_response(str(group_id), bot_resp)
+                                    except Exception as e:
+                                        _log.warning(f"保存机器人回复日志失败: {e}")
+                                    is_first_message = False
+
+                            await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
+                            continue
+
                     if line == "##revoke":
                         if last_sent_id:
                             try:

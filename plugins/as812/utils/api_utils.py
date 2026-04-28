@@ -145,13 +145,18 @@ async def call_local_chat_api(model_name: Optional[str] = None, messages: list =
         return None
 
 
-async def call_image_recognition(api_key: str, image_base64: str) -> Optional[str]:
-    """调用第三方识图接口（优先使用 zai-sdk 的知谱云示例），返回识别结果文本。
+async def call_image_recognition(api_key: str, image_inputs: str | list[str]) -> Optional[str]:
+    """调用第三方识图接口，支持单图或多图输入。
 
-    - image_base64: 图片的 base64 文本（不包含 data: 前缀）
+    - image_inputs: 单个图片 data url/base64，或多个图片 data url/base64 列表。
     - 如果没有可用 SDK，则返回提示性文本以便模型继续处理。
     """
-    if not image_base64:
+    if isinstance(image_inputs, str):
+        image_urls = [image_inputs] if image_inputs else []
+    else:
+        image_urls = [x for x in (image_inputs or []) if x]
+
+    if not image_urls:
         return ""
 
     # 尝试使用 zai-sdk（知谱云）
@@ -165,18 +170,26 @@ async def call_image_recognition(api_key: str, image_base64: str) -> Optional[st
             def _sync_call():
                 try:
                     client = ZhipuAiClient(api_key=api_key)
+                    content_blocks = [
+                        {"type": "image_url", "image_url": {"url": url}}
+                        for url in image_urls
+                    ]
+                    content_blocks.append(
+                        {
+                            "type": "text",
+                            "text": (
+                                "请用一到两句话自然地描述这些图片（它们可能来自同一张 GIF 的多个帧），"
+                                "避免列点或表格。"
+                            )
+                        }
+                    )
                     # 请求外部识图模型，强制要求返回 1-2 句的自然语言描述（不要列点）
                     resp = client.chat.completions.create(
                         model="glm-4.6v-flash",
                         messages=[
                             {
                                 "role": "user",
-                                "content": [
-                                    {"type": "image_url", "image_url": {"url": image_base64}},
-                                    {"type": "text", "text": (
-                                        "请用一到两句话自然地描述这张图片，避免列点或表格，"
-                                    )}
-                                ]
+                                "content": content_blocks
                             }
                         ],
                         thinking={"type": "enabled"}
@@ -214,11 +227,15 @@ async def call_image_recognition(api_key: str, image_base64: str) -> Optional[st
             import asyncio
             loop = asyncio.get_event_loop()
             result = await loop.run_in_executor(None, _sync_call)
+            if result is None:
+                return "[识图失败：服务未返回结果]"
             try:
                 # 如果 result 是对象，尝试提取 content
                 if isinstance(result, dict):
-                    return result.get('content') or result.get('message') or str(result)
-                return getattr(result, 'content', None) or str(result)
+                    text = result.get('content') or result.get('message')
+                    return text if text else "[识图失败：服务未返回结果]"
+                text = getattr(result, 'content', None) or str(result)
+                return text if text and text != "None" else "[识图失败：服务未返回结果]"
             except Exception:
                 return str(result)
 

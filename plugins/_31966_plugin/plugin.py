@@ -280,7 +280,7 @@ class PluginPlugin(NcatBotPlugin):
                     if m:
                         emoji_name = m.group(1)
                         sent = False
-                        for ext in (".png", ".jpg", ".jpeg"):
+                        for ext in (".png", ".jpg", ".jpeg", ".gif"):
                             img_path = assets_dir / f"{emoji_name}{ext}"
                             if img_path.exists() and img_path.is_file():
                                 try:
@@ -313,6 +313,77 @@ class PluginPlugin(NcatBotPlugin):
                             if res:
                                 last_sent_id = str(res)
                         continue
+
+                    inline_matches = list(re.finditer(r"\[([^\[\]\s]+)\]", line))
+                    if inline_matches:
+                        cursor = 0
+                        handled_inline_emoji = False
+
+                        for inline_match in inline_matches:
+                            emoji_name = inline_match.group(1)
+                            emoji_path = None
+                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
+                                candidate = assets_dir / f"{emoji_name}{ext}"
+                                if candidate.exists() and candidate.is_file():
+                                    emoji_path = candidate
+                                    break
+
+                            if emoji_path is None:
+                                continue
+
+                            text_chunk = line[cursor:inline_match.start()].strip()
+                            if text_chunk:
+                                try:
+                                    res = await self.api.qq.post_group_msg(group_id, text=text_chunk)
+                                except Exception:
+                                    res = None
+                                if res:
+                                    last_sent_id = str(res)
+                                    try:
+                                        bot_resp = BotResponse(timestamp=float(time.time()), message=text_chunk, qq="812")
+                                        self.log_manager.save_bot_response(str(group_id), bot_resp)
+                                    except Exception:
+                                        pass
+
+                            try:
+                                data = emoji_path.read_bytes()
+                                b64 = base64.b64encode(data).decode()
+                                res = await self.api.qq.post_group_msg(group_id, image=f"base64://{b64}")
+                            except Exception:
+                                res = None
+
+                            if res:
+                                last_sent_id = str(res)
+                                try:
+                                    bot_resp = BotResponse(
+                                        timestamp=float(time.time()),
+                                        message=f"[EMOJI]{emoji_name}",
+                                        qq="812",
+                                    )
+                                    self.log_manager.save_bot_response(str(group_id), bot_resp)
+                                except Exception:
+                                    pass
+
+                            handled_inline_emoji = True
+                            cursor = inline_match.end()
+
+                        if handled_inline_emoji:
+                            tail_text = line[cursor:].strip()
+                            if tail_text:
+                                try:
+                                    res = await self.api.qq.post_group_msg(group_id, text=tail_text)
+                                except Exception:
+                                    res = None
+                                if res:
+                                    last_sent_id = str(res)
+                                    try:
+                                        bot_resp = BotResponse(timestamp=float(time.time()), message=tail_text, qq="812")
+                                        self.log_manager.save_bot_response(str(group_id), bot_resp)
+                                    except Exception:
+                                        pass
+
+                            await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
+                            continue
 
                     if line == "##revoke":
                         if last_sent_id:

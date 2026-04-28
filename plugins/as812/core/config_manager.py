@@ -38,6 +38,17 @@ class ConfigManager:
         except Exception as e:
             _log.error(f"保存配置文件失败: {e}")
             return False
+
+    def _load_latest_config_from_disk(self) -> Dict[str, Any]:
+        """读取磁盘上的最新配置，避免旧内存配置覆盖用户手动修改。"""
+        try:
+            if os.path.exists(self.config_path):
+                with open(self.config_path, "r", encoding="utf-8") as f:
+                    data = yaml.safe_load(f) or {}
+                    return data if isinstance(data, dict) else {}
+        except Exception as e:
+            _log.warning(f"读取最新配置失败，回退内存配置: {e}")
+        return dict(self.config)
     
     def get(self, key: str, default: Any = None) -> Any:
         """获取配置项"""
@@ -45,7 +56,9 @@ class ConfigManager:
     
     def set(self, key: str, value: Any) -> bool:
         """设置配置项并保存"""
-        self.config[key] = value
+        latest_config = self._load_latest_config_from_disk()
+        latest_config[key] = value
+        self.config = latest_config
         return self.save_config()
     
     def get_api_key(self) -> Optional[str]:
@@ -65,8 +78,22 @@ class ConfigManager:
         return self.get("super_user")
     
     def get_bt_uin(self) -> Optional[str]:
-        """获取机器人QQ号"""
-        return self.get("bt_uin")
+        """获取机器人QQ号，兼容 bt_uin / bot_uin 以及根配置兜底。"""
+        plugin_uin = self.get("bt_uin") or self.get("bot_uin")
+        if plugin_uin:
+            return str(plugin_uin)
+
+        try:
+            if os.path.exists("config.yaml"):
+                with open("config.yaml", "r", encoding="utf-8") as f:
+                    root_cfg = yaml.safe_load(f) or {}
+                root_uin = root_cfg.get("bot_uin") or root_cfg.get("bt_uin")
+                if root_uin:
+                    return str(root_uin)
+        except Exception as e:
+            _log.warning(f"读取根配置 bot_uin 失败: {e}")
+
+        return None
     
     def get_pause_multipliers(self) -> tuple[float, float]:
         """获取暂停乘数"""
