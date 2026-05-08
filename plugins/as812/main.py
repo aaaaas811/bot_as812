@@ -76,22 +76,30 @@ class as812(NcatBotPlugin):
         self.log_manager = LogManager()
 
         # 初始化 RAG 管理器
-        rag_enabled = self.config_manager.get("rag_enabled", False)
-        rag_config = RAGConfig(
-            enabled=rag_enabled,
-            embedding_mode=self.config_manager.get("rag_embedding_mode", "api"),
-            embedding_model=self.config_manager.get("rag_embedding_model", "text-embedding-3-small"),
-            embedding_dim=int(self.config_manager.get("rag_embedding_dim", 1536)),
-            top_k=int(self.config_manager.get("rag_top_k", 5)),
-            similarity_threshold=float(self.config_manager.get("rag_similarity_threshold", 0.5)),
-            chunk_size=int(self.config_manager.get("rag_chunk_size", 512)),
-            chunk_overlap=int(self.config_manager.get("rag_chunk_overlap", 64)),
-            chunk_strategy=self.config_manager.get("rag_chunk_strategy", "paragraph"),
-            trigger_mode=self.config_manager.get("rag_trigger_mode", "keyword"),
-            trigger_keywords=self.config_manager.get("rag_trigger_keywords", ["什么是", "怎么", "如何", "攻略", "帮助", "help"]),
-        )
-        self.rag_manager = RAGManager(config=rag_config)
-        _log.info(f"RAG 管理器已初始化 (enabled={rag_enabled})")
+        try:
+            rag_enabled = self.config_manager.get("rag_enabled", False)
+            rag_config = RAGConfig(
+                enabled=rag_enabled,
+                embedding_mode=self.config_manager.get("rag_embedding_mode", "api"),
+                embedding_model=self.config_manager.get("rag_embedding_model", "text-embedding-3-small"),
+                embedding_dim=int(self.config_manager.get("rag_embedding_dim", 1536)),
+                top_k=int(self.config_manager.get("rag_top_k", 5)),
+                similarity_threshold=float(self.config_manager.get("rag_similarity_threshold", 0.5)),
+                chunk_size=int(self.config_manager.get("rag_chunk_size", 512)),
+                chunk_overlap=int(self.config_manager.get("rag_chunk_overlap", 64)),
+                chunk_strategy=self.config_manager.get("rag_chunk_strategy", "paragraph"),
+                trigger_mode=self.config_manager.get("rag_trigger_mode", "keyword"),
+                trigger_keywords=self.config_manager.get("rag_trigger_keywords", ["什么是", "怎么", "如何", "攻略", "帮助", "help"]),
+                debug=self.config_manager.get("rag_debug", False),
+            )
+            self.rag_manager = RAGManager(config=rag_config)
+            _log.info(f"RAG 管理器已初始化 (enabled={rag_enabled})")
+        except ImportError as e:
+            _log.warning(f"RAG 管理器初始化失败（缺少依赖）: {e}，RAG 功能已禁用")
+            self.rag_manager = None
+        except Exception as e:
+            _log.warning(f"RAG 管理器初始化失败: {e}，RAG 功能已禁用")
+            self.rag_manager = None
 
         self.message_handler = MessageHandler(self.config_manager, self.log_manager)
         self.response_handler = ResponseHandler(
@@ -204,7 +212,20 @@ class as812(NcatBotPlugin):
             return
         text = msg.raw_message
         if text.startswith("/"):
-            return  # 以 / 开头的消息视为命令，交由命令处理器处理，不进入后续流程
+            # 群内 RAG 命令
+            if text.startswith("/记忆") or text.startswith("/rag_"):
+                await self.command_handler.handle_group_rag_command(
+                    self.api.qq, str(msg.group_id), str(msg.sender.user_id), text, msg.sender.role
+                )
+            return  # 其他 / 命令直接跳过
+
+        # 812记忆 命令（群内自然语言添加知识）
+        if text.startswith("812记忆") or text.startswith("812记一下") or text.startswith("812学习"):
+            await self.command_handler.handle_group_rag_command(
+                self.api.qq, str(msg.group_id), str(msg.sender.user_id), text, msg.sender.role
+            )
+            return
+
         # 处理心情计数
         try:
             await self.mood_handler.process_mood_on_message(self.api, msg.group_id)

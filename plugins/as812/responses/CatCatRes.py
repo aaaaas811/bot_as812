@@ -68,36 +68,35 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
         instruction = "请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。不直接输出识图结果。"
         responsetimes = "每行只说一句话。根据问题确定回复多少行。尽量不超过五行。##之后的内容表示特殊行为，不算做回复内容。不要复读。"
         
+        # 构建消息列表：固定前缀部分在前（最大化缓存命中），可变部分在后
         messages = [{"role": "system", "content": persona}]
-        # 读取特殊行为文件（每行一个特殊行为），将每行作为 system 内容追加
 
-        # 仅在存在对应提示文本时加入到 messages
         if instruction:
             messages.append({"role": "system", "content": instruction})
         if responsetimes:
             messages.append({"role": "system", "content": responsetimes})
-        if rag_context:
-            messages.append({"role": "system", "content": rag_context})
-        try:
-            # 在 messages 中加入当前 assests 根目录下的表情包列表（作为 system 行）
-            try:
-                assets_dir = os.path.join(os.path.dirname(__file__), "..", "assests")
-                emoji_names = []
-                if os.path.isdir(assets_dir):
-                    for fn in os.listdir(assets_dir):
-                        fp = os.path.join(assets_dir, fn)
-                        if os.path.isfile(fp):
-                            name, ext = os.path.splitext(fn)
-                            if ext.lower() in ('.png', '.jpg', '.jpeg'):
-                                emoji_names.append(name)
-                if emoji_names:
-                    emoji_str = '、'.join(sorted(set(emoji_names)))
-                    messages.append({"role": "system", "content": f"目前表情包列表：{emoji_str}"})
-                else:
-                    messages.append({"role": "system", "content": "目前表情包列表：无"})
-            except Exception:
-                _log.exception("读取表情包目录失败")
 
+        # 表情包列表（固定内容，加入缓存前缀）
+        try:
+            assets_dir = os.path.join(os.path.dirname(__file__), "..", "assests")
+            emoji_names = []
+            if os.path.isdir(assets_dir):
+                for fn in os.listdir(assets_dir):
+                    fp = os.path.join(assets_dir, fn)
+                    if os.path.isfile(fp):
+                        name, ext = os.path.splitext(fn)
+                        if ext.lower() in ('.png', '.jpg', '.jpeg'):
+                            emoji_names.append(name)
+            if emoji_names:
+                emoji_str = '、'.join(sorted(set(emoji_names)))
+                messages.append({"role": "system", "content": f"目前表情包列表：{emoji_str}"})
+            else:
+                messages.append({"role": "system", "content": "目前表情包列表：无"})
+        except Exception:
+            _log.exception("读取表情包目录失败")
+
+        # 特殊行为规则（固定内容，加入缓存前缀）
+        try:
             spath = os.path.join(os.path.dirname(__file__), "spacial_actions.txt")
             if os.path.exists(spath):
                 with open(spath, 'r', encoding='utf-8') as f:
@@ -108,23 +107,26 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
                         messages.append({"role": "system", "content": line})
         except Exception:
             _log.exception("读取特殊行为文件失败")
-            pass
-        # 如果chat_history已经是字典列表，直接使用
-        if chat_history and isinstance(chat_history[0], dict):
-            messages.extend(chat_history)
-        else:
-            # 兼容旧格式
-            messages.extend(format_group_chat(chat_history))
 
-        # 在消息中加入工具调用说明：当需要识图时，模型应输出单独一行 JSON 格式的工具调用，例如：
-        # {"tool_call": {"name": "vision_recognize", "image_index": 0}}
-        # 如果模型希望识别图片，请仅输出该 JSON 行，不要输出其它文本。
+        # 工具调用说明（固定内容，加入缓存前缀）
         tool_instr = (
             "如果需要对消息中的图片进行识别，请输出单独一行 JSON："
             "{\"tool_call\": {\"name\": \"vision_recognize\", \"image_index\": <图片索引>}}。"
             "否则直接给出回复文本。"
         )
         messages.append({"role": "system", "content": tool_instr})
+
+        # --- 以上为固定前缀（可被 LLM 缓存），以下为每次请求可变的部分 ---
+
+        # RAG 上下文（按需注入，内容可变）
+        if rag_context:
+            messages.append({"role": "system", "content": rag_context})
+
+        # 聊天历史与当前消息（内容可变）
+        if chat_history and isinstance(chat_history[0], dict):
+            messages.extend(chat_history)
+        else:
+            messages.extend(format_group_chat(chat_history))
 
         # 将内部的 tool 角色消息转换为对外 API 可接受的 assistant 角色
         def _prepare_for_api(orig_msgs):

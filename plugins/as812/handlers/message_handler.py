@@ -6,7 +6,7 @@ import random
 import yaml
 from datetime import datetime
 from collections import Counter
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any
 from ncatbot.core.message import GroupMessage
 from ncatbot.utils import config as bot_config
 from ..models.message_models import ChatMessage, UserInfo, ChatHistoryConfig
@@ -317,17 +317,14 @@ class MessageHandler:
         
         return chat_message
     
-    def build_chat_history(self, 
-                          group_id: str, 
-                          current_message: ChatMessage,
-                          personality_summary: str = "") -> Tuple[List[Dict[str, str]], int]:
+    def build_chat_history(self,
+                          group_id: str,
+                          current_message: ChatMessage) -> List[Dict[str, str]]:
         """构建聊天历史"""
-        # 获取配置
         config_data = {
             "context_history": self.config_manager.get("context_history", 50),
-            "summary_threshold": self.config_manager.get("summary_threshold", 50)
         }
-        
+
         chat_config = ChatHistoryConfig.from_config(config_data)
         
         # 按照规则生成合并后的历史：
@@ -373,17 +370,6 @@ class MessageHandler:
         try:
             now_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             messages.append({"role": "user", "content": f"当前时间：{now_time}"})
-        except Exception:
-            pass
-
-        # 添加用户个性总结（若有）
-        try:
-            if personality_summary:
-                ps = personality_summary.strip()
-                if ps:
-                    messages.append({"role": "user", "content": "==============\n"+
-                                     f"用户个性总结：\n{ps}"
-                                     + "\n==============\n"})
         except Exception:
             pass
 
@@ -442,7 +428,7 @@ class MessageHandler:
 
         messages.append({"role": "user", "content": f"【请回答这条消息】{current_user_name}: {current_msg_text}"})
 
-        return messages, chat_config.summary_threshold
+        return messages
     
     def get_user_info_string(self, chat_message: ChatMessage) -> str:
         """获取用户信息字符串"""

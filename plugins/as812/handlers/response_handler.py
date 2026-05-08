@@ -9,7 +9,6 @@ from ..core.config_manager import ConfigManager
 from ..core.log_manager import LogManager
 from .message_handler import MessageHandler
 from ..responses.CatCatRes import cat_cat_response
-from ..personality_summary import summarize_personality, adjust_format_if_needed
 
 _log = get_log()
 
@@ -40,7 +39,7 @@ class ResponseHandler:
         user_qq = msg.user.qq
         
         # 加载个人数据
-        personal_history, user_info_str, personality_summary, personal_log_file = \
+        _, user_info_str, personal_log_file = \
             await self._load_personal_data(group_id, user_qq)
         
         # 更新用户信息
@@ -50,20 +49,15 @@ class ResponseHandler:
             user_info_str = current_user_info
         
         # 构建聊天历史
-        chat_history, summary_threshold = self.message_handler.build_chat_history(
-            group_id, msg, personality_summary
+        chat_history = self.message_handler.build_chat_history(
+            group_id, msg
         )
         
-        # 检查是否需要总结
-        if len(personal_history) >= summary_threshold:
-            await summarize_personality(personal_log_file, api_key, user_info_str)
-            self.log_manager.clear_personal_chat_history(personal_log_file)
-            personal_history = []
         
         # RAG 检索
         rag_context = ""
         if self.rag_manager and self.rag_manager.should_retrieve(msg.message):
-            rag_context, _ = await self.rag_manager.retrieve(msg.message)
+            rag_context, _ = self.rag_manager.retrieve(msg.message)
 
         # 生成回复
         _log.info("开始生成回复……")
@@ -120,7 +114,7 @@ class ResponseHandler:
                 return None
         
             # 加载个人数据
-            personal_history, user_info_str, personality_summary, personal_log_file = \
+            personal_history, user_info_str, personal_log_file = \
                 await self._load_personal_data(group_id, user_qq)
         
             # 记录用户消息到个人日志
@@ -140,8 +134,8 @@ class ResponseHandler:
         
             # 构建聊天历史
             chat_message = ChatMessage.from_dict(current_message)
-            chat_history, summary_threshold = self.message_handler.build_chat_history(
-                group_id, chat_message, personality_summary
+            chat_history = self.message_handler.build_chat_history(
+                group_id, chat_message
             )
 
             # 主动回复场景：若当前消息无文本但包含图片/表情段，提示模型优先考虑识图工具。
@@ -177,7 +171,7 @@ class ResponseHandler:
             # RAG 检索
             rag_context = ""
             if self.rag_manager and self.rag_manager.should_retrieve(current_message.get("message", "")):
-                rag_context, _ = await self.rag_manager.retrieve(current_message.get("message", ""))
+                rag_context, _ = self.rag_manager.retrieve(current_message.get("message", ""))
 
             # 生成回复
             _log.info("开始主动生成回复……")
@@ -190,9 +184,6 @@ class ResponseHandler:
             _log.info(f"812：{response}")
         
             # 检查是否需要总结
-            if len(personal_history) >= summary_threshold:
-                await summarize_personality(personal_log_file, api_key, user_info_str)
-                self.log_manager.clear_personal_chat_history(personal_log_file)
         
             # 保存机器人回复
             bot_qq = self.config_manager.get_bt_uin()
@@ -218,7 +209,7 @@ class ResponseHandler:
         
             return response
     
-    async def _load_personal_data(self, group_id: str, user_qq: str) -> Tuple[list, str, str, str]:
+    async def _load_personal_data(self, group_id: str, user_qq: str) -> Tuple[list, str, str]:
         """加载个人数据（异步包装）"""
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(
@@ -302,22 +293,15 @@ class ResponseHandler:
     def _append_to_personal_chat_history(self, log_path: str, content: str) -> None:
         """向个人聊天记录追加内容"""
         try:
-            # 确保日志格式正确（若不正确则尝试修正）
-            try:
-                adjust_format_if_needed(log_path, "")
-            except Exception:
-                pass
             with open(log_path, "r", encoding="utf-8") as f:
                 file_content = f.read()
-            
-            # 分割内容
+
             parts = file_content.split("\n\n过往聊天记录：\n")
             if len(parts) == 2:
                 header = parts[0] + "\n\n过往聊天记录：\n"
                 existing_records = parts[1].strip().split("\n") if parts[1].strip() else []
                 existing_records.append(content)
-                
-                # 写入更新后的内容
+
                 with open(log_path, "w", encoding="utf-8") as f:
                     f.write(header + "\n".join(existing_records) + "\n")
         except Exception as e:

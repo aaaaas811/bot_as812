@@ -87,56 +87,47 @@ class LogManager:
         
         return messages
     
-    def load_personal_log(self, group_id: str, user_qq: str) -> Tuple[List[str], str, str, str]:
+    def load_personal_log(self, group_id: str, user_qq: str) -> Tuple[List[str], str, str]:
         """
         加载个人日志
-        返回: (聊天记录列表, 用户信息字符串, 个性总结字符串, 日志文件路径)
+        返回: (聊天记录列表, 用户信息字符串, 日志文件路径)
         """
         log_path = self.get_personal_log_path(group_id, user_qq)
-        
+
         personal_history = []
         user_info_str = ""
-        personality_summary = ""
-        
+
         if os.path.exists(log_path):
             try:
                 content = self._read_text_with_fallback(log_path)
-                
+
                 # 解析基本信息
                 if "该用户的基本信息：" in content:
                     start = content.find("该用户的基本信息：") + len("该用户的基本信息：")
-                    end = content.find("\n\n该用户的个性总结：", start)
-                    if end == -1:
-                        end = content.find("\n\n过往聊天记录：", start)
-                    user_info_str = content[start:end].strip()
-                
-                # 解析个性总结
-                if "该用户的个性总结：" in content:
-                    start = content.find("该用户的个性总结：") + len("该用户的个性总结：")
                     end = content.find("\n\n过往聊天记录：", start)
                     if end == -1:
                         end = len(content)
-                    personality_summary = content[start:end].strip()
-                
+                    user_info_str = content[start:end].strip()
+
                 # 解析聊天记录
                 if "过往聊天记录：" in content:
                     records_start = content.find("过往聊天记录：") + len("过往聊天记录：")
                     records = content[records_start:].strip().split("\n")
                     personal_history = [line.strip() for line in records if line.strip()]
-                
+
             except Exception as e:
                 _log.error(f"加载个人日志失败: {e}")
         else:
             # 首次创建个人日志
             user_info_str = f"QQ昵称: 未知, QQ号: {user_qq}, 群昵称: , 群权限: , 群头衔: "
-            initial_content = f"该用户的基本信息：{user_info_str}\n\n该用户的个性总结：\n\n过往聊天记录：\n"
+            initial_content = f"该用户的基本信息：{user_info_str}\n\n过往聊天记录：\n"
             try:
                 with open(log_path, "w", encoding="utf-8") as f:
                     f.write(initial_content)
             except Exception as e:
                 _log.error(f"创建个人日志失败: {e}")
-        
-        return personal_history, user_info_str, personality_summary, log_path
+
+        return personal_history, user_info_str, log_path
     
     def append_to_personal_log(self, log_path: str, content: str) -> bool:
         """向个人日志追加内容"""
@@ -148,36 +139,27 @@ class LogManager:
             _log.error(f"追加个人日志失败: {e}")
             return False
     
-    def update_personal_log_header(self, log_path: str, new_user_info: str, new_personality_summary: str = "") -> bool:
+    def update_personal_log_header(self, log_path: str, new_user_info: str) -> bool:
         """更新个人日志头部信息"""
         try:
             if not os.path.exists(log_path):
                 return False
 
             content = self._read_text_with_fallback(log_path)
-            
+
             # 更新用户信息
             if "该用户的基本信息：" in content:
                 start = content.find("该用户的基本信息：") + len("该用户的基本信息：")
-                end = content.find("\n\n该用户的个性总结：", start)
-                if end == -1:
-                    end = content.find("\n\n过往聊天记录：", start)
-                old_user_info = content[start:end].strip()
-                content = content.replace(f"该用户的基本信息：{old_user_info}", f"该用户的基本信息：{new_user_info}")
-            
-            # 更新个性总结（如果提供）
-            if new_personality_summary and "该用户的个性总结：" in content:
-                start = content.find("该用户的个性总结：") + len("该用户的个性总结：")
                 end = content.find("\n\n过往聊天记录：", start)
                 if end == -1:
                     end = len(content)
-                old_summary = content[start:end].strip()
-                content = content.replace(f"该用户的个性总结：{old_summary}", f"该用户的个性总结：{new_personality_summary}")
-            
+                old_user_info = content[start:end].strip()
+                content = content.replace(f"该用户的基本信息：{old_user_info}", f"该用户的基本信息：{new_user_info}")
+
             with open(log_path, "w", encoding="utf-8") as f:
                 f.write(content)
             return True
-            
+
         except Exception as e:
             _log.error(f"更新个人日志头部失败: {e}")
             return False

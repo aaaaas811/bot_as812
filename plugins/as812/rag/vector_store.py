@@ -1,5 +1,4 @@
-"""向量存储 — 基于 numpy 的轻量向量数据库"""
-import json
+"""向量存储 — 基于 ChromaDB PersistentClient"""
 import os
 from typing import Optional
 
@@ -8,177 +7,101 @@ from ncatbot.utils.logger import get_log
 _log = get_log()
 
 try:
-    import numpy as np
-    _has_numpy = True
-except Exception:
-    np = None
-    _has_numpy = False
+    import chromadb
+    _has_chromadb = True
+except ImportError:
+    chromadb = None  # type: ignore
+    _has_chromadb = False
 
 
 class VectorStore:
-    """轻量向量存储，使用 numpy 数组 + JSON 元数据索引"""
+    """基于 ChromaDB 的向量存储"""
 
-    def __init__(self, data_dir: str, collection: str = "default", dim: int = 768):
-        self.data_dir = data_dir
-        self.collection = collection
-        self.dim = dim
-        self._vectors: list = []        # list of np.ndarray
-        self._metadata: list[dict] = []  # 每条记录的元数据
+    def __init__(self, data_dir: str, collection: str = "default", embedding_function=None):
+        if not _has_chromadb:
+            raise ImportError("chromadb 未安装，请运行: pip install chromadb")
 
-        os.makedirs(self._collection_dir, exist_ok=True)
-        self._load()
+        self.collection_name = collection
+        persist_dir = os.path.join(data_dir, "chroma_db")
+        os.makedirs(persist_dir, exist_ok=True)
 
-    @property
-    def _collection_dir(self) -> str:
-        return os.path.join(self.data_dir, self.collection)
+        self._client = chromadb.PersistentClient(path=persist_dir)
+        self._embedding_function = embedding_function
 
-    @property
-    def _vectors_path(self) -> str:
-        return os.path.join(self._collection_dir, "vectors.npy")
+        self._collection = self._client.get_or_create_collection(
+            name=collection,
+            embedding_function=embedding_function,
+        )
 
-    @property
-    def _metadata_path(self) -> str:
-        return os.path.join(self._collection_dir, "metadata.json")
+    def add(self, texts: list[str], metadatas: list[dict], ids: list[str]) -> int:
+        """批量添加文本（嵌入自动生成），返回添加数量"""
+        if not texts:
+            return 0
 
-    def _load(self):
-        if os.path.exists(self._vectors_path) and os.path.exists(self._metadata_path):
-            try:
-                if _has_numpy:
-                    self._vectors = list(np.load(self._vectors_path, allow_pickle=False))
-                else:
-                    self._vectors = []
-                with open(self._metadata_path, "r", encoding="utf-8") as f:
-                    self._metadata = json.load(f)
-            except Exception as e:
-                _log.warning(f"加载向量存储失败: {e}")
-                self._vectors = []
-                self._metadata = []
-        else:
-            self._vectors = []
-            self._metadata = []
-
-    def _save(self):
-        try:
-            if _has_numpy and self._vectors:
-                arr = np.array(self._vectors)
-                np.save(self._vectors_path, arr)
-            with open(self._metadata_path, "w", encoding="utf-8") as f:
-                json.dump(self._metadata, f, ensure_ascii=False, indent=2)
-        except Exception as e:
-            _log.error(f"保存向量存储失败: {e}")
-
-    def add(self, vectors: list[list[float]], metadata_list: list[dict]) -> int:
-        """批量添加向量和元数据，返回添加数量"""
-        if len(vectors) != len(metadata_list):
-            raise ValueError(f"向量数量({len(vectors)})与元数据数量({len(metadata_list)})不匹配")
-
-        count = 0
-        for vec, meta in zip(vectors, metadata_list):
-            if _has_numpy:
-                self._vectors.append(np.array(vec, dtype=np.float32))
-            else:
-                self._vectors.append(list(vec))
-            self._metadata.append(meta)
-            count += 1
-
-        self._save()
-        return count
+        self._collection.add(
+            documents=texts,
+            metadatas=metadatas,
+            ids=ids,
+        )
+        return len(texts)
 
     def remove(self, source_id: str) -> int:
-        """删除指定来源的所有向量，返回删除数量"""
-        indices_to_remove = [
-            i for i, meta in enumerate(self._metadata)
-            if meta.get("source_id") == source_id
-        ]
-        for i in reversed(indices_to_remove):
-            del self._vectors[i]
-            del self._metadata[i]
+        """按 source_id 删除，返回删除数量"""
+        existing = self._collection.get(
+            where={"source_id": source_id},
+        )
+        if existing["ids"]:
+            self._collection.delete(ids=existing["ids"])
+            return len(existing["ids"])
+        return 0
 
-        if indices_to_remove:
-            self._save()
+    def search(self, query_text: str, top_k: int = 5, threshold: float = 0.5) -> list[dict]:
+        """文本查询（嵌入和相似度计算由 ChromaDB 完成）"""
+        results = self._collection.query(
+            query_texts=[query_text],
+            n_results=top_k,
+        )
 
-        return len(indices_to_remove)
-
-    def remove_by_ids(self, chunk_ids: list[str]) -> int:
-        """按 chunk_id 批量删除"""
-        ids_set = set(chunk_ids)
-        indices_to_remove = [
-            i for i, meta in enumerate(self._metadata)
-            if meta.get("chunk_id") in ids_set
-        ]
-        for i in reversed(indices_to_remove):
-            del self._vectors[i]
-            del self._metadata[i]
-
-        if indices_to_remove:
-            self._save()
-
-        return len(indices_to_remove)
-
-    def search(self, query_vector: list[float], top_k: int = 5, threshold: float = 0.5) -> list[dict]:
-        """余弦相似度搜索，返回 top_k 结果"""
-        if not self._vectors:
+        if not results["ids"] or not results["ids"][0]:
             return []
 
-        if _has_numpy:
-            query = np.array(query_vector, dtype=np.float32)
-            matrix = np.array(self._vectors)
+        scored = []
+        for i, chunk_id in enumerate(results["ids"][0]):
+            distance = results["distances"][0][i] if results.get("distances") else 0
+            # ChromaDB 默认用余弦距离 (0=相同, 2=相反)，转相似度
+            similarity = 1.0 - (distance / 2.0)
+            if similarity < threshold:
+                continue
+            meta = dict(results["metadatas"][0][i]) if results.get("metadatas") else {}
+            meta["score"] = similarity
+            meta["text"] = results["documents"][0][i] if results.get("documents") else ""
+            meta["chunk_id"] = chunk_id
+            scored.append(meta)
 
-            # 归一化
-            query_norm = query / (np.linalg.norm(query) + 1e-8)
-            matrix_norms = np.linalg.norm(matrix, axis=1) + 1e-8
-            matrix_normed = matrix / matrix_norms[:, np.newaxis]
-
-            # 余弦相似度
-            similarities = np.dot(matrix_normed, query_norm)
-
-            # 排序获取 top_k
-            top_indices = np.argsort(similarities)[::-1][:top_k]
-            results = []
-            for idx in top_indices:
-                score = float(similarities[idx])
-                if score >= threshold:
-                    meta = dict(self._metadata[idx])
-                    meta["score"] = score
-                    results.append(meta)
-            return results
-        else:
-            # 纯 Python 余弦相似度
-            def cosine_sim(a, b):
-                dot = sum(x * y for x, y in zip(a, b))
-                norm_a = (sum(x * x for x in a) + 1e-8) ** 0.5
-                norm_b = (sum(x * x for x in b) + 1e-8) ** 0.5
-                return dot / (norm_a * norm_b)
-
-            scored = []
-            for i, vec in enumerate(self._vectors):
-                score = cosine_sim(query_vector, vec)
-                if score >= threshold:
-                    meta = dict(self._metadata[i])
-                    meta["score"] = score
-                    scored.append(meta)
-
-            scored.sort(key=lambda x: x["score"], reverse=True)
-            return scored[:top_k]
+        return scored
 
     def list_sources(self) -> list[dict]:
-        """列出所有知识源"""
-        sources = {}
-        for meta in self._metadata:
-            sid = meta.get("source_id", "")
-            if sid not in sources:
-                sources[sid] = {
-                    "source_id": sid,
-                    "title": meta.get("title", sid),
-                    "chunk_count": 0,
-                }
-            sources[sid]["chunk_count"] += 1
+        """列出所有知识源（通过遍历去重 source_id）"""
+        all_data = self._collection.get()
+        sources: dict[str, dict] = {}
+        if all_data["metadatas"]:
+            for meta in all_data["metadatas"]:
+                sid = meta.get("source_id", "")
+                if sid not in sources:
+                    sources[sid] = {
+                        "source_id": sid,
+                        "title": meta.get("title", sid),
+                        "chunk_count": 0,
+                    }
+                sources[sid]["chunk_count"] += 1
         return sorted(sources.values(), key=lambda x: x["title"])
 
     def count(self) -> int:
-        return len(self._vectors)
+        return self._collection.count()
 
     def clear(self):
-        self._vectors = []
-        self._metadata = []
-        self._save()
+        self._client.delete_collection(self.collection_name)
+        self._collection = self._client.get_or_create_collection(
+            name=self.collection_name,
+            embedding_function=self._embedding_function,
+        )

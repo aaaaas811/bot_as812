@@ -43,6 +43,16 @@ class mh(NcatBotPlugin):
             self.image_cache_dir = Path("plugins/mh/image_cache")
             self.image_cache_dir.mkdir(parents=True, exist_ok=True)
             print("怪物数据加载成功")
+            # 注册每天 04:00 定时清空集会码
+            try:
+                self.add_scheduled_task(
+                    name="mh_clear_team_codes",
+                    interval="04:00",
+                    callback=self._daily_clear_team_codes,
+                )
+                print("已注册定时任务：每日 04:00 清空集会码")
+            except Exception as e:
+                print(f"注册定时清空任务失败: {e}")
         except Exception as e:
             print(f"怪物数据加载失败: {e}，请确保已运行爬虫脚本以获取数据")
 
@@ -445,7 +455,7 @@ class mh(NcatBotPlugin):
             "/ws(wi)简介 怪物名字 查询该怪物的信息\n" \
             "/ws(wi)弱点 怪物名字 查询该怪物的弱点简析\n" \
             "/ws(wi)肉质 怪物名字 查询 mhws(mhwi) 数据源的肉质表"
-            await msg.reply(text = menu_text, at = False)
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=menu_text)
         if self.is_mhw_team_code.match(text):
             self.mhw.append(text)
             await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
@@ -575,3 +585,12 @@ class mh(NcatBotPlugin):
             await self._send_meat_table_image(msg, monster_name, source='mhws', tip_text=tip)
             return
         
+    async def _daily_clear_team_codes(self):
+        """每天 04:00 定时清空集会码（由调度器调用）。"""
+        try:
+            self.mhw.clear()
+            self.mhr.clear()
+            LOG.info("mh 插件：定时任务已清空所有集会码")
+        except Exception as e:
+            LOG.error(f"mh 插件：定时清空集会码失败: {e}")
+

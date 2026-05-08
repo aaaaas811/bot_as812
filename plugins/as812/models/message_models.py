@@ -102,13 +102,11 @@ class BotResponse:
 class ChatHistoryConfig:
     """聊天历史配置模型"""
     context_history: int = 50
-    summary_threshold: int = 50
     max_history: int | None = None
-    
+
     @classmethod
     def from_config(cls, config_data: Dict[str, Any]) -> 'ChatHistoryConfig':
         return cls(
             context_history=int(config_data.get("context_history", 50)),
-            summary_threshold=int(config_data.get("summary_threshold", 50)),
             max_history=config_data.get("max_history")
         )

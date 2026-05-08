@@ -1,11 +1,9 @@
 """命令处理器"""
-import os
 import time
 from typing import Dict, Any
 from ncatbot.utils.logger import get_log
 from ..core.config_manager import ConfigManager, PromptManager
 from ..core.log_manager import LogManager
-from ..personality_summary import summarize_personality
 
 _log = get_log()
 
@@ -29,10 +27,6 @@ class CommandHandler:
             await self._handle_set_config(api, user_id, message)
         elif message == "prompt":
             await self._handle_show_prompt(api, user_id)
-        elif message == "manual_summary":
-            await self._handle_manual_summary(api, user_id)
-        elif message.startswith("reset_summary "):
-            await self._handle_reset_summary(api, user_id, message)
         # RAG 命令
         elif message == "rag_stats":
             await self._handle_rag_stats(api, user_id)
@@ -98,109 +92,94 @@ class CommandHandler:
         cat_prompt = self.prompt_manager.load_prompt()
         await api.post_private_msg(user_id, text=cat_prompt)
     
-    async def _handle_manual_summary(self, api, user_id: int) -> None:
-        """手动总结用户信息"""
-        await api.post_private_msg(user_id, text="开始手动总结用户信息...")
-        
-        summary_threshold = self.config_manager.get("summary_threshold", 25)
-        processed_count = 0
-        skipped_count = 0
-        
-        # 遍历所有群组目录
-        logs_dir = "plugins/as812/logs"
-        if os.path.exists(logs_dir):
-            for group_dir in os.listdir(logs_dir):
-                group_path = os.path.join(logs_dir, group_dir)
-                if os.path.isdir(group_path) and not group_dir.endswith("_history.log"):
-                    gid = group_dir
-                    
-                    # 遍历该群的所有用户日志
-                    for user_file in os.listdir(group_path):
-                        if user_file.endswith(".log"):
-                            user_qq = user_file[:-4]  # 去掉.log扩展名
-                            user_log_path = os.path.join(group_path, user_file)
-                            
-                            try:
-                                # 加载用户数据
-                                personal_history, user_info_str, personality_summary, personal_log_file = \
-                                    self.log_manager.load_personal_log(gid, user_qq)
-                                
-                                # 检查是否需要总结
-                                if len(personal_history) >= summary_threshold:
-                                    api_key = self.config_manager.get_api_key()
-                                    if api_key:
-                                        await summarize_personality(user_log_path, api_key, user_info_str)
-                                        processed_count += 1
-                                        _log.info(f"已总结用户 {user_qq} 在群 {gid} 的信息")
-                                    else:
-                                        _log.warning("API密钥未配置，无法总结")
-                                else:
-                                    skipped_count += 1
-                                    
-                            except Exception as e:
-                                _log.error(f"处理用户 {user_qq} 在群 {gid} 时出错: {e}")
-                                await api.post_private_msg(user_id, text=f"处理用户 {user_qq} 时出错: {e}")
-        
-        await api.post_private_msg(user_id, text=f"手动总结完成！\n已处理: {processed_count} 个用户\n跳过: {skipped_count} 个用户")
-    
-    async def _handle_reset_summary(self, api, user_id: int, message: str) -> None:
-        """重置用户个性总结"""
-        parts = message.split(" ", 1)
-        if len(parts) < 2:
-            await api.post_private_msg(user_id, text="格式错误，请使用 reset_summary <qq号>")
+    async def handle_group_rag_command(self, api, group_id: str, user_id: str, text: str, sender_role: str = "") -> None:
+        """处理群内 RAG 命令"""
+        if not self.rag_manager:
+            await api.post_group_msg(group_id, text="[RAG] 知识库未初始化", reply=True)
             return
-        
-        target_qq = parts[1].strip()
-        reset_count = 0
-        
-        # 遍历所有群组目录
-        logs_dir = "plugins/as812/logs"
-        if os.path.exists(logs_dir):
-            for group_dir in os.listdir(logs_dir):
-                group_path = os.path.join(logs_dir, group_dir)
-                if os.path.isdir(group_path) and not group_dir.endswith("_history.log"):
-                    gid = group_dir
-                    user_log_path = os.path.join(group_path, f"{target_qq}.log")
-                    
-                    if os.path.exists(user_log_path):
-                        try:
-                            # 读取文件内容
-                            with open(user_log_path, "r", encoding="utf-8") as f:
-                                content = f.read()
-                            
-                            # 解析基本信息
-                            user_info_str = ""
-                            if "该用户的基本信息：" in content:
-                                start = content.find("该用户的基本信息：") + len("该用户的基本信息：")
-                                end = content.find("\n\n该用户的个性总结：", start)
-                                if end == -1:
-                                    end = content.find("\n\n过往聊天记录：", start)
-                                user_info_str = content[start:end].strip()
-                            
-                            # 重置个性总结为空
-                            new_content = f"该用户的基本信息：{user_info_str}\n\n该用户的个性总结：\n\n过往聊天记录：\n"
-                            
-                            # 如果有聊天记录，保留它们
-                            if "过往聊天记录：" in content:
-                                records_start = content.find("过往聊天记录：") + len("过往聊天记录：")
-                                records = content[records_start:].strip()
-                                if records:
-                                    new_content += records + "\n"
-                            
-                            with open(user_log_path, "w", encoding="utf-8") as f:
-                                f.write(new_content)
-                            
-                            reset_count += 1
-                            _log.info(f"已重置用户 {target_qq} 在群 {gid} 的个性总结")
-                            
-                        except Exception as e:
-                            _log.error(f"重置用户 {target_qq} 在群 {gid} 时出错: {e}")
-                            await api.post_private_msg(user_id, text=f"重置用户 {target_qq} 时出错: {e}")
-        
-        if reset_count > 0:
-            await api.post_private_msg(user_id, text=f"已重置用户 {target_qq} 的个性总结")
-        else:
-            await api.post_private_msg(user_id, text=f"未找到用户 {target_qq} 的日志文件")
+
+        text = text.strip()
+
+        # /记忆 <内容> 或 812记忆 <内容> 或 812记一下 <内容> 或 812学习 <内容>
+        if text.startswith("/记忆 ") or text.startswith("812记忆 ") or text.startswith("812记一下 ") or text.startswith("812学习 "):
+            for prefix in ["/记忆 ", "812记忆 ", "812记一下 ", "812学习 "]:
+                if text.startswith(prefix):
+                    content = text[len(prefix):].strip()
+                    break
+            else:
+                content = ""
+
+            if not content:
+                await api.post_group_msg(group_id, text="格式: /记忆 <内容> 或 812记忆 <内容>", reply=True)
+                return
+
+            title = f"群聊添加_{user_id}_{int(time.time())}"
+            count = self.rag_manager.add_text(content, title=title)
+            await api.post_group_msg(
+                group_id,
+                text=f"已记住 ({count} chunks): {content[:100]}{'...' if len(content) > 100 else ''}",
+                reply=True,
+            )
+            return
+
+        # /rag_stats
+        if text == "/rag_stats":
+            stats = self.rag_manager.get_stats()
+            lines = [
+                f"RAG 知识库: {stats['total_documents']} 个文档, {stats['total_chunks']} 个 chunks",
+                f"状态: {'启用' if self.rag_manager.enabled else '禁用'}",
+            ]
+            await api.post_group_msg(group_id, text="\n".join(lines), reply=True)
+            return
+
+        # /rag_list
+        if text == "/rag_list":
+            docs = self.rag_manager.list_knowledge()
+            if not docs:
+                await api.post_group_msg(group_id, text="知识库为空", reply=True)
+                return
+            lines = [f"知识库（{len(docs)} 个文档）："]
+            for doc in docs[:10]:
+                lines.append(f"  [{doc['chunk_count']}c] {doc['title']}")
+            if len(docs) > 10:
+                lines.append(f"  ...还有 {len(docs) - 10} 个")
+            await api.post_group_msg(group_id, text="\n".join(lines), reply=True)
+            return
+
+        # /rag_remove <source_id>（仅群主/管理员可用）
+        if text.startswith("/rag_remove "):
+            if sender_role not in ("owner", "admin"):
+                await api.post_group_msg(group_id, text="仅群主/管理员可删除知识", reply=True)
+                return
+            source_id = text[len("/rag_remove "):].strip()
+            count = self.rag_manager.remove(source_id)
+            await api.post_group_msg(group_id, text=f"已删除 {count} 个 chunks", reply=True)
+            return
+
+        # /rag_enable / /rag_disable（仅群主/管理员可用）
+        if text in ("/rag_enable", "/rag_disable"):
+            if sender_role not in ("owner", "admin"):
+                await api.post_group_msg(group_id, text="仅群主/管理员可切换 RAG 状态", reply=True)
+                return
+            enable = text == "/rag_enable"
+            self.rag_manager.enabled = enable
+            self.config_manager.set("rag_enabled", enable)
+            await api.post_group_msg(group_id, text=f"RAG 已{'启用' if enable else '禁用'}", reply=True)
+            return
+
+        # /rag_help
+        if text == "/rag_help":
+            help_text = (
+                "RAG 知识库群指令：\n"
+                "/记忆 <内容> — 添加知识\n"
+                "812记忆 <内容> — 同上\n"
+                "/rag_stats — 查看统计\n"
+                "/rag_list — 查看列表\n"
+                "/rag_remove <id> — 删除(管理)\n"
+                "/rag_enable|disable — 开关(管理)"
+            )
+            await api.post_group_msg(group_id, text=help_text, reply=True)
+            return
 
     # -- RAG 命令处理 --
 
