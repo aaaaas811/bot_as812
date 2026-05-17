@@ -10,7 +10,7 @@ var EventType = /* @__PURE__ */ ((EventType2) => {
   return EventType2;
 })(EventType || {});
 
-let startTime = Date.now();
+const startTime = Date.now();
 let logger = null;
 let currentConfig = {
   prefix: "#napcat",

@@ -8,6 +8,7 @@ import base64
 import sys
 import subprocess
 import random
+import time
 from typing import Any
 from types import SimpleNamespace
 from pathlib import Path
@@ -24,6 +25,7 @@ from .handlers.mood_handler import MoodHandler
 from .handlers.command_handler import CommandHandler
 from .handlers.bilibili_handler import BilibiliHandler
 from .models.message_models import BotResponse
+from .responses.CatCatRes import cat_cat_response
 from .rag import RAGManager, RAGConfig
 
 import bot_state
@@ -65,6 +67,7 @@ class as812(NcatBotPlugin):
         self.bilibili_handler = None
         self.rag_manager = None
         self._assets_dir = Path(__file__).parent / "assests"
+        self._private_chat_enabled = False
     
     async def on_load(self):
         """插件加载时执行"""
@@ -188,6 +191,68 @@ class as812(NcatBotPlugin):
         if hasattr(self.api, "delete_msg"):
             return await self.api.delete_msg(message_id)
         raise AttributeError("当前 SDK 未提供 delete_msg 接口")
+
+    async def _qq_post_private_msg(self, user_id, **kwargs):
+        """兼容不同 SDK 版本的私聊消息发送接口。"""
+        qq_api = getattr(self.api, "qq", None)
+        if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+            return await qq_api.post_private_msg(user_id, **kwargs)
+        if hasattr(self.api, "post_private_msg"):
+            return await self.api.post_private_msg(user_id, **kwargs)
+        raise AttributeError("当前 SDK 未提供 post_private_msg 接口")
+
+    async def _handle_private_chat(self, msg):
+        """处理 MASTER_UIN 的私聊 AI 聊天"""
+        user_id = str(msg.user_id)
+        private_group_id = f"private_{user_id}"
+
+        # 获取提示词和 API 密钥
+        cat_prompt = self.prompt_manager.load_prompt()
+        api_key = self.config_manager.get_api_key()
+        if not api_key:
+            _log.error("API密钥未配置")
+            await self._qq_post_private_msg(msg.user_id, text="API密钥未配置，无法聊天")
+            return
+
+        # 解析私聊消息
+        chat_message = self.message_handler.parse_private_message(msg)
+        _log.info(f"私聊 {chat_message.user.nickname}({user_id}): {chat_message.message[:20]}")
+
+        # 保存用户消息到私聊历史
+        self.log_manager.save_group_message(private_group_id, chat_message)
+
+        # 构建聊天历史
+        chat_history = self.message_handler.build_chat_history(
+            private_group_id, chat_message
+        )
+
+        # RAG 检索
+        rag_context = ""
+        if self.rag_manager and self.rag_manager.should_retrieve(chat_message.message):
+            rag_context, _ = self.rag_manager.retrieve(chat_message.message)
+
+        # 生成回复
+        _log.info("开始生成私聊回复……")
+        image_api_key = self.config_manager.get_image_api_key()
+        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+
+        if not response:
+            _log.info("私聊回复为空")
+            return
+
+        _log.info(f"812私聊回复：{response[:50]}")
+
+        # 保存机器人回复到私聊历史
+        bot_qq = self.config_manager.get_bt_uin() or "812"
+        bot_response = BotResponse(
+            timestamp=time.time(),
+            message=response,
+            qq=str(bot_qq)
+        )
+        self.log_manager.save_bot_response(private_group_id, bot_response)
+
+        # 发送回复
+        await self._send_private_response(msg.user_id, response)
 
     @registrar.qq.on_group_command("测试as812")
     @bot_state.ignore_if_sleeping()
@@ -353,6 +418,18 @@ class as812(NcatBotPlugin):
             return
 
         raw_text = (msg.raw_message or "").strip()
+
+        # 私聊模式开关（仅 MASTER_UIN）
+        if str(msg.user_id) == bot_state.MASTER_UIN:
+            if raw_text == "开启私聊":
+                self._private_chat_enabled = True
+                await self._qq_post_private_msg(msg.user_id, text="私聊模式已开启")
+                return
+            if raw_text == "关闭私聊":
+                self._private_chat_enabled = False
+                await self._qq_post_private_msg(msg.user_id, text="私聊模式已关闭")
+                return
+
         match = re.match(r"^帮我说[：:]\s*(.+)$", raw_text)
         if match:
             active_group_id = self.config_manager.get_active_group_id()
@@ -378,10 +455,25 @@ class as812(NcatBotPlugin):
                 if qq_api is not None and hasattr(qq_api, "post_private_msg"):
                     await qq_api.post_private_msg(msg.user_id, text=f"转述失败: {e}")
             return
-        
+
+        # MASTER_UIN 私聊 AI 聊天（需开启私聊模式）
+        if str(msg.user_id) == bot_state.MASTER_UIN and self._private_chat_enabled:
+            is_known_command = (
+                raw_text in ("view_config", "prompt", "rag_stats", "rag_list",
+                             "rag_clear", "rag_enable", "rag_disable")
+                or raw_text.startswith("set_prompt")
+                or raw_text.startswith("set_")
+                or raw_text.startswith("rag_add ")
+                or raw_text.startswith("rag_import ")
+                or raw_text.startswith("rag_remove ")
+            )
+            if not is_known_command:
+                await self._handle_private_chat(msg)
+                return
+
         await self.command_handler.handle_private_command(
             self.api.qq,
-            msg.user_id, 
+            msg.user_id,
             raw_text
         )
 
@@ -622,4 +714,113 @@ class as812(NcatBotPlugin):
                 
         except Exception as e:
             _log.error(f"发送回复消息失败: {e}")
-    
+
+    async def _send_private_response(self, user_id: int, response: str, reply_id: str = None):
+        """发送私聊回复消息"""
+        try:
+            pause_multiplier, line_pause_multiplier = self.config_manager.get_pause_multipliers()
+
+            paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", response) if p.strip()]
+            is_first_message = True
+
+            for para in paragraphs:
+                lines = [l.strip() for l in para.splitlines() if l.strip()]
+
+                for line in lines:
+                    # 表情包指令
+                    m_em_bracket = re.match(r"^\[EMOJI\]\s*([^\s\]]+)$", line)
+                    m_em_hash = re.match(r"^##emoji\s*\[?([^\]\s]+)\]?$", line, flags=re.IGNORECASE)
+                    m = m_em_bracket or m_em_hash
+                    if m:
+                        emoji_name = m.group(1)
+                        try:
+                            sent = False
+                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
+                                img_path = self._assets_dir / f"{emoji_name}{ext}"
+                                if img_path.exists() and img_path.is_file():
+                                    try:
+                                        data = img_path.read_bytes()
+                                        b64 = base64.b64encode(data).decode()
+                                        await self._qq_post_private_msg(user_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
+                                    except Exception as e:
+                                        _log.error(f"发送表情包失败: {e}")
+                                    sent = True
+                                    is_first_message = False
+                                    break
+
+                            if not sent:
+                                try:
+                                    await self._qq_post_private_msg(user_id, text=f"表情包不存在: {emoji_name}", reply=reply_id if is_first_message else None)
+                                except Exception as e:
+                                    _log.error(f"发送消息失败: {e}")
+                                is_first_message = False
+                        except Exception as e:
+                            _log.warning(f"处理表情包指令失败: {e}")
+                        continue
+
+                    # 行内表情
+                    inline_matches = list(re.finditer(r"\[([^\[\]\s]+)\]", line))
+                    if inline_matches:
+                        cursor = 0
+                        handled_inline_emoji = False
+
+                        for inline_match in inline_matches:
+                            emoji_name = inline_match.group(1)
+                            emoji_path = None
+                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
+                                candidate = self._assets_dir / f"{emoji_name}{ext}"
+                                if candidate.exists() and candidate.is_file():
+                                    emoji_path = candidate
+                                    break
+
+                            if emoji_path is None:
+                                continue
+
+                            text_chunk = line[cursor:inline_match.start()].strip()
+                            if text_chunk:
+                                try:
+                                    await self._qq_post_private_msg(user_id, text=text_chunk, reply=reply_id if is_first_message else None)
+                                except Exception as e:
+                                    _log.error(f"发送消息失败: {e}")
+                                is_first_message = False
+
+                            try:
+                                data = emoji_path.read_bytes()
+                                b64 = base64.b64encode(data).decode()
+                                await self._qq_post_private_msg(user_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
+                            except Exception as e:
+                                _log.error(f"发送表情包失败: {e}")
+                            is_first_message = False
+
+                            handled_inline_emoji = True
+                            cursor = inline_match.end()
+
+                        if handled_inline_emoji:
+                            tail_text = line[cursor:].strip()
+                            if tail_text:
+                                try:
+                                    await self._qq_post_private_msg(user_id, text=tail_text, reply=reply_id if is_first_message else None)
+                                except Exception as e:
+                                    _log.error(f"发送消息失败: {e}")
+                                is_first_message = False
+
+                            await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
+                            continue
+
+                    if line == "##should not say":
+                        break
+                    if line == "##revoke":
+                        continue
+
+                    try:
+                        await self._qq_post_private_msg(user_id, text=line, reply=reply_id if is_first_message else None)
+                    except Exception as e:
+                        _log.error(f"发送消息失败: {e}")
+
+                    is_first_message = False
+                    await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
+
+                await asyncio.sleep(pause_multiplier * len(para))
+
+        except Exception as e:
+            _log.error(f"发送私聊回复消息失败: {e}")

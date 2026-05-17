@@ -1,0 +1,9 @@
+name = "as812_xiaozhi_bridge"
+version = "0.1.0"
+main = "main.py"
+author = "as811"
+description = "将QQ私聊桥接到xiaozhi-esp32-server的AI对话管线"
+entry_class = "XiaozhiBridge"
+pip_dependencies = []
+
+[dependencies]

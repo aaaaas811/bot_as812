@@ -7,7 +7,7 @@ import yaml
 from datetime import datetime
 from collections import Counter
 from typing import List, Dict, Any
-from ncatbot.core.message import GroupMessage
+from ncatbot.event.qq import GroupMessageEvent as GroupMessage, PrivateMessageEvent
 from ncatbot.utils import config as bot_config
 from ..models.message_models import ChatMessage, UserInfo, ChatHistoryConfig
 from ..core.log_manager import LogManager
@@ -317,6 +317,94 @@ class MessageHandler:
         
         return chat_message
     
+    def parse_private_message(self, msg: PrivateMessageEvent) -> ChatMessage:
+        """解析 PrivateMessageEvent 为 ChatMessage 对象"""
+        user_qq = str(msg.user_id)
+        text_content = ""
+        message_array = []
+
+        for message in msg.message:
+            mtype = self._detect_segment_type(message)
+
+            if mtype == "text":
+                txt = None
+                if hasattr(message, "text"):
+                    txt = getattr(message, "text")
+                else:
+                    try:
+                        txt = message.get("data", {}).get("text")
+                    except Exception:
+                        txt = None
+                if txt:
+                    text_content += (txt + ",")
+                    try:
+                        message_array.append({"type": "text", "text": txt})
+                    except Exception:
+                        pass
+
+            if mtype not in ("text",):
+                try:
+                    seg = {"type": mtype}
+                    data = None
+                    try:
+                        data = getattr(message, "data", None) or {}
+                    except Exception:
+                        data = {}
+
+                    if isinstance(message, dict):
+                        data = message.get("data", {}) if message.get("data") is not None else data
+
+                    for key in ("file", "url", "sub_type", "id", "summary", "file_size"):
+                        try:
+                            val = None
+                            if hasattr(message, key):
+                                val = getattr(message, key)
+                            else:
+                                val = data.get(key) if isinstance(data, dict) else None
+                            if val is not None:
+                                seg[key] = val
+                        except Exception:
+                            continue
+
+                    message_array.append(seg)
+                except Exception:
+                    pass
+
+        nickname = getattr(msg, "nickname", "") or ""
+        if not nickname:
+            sender = getattr(msg, "sender", None)
+            if sender:
+                nickname = getattr(sender, "nickname", "") or ""
+
+        user_info = UserInfo(
+            nickname=nickname,
+            qq=user_qq,
+            card="",
+            role="",
+            title=""
+        )
+
+        ts = None
+        for attr in ("timestamp", "time", "recv_time", "receive_time", "created_at"):
+            ts = getattr(msg, attr, None)
+            if ts is not None:
+                break
+        if ts is None:
+            import time as _time
+            ts = _time.time()
+
+        chat_message = ChatMessage(
+            timestamp=float(ts),
+            user=user_info,
+            message=text_content.rstrip(','),
+            message_array=message_array if message_array else None,
+            force_reply=True,
+            message_id=None,
+            reply_id=None
+        )
+
+        return chat_message
+
     def build_chat_history(self,
                           group_id: str,
                           current_message: ChatMessage) -> List[Dict[str, str]]:

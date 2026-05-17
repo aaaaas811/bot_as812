@@ -3,7 +3,7 @@ from ncatbot.plugin import NcatBotPlugin
 from ncatbot.core import registrar
 from ncatbot.event.qq import GroupMessageEvent
 from ncatbot.utils import get_log
-from ncatbot.core import MessageChain, Image
+from ncatbot.types import Image  # MessageChain (ncatbot5: MessageArray) unused in this module
 import re
 import json
 import os

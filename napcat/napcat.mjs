@@ -6,23 +6,23 @@ import fsProm, { stat as stat$1, readdir, unlink as unlink$1 } from 'fs/promises
 import { ReadableStream as ReadableStream$1 } from 'node:stream/web';
 import * as stream$3 from 'node:stream';
 import stream__default, { Readable, PassThrough, pipeline } from 'node:stream';
-import fs$2, { open, stat, writeFile, constants as constants$1, unlink, readdir as readdir$1 } from 'node:fs/promises';
+import fs$2, { open, stat, writeFile, constants, unlink, readdir as readdir$1 } from 'node:fs/promises';
 import { createRequire } from 'module';
 import https$1 from 'node:https';
 import http from 'node:http';
 import * as crypto$2 from 'crypto';
 import crypto__default, { randomUUID, createHmac, createHash as createHash$1 } from 'crypto';
 import * as path$1 from 'node:path';
-import path__default, { basename, resolve as resolve$1, join as join$1, normalize as normalize$1, dirname as dirname$1 } from 'node:path';
+import path__default, { basename, resolve, join as join$1, normalize as normalize$1, dirname as dirname$1 } from 'node:path';
 import tls from 'node:tls';
-import os$1, { platform, arch, constants } from 'node:os';
+import os$1, { platform, arch, constants as constants$1 } from 'node:os';
 import * as https from 'https';
 import https__default, { createServer } from 'https';
 import http$1, { createServer as createServer$1 } from 'http';
 import * as fs$1 from 'node:fs';
-import fs__default$1, { readFileSync, statSync, createReadStream, openSync, readSync, closeSync, existsSync, readdirSync, writeFileSync as writeFileSync$1, promises as promises$1, unlink as unlink$2 } from 'node:fs';
+import fs__default$1, { readFileSync, statSync, createReadStream, openSync, readSync, closeSync, existsSync, readdirSync, writeFileSync as writeFileSync$1, promises as promises$1, mkdirSync as mkdirSync$1, unlink as unlink$2 } from 'node:fs';
 import * as crypto$1 from 'node:crypto';
-import crypto__default$1, { createHash, randomBytes, randomUUID as randomUUID$1 } from 'node:crypto';
+import crypto__default$1, { createHash, pbkdf2Sync, createDecipheriv, randomBytes, randomUUID as randomUUID$1 } from 'node:crypto';
 import * as os from 'os';
 import os__default from 'os';
 import * as net from 'node:net';
@@ -5949,7 +5949,7 @@ const UINT64_LE = {
  * Consume a fixed number of bytes from the stream and return a string with a specified encoding.
  * Supports all encodings supported by TextDecoder, plus 'windows-1252'.
  */
-class StringType {
+let StringType$1 = class StringType {
     constructor(len, encoding) {
         this.len = len;
         this.encoding = encoding;
@@ -5958,7 +5958,7 @@ class StringType {
         const bytes = data.subarray(offset, offset + this.len);
         return textDecode(bytes, this.encoding);
     }
-}
+};
 
 var require$2 = createRequire('/');
 // DEFLATE is a complex format; to read this code, you should probably check the RFC first:
@@ -7592,7 +7592,7 @@ class ZipHandler {
                 if (entry.signature !== Signature.CentralFileHeader) {
                     throw new Error('Expected Central-File-Header signature');
                 }
-                entry.filename = await this.tokenizer.readToken(new StringType(entry.filenameLength, 'utf-8'));
+                entry.filename = await this.tokenizer.readToken(new StringType$1(entry.filenameLength, 'utf-8'));
                 await this.tokenizer.ignore(entry.extraFieldLength);
                 await this.tokenizer.ignore(entry.fileCommentLength);
                 files.push(entry);
@@ -7694,7 +7694,7 @@ class ZipHandler {
         const signature = await this.tokenizer.peekToken(UINT32_LE);
         if (signature === Signature.LocalFileHeader) {
             const header = await this.tokenizer.readToken(LocalFileHeaderToken);
-            header.filename = await this.tokenizer.readToken(new StringType(header.filenameLength, 'utf-8'));
+            header.filename = await this.tokenizer.readToken(new StringType$1(header.filenameLength, 'utf-8'));
             return header;
         }
         if (signature === Signature.CentralFileHeader) {
@@ -7864,7 +7864,7 @@ Checks whether the TAR checksum is valid.
 @returns {boolean} `true` if the TAR checksum is valid, otherwise `false`.
 */
 function tarHeaderChecksumMatches(arrayBuffer, offset = 0) {
-	const readSum = Number.parseInt(new StringType(6).get(arrayBuffer, 148).replace(/\0.*$/, '').trim(), 8); // Read sum in header
+	const readSum = Number.parseInt(new StringType$1(6).get(arrayBuffer, 148).replace(/\0.*$/, '').trim(), 8); // Read sum in header
 	if (Number.isNaN(readSum)) {
 		return false;
 	}
@@ -9051,7 +9051,7 @@ let FileTypeParser$1 = class FileTypeParser {
 				while (children > 0) {
 					const element = await readElement();
 					if (element.id === 0x42_82) {
-						const rawValue = await tokenizer.readToken(new StringType(element.len));
+						const rawValue = await tokenizer.readToken(new StringType$1(element.len));
 						return rawValue.replaceAll(/\00.*$/g, ''); // Return DocType
 					}
 
@@ -9329,7 +9329,7 @@ let FileTypeParser$1 = class FileTypeParser {
 		}
 
 		if (this.checkString('AC')) {
-			const version = new StringType(4, 'latin1').get(this.buffer, 2);
+			const version = new StringType$1(4, 'latin1').get(this.buffer, 2);
 			if (version.match('^d*') && version >= 1000 && version <= 1050) {
 				return {
 					ext: 'dwg',
@@ -9356,7 +9356,7 @@ let FileTypeParser$1 = class FileTypeParser {
 
 		if (this.checkString('!<arch>')) {
 			await tokenizer.ignore(8);
-			const string = await tokenizer.readToken(new StringType(13, 'ascii'));
+			const string = await tokenizer.readToken(new StringType$1(13, 'ascii'));
 			if (string === 'debian-binary') {
 				return {
 					ext: 'deb',
@@ -9398,7 +9398,7 @@ let FileTypeParser$1 = class FileTypeParser {
 			async function readChunkHeader() {
 				return {
 					length: await tokenizer.readToken(INT32_BE),
-					type: await tokenizer.readToken(new StringType(4, 'latin1')),
+					type: await tokenizer.readToken(new StringType$1(4, 'latin1')),
 				};
 			}
 
@@ -9483,7 +9483,7 @@ let FileTypeParser$1 = class FileTypeParser {
 		) {
 			// They all can have MIME `video/mp4` except `application/mp4` special-case which is hard to detect.
 			// For some cases, we're specific, everything else falls to `video/mp4` with `mp4` extension.
-			const brandMajor = new StringType(4, 'latin1').get(this.buffer, 8).replace('\0', ' ').trim();
+			const brandMajor = new StringType$1(4, 'latin1').get(this.buffer, 8).replace('\0', ' ').trim();
 			switch (brandMajor) {
 				case 'avif':
 				case 'avis':
@@ -9665,7 +9665,7 @@ let FileTypeParser$1 = class FileTypeParser {
 			// JPEG-2000 family
 
 			await tokenizer.ignore(20);
-			const type = await tokenizer.readToken(new StringType(4, 'ascii'));
+			const type = await tokenizer.readToken(new StringType$1(4, 'ascii'));
 			switch (type) {
 				case 'jp2 ':
 					return {
@@ -10372,7 +10372,7 @@ class RkeyManager {
 }
 
 const __vite_import_meta_env__ = {};
-const napCatVersion = typeof (__vite_import_meta_env__) !== "undefined" && "4.16.0" || "1.0.0-dev";
+const napCatVersion = typeof (__vite_import_meta_env__) !== "undefined" && "4.18.2" || "1.0.0-dev";
 const SEMVER_REGEX$1 = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 function parseSemVer(version) {
   if (!version || typeof version !== "string") {
@@ -10824,7 +10824,7 @@ async function getGitHubRelease(owner, repo, tag = "latest", options = {}) {
       const response = await PromiseTimer(
         RequestUtil.HttpGetJson(url, "GET", void 0, {
           "User-Agent": "NapCat",
-          "Accept": "application/vnd.github.v3+json"
+          Accept: "application/vnd.github.v3+json"
         }),
         currentConfig.timeout
       );
@@ -11323,7 +11323,7 @@ function httpDownloadWithProxy(url, headers, proxy) {
         method: "CONNECT",
         path: `${targetUrl.hostname}:${targetUrl.port || 443}`,
         headers: {
-          "Host": `${targetUrl.hostname}:${targetUrl.port || 443}`,
+          Host: `${targetUrl.hostname}:${targetUrl.port || 443}`,
           ...proxyAuthHeader
         }
       });
@@ -11341,8 +11341,8 @@ function httpDownloadWithProxy(url, headers, proxy) {
           const requestPath = targetUrl.pathname + targetUrl.search;
           const requestHeaders = {
             ...headers,
-            "Host": targetUrl.hostname,
-            "Connection": "close"
+            Host: targetUrl.hostname,
+            Connection: "close"
           };
           const headerLines = Object.entries(requestHeaders).map(([key, value]) => `${key}: ${value}`).join("\r\n");
           const httpRequest = `GET ${requestPath} HTTP/1.1\r
@@ -11416,7 +11416,7 @@ ${headerLines}\r
         // 完整 URL
         headers: {
           ...headers,
-          "Host": targetUrl.hostname,
+          Host: targetUrl.hostname,
           ...proxyAuthHeader
         }
       }, (response) => {
@@ -11506,23 +11506,21 @@ async function uriToLocalFile(dir, uri, filename = randomUUID(), headers, proxy)
     case 1 /* Local */: {
       const fileExt = path__default.extname(HandledUri);
       const localFileName = path__default.basename(HandledUri, fileExt) + fileExt;
-      const tempFilePath = path__default.join(dir, filename + fileExt);
-      fs__default.copyFileSync(HandledUri, tempFilePath);
-      return { success: true, errMsg: "", fileName: localFileName, path: tempFilePath };
+      return { success: true, errMsg: "", fileName: localFileName, path: HandledUri, isLocal: true };
     }
     case 2 /* Remote */: {
       const buffer = await httpDownload({ url: HandledUri, headers: headers ?? {}, proxy });
       fs__default.writeFileSync(filePath, buffer);
-      return { success: true, errMsg: "", fileName: filename, path: filePath };
+      return { success: true, errMsg: "", fileName: filename, path: filePath, isLocal: false };
     }
     case 3 /* Base64 */: {
       const base64 = HandledUri.replace(/^base64:\/\//, "");
       const base64Buffer = Buffer.from(base64, "base64");
       fs__default.writeFileSync(filePath, base64Buffer);
-      return { success: true, errMsg: "", fileName: filename, path: filePath };
+      return { success: true, errMsg: "", fileName: filename, path: filePath, isLocal: false };
     }
     default:
-      return { success: false, errMsg: `识别URL失败, uri= ${uri}`, fileName: "", path: "" };
+      return { success: false, errMsg: `识别URL失败, uri= ${uri}`, fileName: "", path: "", isLocal: false };
   }
 }
 
@@ -12421,9 +12419,22 @@ class NTQQGroupApi {
   core;
   groupMemberCache = /* @__PURE__ */ new Map();
   essenceLRU = new LimitedHashTable(1e3);
+  // psKey 滑动缓存，TTL 60 秒，惰性删除（不主动清理，等下次访问检测到过期再刷新）
+  _qunPskeyCache = null;
   constructor(context, core) {
     this.context = context;
     this.core = core;
+  }
+  /** 获取 qun.qq.com 域名的 psKey，滑动 TTL 60 秒（每次访问顺延） */
+  async getQunPskey() {
+    const now = Date.now();
+    if (this._qunPskeyCache && this._qunPskeyCache.expireAt > now) {
+      this._qunPskeyCache.expireAt = now + 60 * 1e3;
+      return this._qunPskeyCache.value;
+    }
+    const psKey = (await this.core.apis.UserApi.getPSkey(["qun.qq.com"])).domainPskeyMap.get("qun.qq.com");
+    this._qunPskeyCache = { value: psKey, expireAt: now + 60 * 1e3 };
+    return psKey;
   }
   async setGroupRemark(groupCode, remark) {
     return this.context.session.getGroupService().modifyGroupRemark(groupCode, remark);
@@ -12465,7 +12476,7 @@ class NTQQGroupApi {
     }
   }
   async fetchGroupEssenceList(groupCode) {
-    const pskey = (await this.core.apis.UserApi.getPSkey(["qun.qq.com"])).domainPskeyMap.get("qun.qq.com");
+    const pskey = await this.getQunPskey();
     return this.context.session.getGroupService().fetchGroupEssenceList({
       groupCode,
       pageStart: 0,
@@ -12671,7 +12682,7 @@ class NTQQGroupApi {
     return this.context.session.getGroupService().kickMemberV2(param);
   }
   async deleteGroupBulletin(groupCode, noticeId) {
-    const psKey = (await this.core.apis.UserApi.getPSkey(["qun.qq.com"])).domainPskeyMap.get("qun.qq.com");
+    const psKey = await this.getQunPskey();
     return this.context.session.getGroupService().deleteGroupBulletin(groupCode, psKey, noticeId);
   }
   async quitGroupV2(GroupCode, needDeleteLocalMsg) {
@@ -12766,7 +12777,7 @@ class NTQQGroupApi {
     return ret.arkJson;
   }
   async uploadGroupBulletinPic(groupCode, imageurl) {
-    const _Pskey = (await this.core.apis.UserApi.getPSkey(["qun.qq.com"])).domainPskeyMap.get("qun.qq.com");
+    const _Pskey = await this.getQunPskey();
     return this.context.session.getGroupService().uploadGroupBulletinPic(groupCode, _Pskey, imageurl);
   }
   async handleGroupRequest(doubt, notify, operateType, reason) {
@@ -12803,11 +12814,11 @@ class NTQQGroupApi {
   async setMemberRole(groupCode, memberUid, role) {
     return this.context.session.getGroupService().modifyMemberRole(groupCode, memberUid, role);
   }
-  async setGroupName(groupCode, groupName) {
-    return this.context.session.getGroupService().modifyGroupName(groupCode, groupName, false);
+  async setGroupName(groupCode, groupName, isNormalMember = false) {
+    return this.context.session.getGroupService().modifyGroupName(groupCode, groupName, isNormalMember);
   }
   async publishGroupBulletin(groupCode, content, picInfo = void 0, pinned = 0, confirmRequired = 0) {
-    const psKey = (await this.core.apis.UserApi.getPSkey(["qun.qq.com"])).domainPskeyMap.get("qun.qq.com");
+    const psKey = await this.getQunPskey();
     const data = {
       text: encodeURI(content),
       picInfo,
@@ -13760,10 +13771,13 @@ class NTQQWebApi {
     }
     return (hash & 2147483647).toString();
   }
-  async getAlbumListByNTQQ(gc) {
+  getBknFromPSKey(psKey) {
+    return this.getBknFromSKey(psKey);
+  }
+  async getAlbumListByNTQQ(gc, attach_info = "") {
     return await this.context.session.getAlbumService().getAlbumList({
       qun_id: gc,
-      attach_info: "",
+      attach_info,
       seq: 3331,
       request_time_line: {
         request_invoke_time: "0"
@@ -14005,6 +14019,20 @@ const offset$1 = {
   "3.2.25-45758-x64": {"send":"5CF8F30","recv":"31667E0"},
   "3.2.25-45758-arm64": {"send":"3EB6554","recv":"149AF0C"},
   "9.9.27-45758-x64": {"send":"0A6A6BC","recv":"1E87EC1"},
+  "9.9.28-46494-x64": {"send":"0A6D66C","recv":"1E9890D"},
+  "3.2.26-46494-x64": {"send":"5D30910","recv":"31814B0"},
+  "3.2.26-46494-arm64": {"send":"3EDC654","recv":"14A3124"},
+  "3.2.26-46928-x64": {"send":"5D30910","recv":"31814B0"},
+  "3.2.26-46928-arm64": {"send":"3EDC654","recv":"14A3124"},
+  "9.9.28-46928-x64": {"send":"0A6D66C","recv":"1E9890D"},
+  "3.2.27-47354-x64": {"send":"5D38930","recv":"318D090"},
+  "3.2.27-47354-arm64": {"send":"3EE8B24","recv":"14D422C"},
+  "9.9.29-47354-x64": {"send":"0A70B3C","recv":"1EAFD51"},
+  "6.9.93-47354-arm64": {"send":"244066C","recv":"09BCCF8"},
+  "6.9.93-47354-x64": {"send":"28ADE46","recv":"0A8FD5A"},
+  "9.9.30-48517-x64": {"send":"0A9B1BC","recv":"1F0324D"},
+  "3.2.28-48517-x64": {"send":"5E41890","recv":"3216D10"},
+  "3.2.28-48517-arm64": {"send":"3F9C7E4","recv":"14E1AA8"},
 };
 
 class Frame {
@@ -15587,6 +15615,13 @@ const ApplyUploadRespV3 = {
 ({
   field10: ProtoField(10, ScalarType.UINT32, true)});
 
+const OidbSvcTrpcTcp0XCDE_2RespBodyInner = {
+  value: ProtoField(1, ScalarType.STRING)
+};
+const OidbSvcTrpcTcp0XCDE_2RespBody = {
+  inner: ProtoField(2, () => OidbSvcTrpcTcp0XCDE_2RespBodyInner)
+};
+
 const OidbSvcTrpcTcp0XEB7_Body = {
   uin: ProtoField(1, ScalarType.STRING),
   groupUin: ProtoField(2, ScalarType.STRING),
@@ -15684,7 +15719,7 @@ const Language = {
   languageDesc: ProtoField(2, ScalarType.STRING)
 };
 
-const OidbSvcTrpcTcp0XF90_1 = {
+const OidbSvcTrpcTcp0XF90 = {
   groupUin: ProtoField(1, ScalarType.UINT32),
   msgSeq: ProtoField(2, ScalarType.UINT64)
 };
@@ -16564,17 +16599,19 @@ class PacketMsgMarkDownElement extends IPacketMsgElement {
 class PacketMultiMsgElement extends IPacketMsgElement {
   resid;
   message;
+  uuid;
   constructor(rawElement, message) {
     super(rawElement);
     this.resid = rawElement.multiForwardMsgElement.resId;
     this.message = message ?? [];
+    this.uuid = rawElement.multiForwardMsgElement.fileName || crypto$1.randomUUID();
   }
   buildElement() {
     return [{
       lightAppElem: {
         data: Buffer.concat([
           Buffer.from([1]),
-          zlib.deflateSync(Buffer.from(JSON.stringify(ForwardMsgBuilder.fromPacketMsg(this.resid, this.message)), "utf-8"))
+          zlib.deflateSync(Buffer.from(JSON.stringify(ForwardMsgBuilder.fromPacketMsg(this.resid, this.message, void 0, void 0, void 0, void 0, this.uuid)), "utf-8"))
         ])
       }
     }];
@@ -17213,9 +17250,37 @@ let RenameGroupFile$1 = class RenameGroupFile extends PacketTransformer {
 };
 const RenameGroupFile_default = new RenameGroupFile$1();
 
+let CompleteGroupTodo$1 = class CompleteGroupTodo extends PacketTransformer {
+  build(peer, msgSeq) {
+    const data = new NapProtoMsg(OidbSvcTrpcTcp0XF90).encode({
+      groupUin: peer,
+      msgSeq: BigInt(msgSeq)
+    });
+    return OidbBase$1.build(3984, 2, data);
+  }
+  parse(data) {
+    return OidbBase$1.parse(data);
+  }
+};
+const CompleteGroupTodo_default = new CompleteGroupTodo$1();
+
+let CancelGroupTodo$1 = class CancelGroupTodo extends PacketTransformer {
+  build(peer, msgSeq) {
+    const data = new NapProtoMsg(OidbSvcTrpcTcp0XF90).encode({
+      groupUin: peer,
+      msgSeq: BigInt(msgSeq)
+    });
+    return OidbBase$1.build(3984, 3, data);
+  }
+  parse(data) {
+    return OidbBase$1.parse(data);
+  }
+};
+const CancelGroupTodo_default = new CancelGroupTodo$1();
+
 let SetGroupTodo$1 = class SetGroupTodo extends PacketTransformer {
   build(peer, msgSeq) {
-    const data = new NapProtoMsg(OidbSvcTrpcTcp0XF90_1).encode({
+    const data = new NapProtoMsg(OidbSvcTrpcTcp0XF90).encode({
       groupUin: peer,
       msgSeq: BigInt(msgSeq)
     });
@@ -18118,7 +18183,7 @@ class UploadForwardMsgV2 extends PacketTransformer {
     const reqdata = msg.map((item) => ({
       actionCommand: item.actionCommand,
       actionData: {
-        msgBody: this.msgBuilder.buildFakeMsg(selfUid, item.actionMsg)
+        msgBody: item.actionMsgBody ?? this.msgBuilder.buildFakeMsg(selfUid, item.actionMsg ?? [])
       }
     }));
     const longMsgResultData = new NapProtoMsg(LongMsgResult).encode(
@@ -18716,7 +18781,7 @@ var compressing$1 = {};
 
 var zip = {};
 
-var utils$2 = {};
+var utils$1 = {};
 
 var mkdirp;
 var hasRequiredMkdirp;
@@ -19123,11 +19188,11 @@ function requirePump () {
 	return pump_1;
 }
 
-var hasRequiredUtils$2;
+var hasRequiredUtils$1;
 
-function requireUtils$2 () {
-	if (hasRequiredUtils$2) return utils$2;
-	hasRequiredUtils$2 = 1;
+function requireUtils$1 () {
+	if (hasRequiredUtils$1) return utils$1;
+	hasRequiredUtils$1 = 1;
 
 	const fs = fs__default;
 	const path = path__default$1;
@@ -19135,7 +19200,7 @@ function requireUtils$2 () {
 	const pump = requirePump();
 
 	// file/fileBuffer/stream
-	utils$2.sourceType = source => {
+	utils$1.sourceType = source => {
 	  if (!source) return undefined;
 
 	  if (source instanceof Buffer) return 'buffer';
@@ -19159,13 +19224,13 @@ function requireUtils$2 () {
 	  return 'path';
 	}
 
-	utils$2.destType = destType;
+	utils$1.destType = destType;
 
 	const illigalEntryError = new Error('Type is not supported, must be a file path, directory path, file buffer, or a readable stream');
 	illigalEntryError.name = 'IlligalEntryError';
 
 	// fileOrDir/fileBuffer/stream
-	utils$2.entryType = entry => {
+	utils$1.entryType = entry => {
 	  if (!entry) return;
 
 	  if (entry instanceof Buffer) return 'buffer';
@@ -19176,7 +19241,7 @@ function requireUtils$2 () {
 	};
 
 
-	utils$2.clone = obj => {
+	utils$1.clone = obj => {
 	  const newObj = {};
 	  for (const i in obj) {
 	    newObj[i] = obj[i];
@@ -19184,7 +19249,7 @@ function requireUtils$2 () {
 	  return newObj;
 	};
 
-	utils$2.makeFileProcessFn = StreamClass => {
+	utils$1.makeFileProcessFn = StreamClass => {
 	  return (source, dest, opts) => {
 	    opts = opts || {};
 	    opts.source = source;
@@ -19194,7 +19259,7 @@ function requireUtils$2 () {
 	  };
 	};
 
-	utils$2.makeCompressDirFn = StreamClass => {
+	utils$1.makeCompressDirFn = StreamClass => {
 	  return (dir, dest, opts) => {
 	    const destStream = destType(dest) === 'path' ? fs.createWriteStream(dest) : dest;
 	    const compressStream = new StreamClass();
@@ -19203,7 +19268,7 @@ function requireUtils$2 () {
 	  };
 	};
 
-	utils$2.makeUncompressFn = StreamClass => {
+	utils$1.makeUncompressFn = StreamClass => {
 	  return (source, destDir, opts) => {
 	    opts = opts || {};
 	    opts.source = source;
@@ -19279,7 +19344,7 @@ function requireUtils$2 () {
 	  };
 	};
 
-	utils$2.streamToBuffer = stream => {
+	utils$1.streamToBuffer = stream => {
 	  return new Promise((resolve, reject) => {
 	    const chunks = [];
 	    stream
@@ -19301,7 +19366,7 @@ function requireUtils$2 () {
 	  });
 	}
 
-	utils$2.safePipe = safePipe;
+	utils$1.safePipe = safePipe;
 
 	function normalizePath(fileName) {
 	  fileName = path.normalize(fileName);
@@ -19355,8 +19420,8 @@ function requireUtils$2 () {
 	  return s.slice(strip).join('/') || '/';
 	}
 
-	utils$2.stripFileName = stripFileName;
-	return utils$2;
+	utils$1.stripFileName = stripFileName;
+	return utils$1;
 }
 
 var yazl = {};
@@ -20278,13 +20343,13 @@ function requireProcessNextickArgs () {
 	return processNextickArgs.exports;
 }
 
-var util$3 = {};
+var util$2 = {};
 
-var hasRequiredUtil$2;
+var hasRequiredUtil$1;
 
-function requireUtil$2 () {
-	if (hasRequiredUtil$2) return util$3;
-	hasRequiredUtil$2 = 1;
+function requireUtil$1 () {
+	if (hasRequiredUtil$1) return util$2;
+	hasRequiredUtil$1 = 1;
 	// Copyright Joyent, Inc. and other Node contributors.
 	//
 	// Permission is hereby granted, free of charge, to any person obtaining a
@@ -20315,67 +20380,67 @@ function requireUtil$2 () {
 	  }
 	  return objectToString(arg) === '[object Array]';
 	}
-	util$3.isArray = isArray;
+	util$2.isArray = isArray;
 
 	function isBoolean(arg) {
 	  return typeof arg === 'boolean';
 	}
-	util$3.isBoolean = isBoolean;
+	util$2.isBoolean = isBoolean;
 
 	function isNull(arg) {
 	  return arg === null;
 	}
-	util$3.isNull = isNull;
+	util$2.isNull = isNull;
 
 	function isNullOrUndefined(arg) {
 	  return arg == null;
 	}
-	util$3.isNullOrUndefined = isNullOrUndefined;
+	util$2.isNullOrUndefined = isNullOrUndefined;
 
 	function isNumber(arg) {
 	  return typeof arg === 'number';
 	}
-	util$3.isNumber = isNumber;
+	util$2.isNumber = isNumber;
 
 	function isString(arg) {
 	  return typeof arg === 'string';
 	}
-	util$3.isString = isString;
+	util$2.isString = isString;
 
 	function isSymbol(arg) {
 	  return typeof arg === 'symbol';
 	}
-	util$3.isSymbol = isSymbol;
+	util$2.isSymbol = isSymbol;
 
 	function isUndefined(arg) {
 	  return arg === void 0;
 	}
-	util$3.isUndefined = isUndefined;
+	util$2.isUndefined = isUndefined;
 
 	function isRegExp(re) {
 	  return objectToString(re) === '[object RegExp]';
 	}
-	util$3.isRegExp = isRegExp;
+	util$2.isRegExp = isRegExp;
 
 	function isObject(arg) {
 	  return typeof arg === 'object' && arg !== null;
 	}
-	util$3.isObject = isObject;
+	util$2.isObject = isObject;
 
 	function isDate(d) {
 	  return objectToString(d) === '[object Date]';
 	}
-	util$3.isDate = isDate;
+	util$2.isDate = isDate;
 
 	function isError(e) {
 	  return (objectToString(e) === '[object Error]' || e instanceof Error);
 	}
-	util$3.isError = isError;
+	util$2.isError = isError;
 
 	function isFunction(arg) {
 	  return typeof arg === 'function';
 	}
-	util$3.isFunction = isFunction;
+	util$2.isFunction = isFunction;
 
 	function isPrimitive(arg) {
 	  return arg === null ||
@@ -20385,14 +20450,14 @@ function requireUtil$2 () {
 	         typeof arg === 'symbol' ||  // ES6 symbol
 	         typeof arg === 'undefined';
 	}
-	util$3.isPrimitive = isPrimitive;
+	util$2.isPrimitive = isPrimitive;
 
-	util$3.isBuffer = require$$0$4.Buffer.isBuffer;
+	util$2.isBuffer = require$$0$4.Buffer.isBuffer;
 
 	function objectToString(o) {
 	  return Object.prototype.toString.call(o);
 	}
-	return util$3;
+	return util$2;
 }
 
 var inherits_browser = {exports: {}};
@@ -21045,7 +21110,7 @@ function require_stream_readable$1 () {
 	/*</replacement>*/
 
 	/*<replacement>*/
-	var util = Object.create(requireUtil$2());
+	var util = Object.create(requireUtil$1());
 	util.inherits = requireInherits_browser();
 	/*</replacement>*/
 
@@ -22114,7 +22179,7 @@ function require_stream_writable$1 () {
 	Writable.WritableState = WritableState;
 
 	/*<replacement>*/
-	var util = Object.create(requireUtil$2());
+	var util = Object.create(requireUtil$1());
 	util.inherits = requireInherits_browser();
 	/*</replacement>*/
 
@@ -22760,7 +22825,7 @@ function require_stream_duplex$1 () {
 	_stream_duplex$1 = Duplex;
 
 	/*<replacement>*/
-	var util = Object.create(requireUtil$2());
+	var util = Object.create(requireUtil$1());
 	util.inherits = requireInherits_browser();
 	/*</replacement>*/
 
@@ -23280,16 +23345,16 @@ function requireIsarray () {
 	return isarray;
 }
 
-var type$2;
+var type;
 var hasRequiredType;
 
 function requireType () {
-	if (hasRequiredType) return type$2;
+	if (hasRequiredType) return type;
 	hasRequiredType = 1;
 
 	/** @type {import('./type')} */
-	type$2 = TypeError;
-	return type$2;
+	type = TypeError;
+	return type;
 }
 
 var esObjectAtoms;
@@ -23340,16 +23405,16 @@ function requireRange () {
 	return range;
 }
 
-var ref$1;
-var hasRequiredRef$1;
+var ref;
+var hasRequiredRef;
 
-function requireRef$1 () {
-	if (hasRequiredRef$1) return ref$1;
-	hasRequiredRef$1 = 1;
+function requireRef () {
+	if (hasRequiredRef) return ref;
+	hasRequiredRef = 1;
 
 	/** @type {import('./ref')} */
-	ref$1 = ReferenceError;
-	return ref$1;
+	ref = ReferenceError;
+	return ref;
 }
 
 var syntax;
@@ -23364,16 +23429,16 @@ function requireSyntax () {
 	return syntax;
 }
 
-var uri$1;
-var hasRequiredUri$1;
+var uri;
+var hasRequiredUri;
 
-function requireUri$1 () {
-	if (hasRequiredUri$1) return uri$1;
-	hasRequiredUri$1 = 1;
+function requireUri () {
+	if (hasRequiredUri) return uri;
+	hasRequiredUri = 1;
 
 	/** @type {import('./uri')} */
-	uri$1 = URIError;
-	return uri$1;
+	uri = URIError;
+	return uri;
 }
 
 var abs;
@@ -23924,10 +23989,10 @@ function requireGetIntrinsic () {
 	var $Error = /*@__PURE__*/ requireEsErrors();
 	var $EvalError = /*@__PURE__*/ require_eval();
 	var $RangeError = /*@__PURE__*/ requireRange();
-	var $ReferenceError = /*@__PURE__*/ requireRef$1();
+	var $ReferenceError = /*@__PURE__*/ requireRef();
 	var $SyntaxError = /*@__PURE__*/ requireSyntax();
 	var $TypeError = /*@__PURE__*/ requireType();
-	var $URIError = /*@__PURE__*/ requireUri$1();
+	var $URIError = /*@__PURE__*/ requireUri();
 
 	var abs = /*@__PURE__*/ requireAbs();
 	var floor = /*@__PURE__*/ requireFloor();
@@ -25545,7 +25610,7 @@ function require_stream_transform$1 () {
 	var Duplex = require_stream_duplex$1();
 
 	/*<replacement>*/
-	var util = Object.create(requireUtil$2());
+	var util = Object.create(requireUtil$1());
 	util.inherits = requireInherits_browser();
 	/*</replacement>*/
 
@@ -25704,7 +25769,7 @@ function require_stream_passthrough$1 () {
 	var Transform = require_stream_transform$1();
 
 	/*<replacement>*/
-	var util = Object.create(requireUtil$2());
+	var util = Object.create(requireUtil$1());
 	util.inherits = requireInherits_browser();
 	/*</replacement>*/
 
@@ -26332,7 +26397,7 @@ function requireStream$3 () {
 	const path = path__default$1;
 	const stream = require$$1$1;
 	const tar = requireTarStream();
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const BaseStream = requireBase_stream();
 
 	class TarStream extends BaseStream {
@@ -26571,7 +26636,7 @@ function requireFile_stream$3 () {
 	const yazl = requireYazl();
 	const assert = require$$2$2;
 	const stream = require$$1$1;
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const ready = requireGetReady();
 
 	class ZipFileStream extends stream.Transform {
@@ -30761,7 +30826,7 @@ const require$$1 = /* #__PURE__ */ JSON.parse("[[\"0\",\"\\u0000\",127],[\"8ea1\
 
 const require$$2$1 = /* #__PURE__ */ JSON.parse("[[\"0\",\"\\u0000\",127,\"€\"],[\"8140\",\"丂丄丅丆丏丒丗丟丠両丣並丩丮丯丱丳丵丷丼乀乁乂乄乆乊乑乕乗乚乛乢乣乤乥乧乨乪\",5,\"乲乴\",9,\"乿\",6,\"亇亊\"],[\"8180\",\"亐亖亗亙亜亝亞亣亪亯亰亱亴亶亷亸亹亼亽亾仈仌仏仐仒仚仛仜仠仢仦仧仩仭仮仯仱仴仸仹仺仼仾伀伂\",6,\"伋伌伒\",4,\"伜伝伡伣伨伩伬伭伮伱伳伵伷伹伻伾\",4,\"佄佅佇\",5,\"佒佔佖佡佢佦佨佪佫佭佮佱佲併佷佸佹佺佽侀侁侂侅來侇侊侌侎侐侒侓侕侖侘侙侚侜侞侟価侢\"],[\"8240\",\"侤侫侭侰\",4,\"侶\",8,\"俀俁係俆俇俈俉俋俌俍俒\",4,\"俙俛俠俢俤俥俧俫俬俰俲俴俵俶俷俹俻俼俽俿\",11],[\"8280\",\"個倎倐們倓倕倖倗倛倝倞倠倢倣値倧倫倯\",10,\"倻倽倿偀偁偂偄偅偆偉偊偋偍偐\",4,\"偖偗偘偙偛偝\",7,\"偦\",5,\"偭\",8,\"偸偹偺偼偽傁傂傃傄傆傇傉傊傋傌傎\",20,\"傤傦傪傫傭\",4,\"傳\",6,\"傼\"],[\"8340\",\"傽\",17,\"僐\",5,\"僗僘僙僛\",10,\"僨僩僪僫僯僰僱僲僴僶\",4,\"僼\",9,\"儈\"],[\"8380\",\"儉儊儌\",5,\"儓\",13,\"儢\",28,\"兂兇兊兌兎兏児兒兓兗兘兙兛兝\",4,\"兣兤兦內兩兪兯兲兺兾兿冃冄円冇冊冋冎冏冐冑冓冔冘冚冝冞冟冡冣冦\",4,\"冭冮冴冸冹冺冾冿凁凂凃凅凈凊凍凎凐凒\",5],[\"8440\",\"凘凙凚凜凞凟凢凣凥\",5,\"凬凮凱凲凴凷凾刄刅刉刋刌刏刐刓刔刕刜刞刟刡刢刣別刦刧刪刬刯刱刲刴刵刼刾剄\",5,\"剋剎剏剒剓剕剗剘\"],[\"8480\",\"剙剚剛剝剟剠剢剣剤剦剨剫剬剭剮剰剱剳\",9,\"剾劀劃\",4,\"劉\",6,\"劑劒劔\",6,\"劜劤劥劦劧劮劯劰労\",9,\"勀勁勂勄勅勆勈勊勌勍勎勏勑勓勔動勗務\",5,\"勠勡勢勣勥\",10,\"勱\",7,\"勻勼勽匁匂匃匄匇匉匊匋匌匎\"],[\"8540\",\"匑匒匓匔匘匛匜匞匟匢匤匥匧匨匩匫匬匭匯\",9,\"匼匽區卂卄卆卋卌卍卐協単卙卛卝卥卨卪卬卭卲卶卹卻卼卽卾厀厁厃厇厈厊厎厏\"],[\"8580\",\"厐\",4,\"厖厗厙厛厜厞厠厡厤厧厪厫厬厭厯\",6,\"厷厸厹厺厼厽厾叀參\",4,\"収叏叐叒叓叕叚叜叝叞叡叢叧叴叺叾叿吀吂吅吇吋吔吘吙吚吜吢吤吥吪吰吳吶吷吺吽吿呁呂呄呅呇呉呌呍呎呏呑呚呝\",4,\"呣呥呧呩\",7,\"呴呹呺呾呿咁咃咅咇咈咉咊咍咑咓咗咘咜咞咟咠咡\"],[\"8640\",\"咢咥咮咰咲咵咶咷咹咺咼咾哃哅哊哋哖哘哛哠\",4,\"哫哬哯哰哱哴\",5,\"哻哾唀唂唃唄唅唈唊\",4,\"唒唓唕\",5,\"唜唝唞唟唡唥唦\"],[\"8680\",\"唨唩唫唭唲唴唵唶唸唹唺唻唽啀啂啅啇啈啋\",4,\"啑啒啓啔啗\",4,\"啝啞啟啠啢啣啨啩啫啯\",5,\"啹啺啽啿喅喆喌喍喎喐喒喓喕喖喗喚喛喞喠\",6,\"喨\",8,\"喲喴営喸喺喼喿\",4,\"嗆嗇嗈嗊嗋嗎嗏嗐嗕嗗\",4,\"嗞嗠嗢嗧嗩嗭嗮嗰嗱嗴嗶嗸\",4,\"嗿嘂嘃嘄嘅\"],[\"8740\",\"嘆嘇嘊嘋嘍嘐\",7,\"嘙嘚嘜嘝嘠嘡嘢嘥嘦嘨嘩嘪嘫嘮嘯嘰嘳嘵嘷嘸嘺嘼嘽嘾噀\",11,\"噏\",4,\"噕噖噚噛噝\",4],[\"8780\",\"噣噥噦噧噭噮噯噰噲噳噴噵噷噸噹噺噽\",7,\"嚇\",6,\"嚐嚑嚒嚔\",14,\"嚤\",10,\"嚰\",6,\"嚸嚹嚺嚻嚽\",12,\"囋\",8,\"囕囖囘囙囜団囥\",5,\"囬囮囯囲図囶囷囸囻囼圀圁圂圅圇國\",6],[\"8840\",\"園\",9,\"圝圞圠圡圢圤圥圦圧圫圱圲圴\",4,\"圼圽圿坁坃坄坅坆坈坉坋坒\",4,\"坘坙坢坣坥坧坬坮坰坱坲坴坵坸坹坺坽坾坿垀\"],[\"8880\",\"垁垇垈垉垊垍\",4,\"垔\",6,\"垜垝垞垟垥垨垪垬垯垰垱垳垵垶垷垹\",8,\"埄\",6,\"埌埍埐埑埓埖埗埛埜埞埡埢埣埥\",7,\"埮埰埱埲埳埵埶執埻埼埾埿堁堃堄堅堈堉堊堌堎堏堐堒堓堔堖堗堘堚堛堜堝堟堢堣堥\",4,\"堫\",4,\"報堲堳場堶\",7],[\"8940\",\"堾\",5,\"塅\",6,\"塎塏塐塒塓塕塖塗塙\",4,\"塟\",5,\"塦\",4,\"塭\",16,\"塿墂墄墆墇墈墊墋墌\"],[\"8980\",\"墍\",4,\"墔\",4,\"墛墜墝墠\",7,\"墪\",17,\"墽墾墿壀壂壃壄壆\",10,\"壒壓壔壖\",13,\"壥\",5,\"壭壯壱売壴壵壷壸壺\",7,\"夃夅夆夈\",4,\"夎夐夑夒夓夗夘夛夝夞夠夡夢夣夦夨夬夰夲夳夵夶夻\"],[\"8a40\",\"夽夾夿奀奃奅奆奊奌奍奐奒奓奙奛\",4,\"奡奣奤奦\",12,\"奵奷奺奻奼奾奿妀妅妉妋妌妎妏妐妑妔妕妘妚妛妜妝妟妠妡妢妦\"],[\"8a80\",\"妧妬妭妰妱妳\",5,\"妺妼妽妿\",6,\"姇姈姉姌姍姎姏姕姖姙姛姞\",4,\"姤姦姧姩姪姫姭\",11,\"姺姼姽姾娀娂娊娋娍娎娏娐娒娔娕娖娗娙娚娛娝娞娡娢娤娦娧娨娪\",6,\"娳娵娷\",4,\"娽娾娿婁\",4,\"婇婈婋\",9,\"婖婗婘婙婛\",5],[\"8b40\",\"婡婣婤婥婦婨婩婫\",8,\"婸婹婻婼婽婾媀\",17,\"媓\",6,\"媜\",13,\"媫媬\"],[\"8b80\",\"媭\",4,\"媴媶媷媹\",4,\"媿嫀嫃\",5,\"嫊嫋嫍\",4,\"嫓嫕嫗嫙嫚嫛嫝嫞嫟嫢嫤嫥嫧嫨嫪嫬\",4,\"嫲\",22,\"嬊\",11,\"嬘\",25,\"嬳嬵嬶嬸\",7,\"孁\",6],[\"8c40\",\"孈\",7,\"孒孖孞孠孡孧孨孫孭孮孯孲孴孶孷學孹孻孼孾孿宂宆宊宍宎宐宑宒宔宖実宧宨宩宬宭宮宯宱宲宷宺宻宼寀寁寃寈寉寊寋寍寎寏\"],[\"8c80\",\"寑寔\",8,\"寠寢寣實寧審\",4,\"寯寱\",6,\"寽対尀専尃尅將專尋尌對導尐尒尓尗尙尛尞尟尠尡尣尦尨尩尪尫尭尮尯尰尲尳尵尶尷屃屄屆屇屌屍屒屓屔屖屗屘屚屛屜屝屟屢層屧\",6,\"屰屲\",6,\"屻屼屽屾岀岃\",4,\"岉岊岋岎岏岒岓岕岝\",4,\"岤\",4],[\"8d40\",\"岪岮岯岰岲岴岶岹岺岻岼岾峀峂峃峅\",5,\"峌\",5,\"峓\",5,\"峚\",6,\"峢峣峧峩峫峬峮峯峱\",9,\"峼\",4],[\"8d80\",\"崁崄崅崈\",5,\"崏\",4,\"崕崗崘崙崚崜崝崟\",4,\"崥崨崪崫崬崯\",4,\"崵\",7,\"崿\",7,\"嵈嵉嵍\",10,\"嵙嵚嵜嵞\",10,\"嵪嵭嵮嵰嵱嵲嵳嵵\",12,\"嶃\",21,\"嶚嶛嶜嶞嶟嶠\"],[\"8e40\",\"嶡\",21,\"嶸\",12,\"巆\",6,\"巎\",12,\"巜巟巠巣巤巪巬巭\"],[\"8e80\",\"巰巵巶巸\",4,\"巿帀帄帇帉帊帋帍帎帒帓帗帞\",7,\"帨\",4,\"帯帰帲\",4,\"帹帺帾帿幀幁幃幆\",5,\"幍\",6,\"幖\",4,\"幜幝幟幠幣\",14,\"幵幷幹幾庁庂広庅庈庉庌庍庎庒庘庛庝庡庢庣庤庨\",4,\"庮\",4,\"庴庺庻庼庽庿\",6],[\"8f40\",\"廆廇廈廋\",5,\"廔廕廗廘廙廚廜\",11,\"廩廫\",8,\"廵廸廹廻廼廽弅弆弇弉弌弍弎弐弒弔弖弙弚弜弝弞弡弢弣弤\"],[\"8f80\",\"弨弫弬弮弰弲\",6,\"弻弽弾弿彁\",14,\"彑彔彙彚彛彜彞彟彠彣彥彧彨彫彮彯彲彴彵彶彸彺彽彾彿徃徆徍徎徏徑従徔徖徚徛徝從徟徠徢\",5,\"復徫徬徯\",5,\"徶徸徹徺徻徾\",4,\"忇忈忊忋忎忓忔忕忚忛応忞忟忢忣忥忦忨忩忬忯忰忲忳忴忶忷忹忺忼怇\"],[\"9040\",\"怈怉怋怌怐怑怓怗怘怚怞怟怢怣怤怬怭怮怰\",4,\"怶\",4,\"怽怾恀恄\",6,\"恌恎恏恑恓恔恖恗恘恛恜恞恟恠恡恥恦恮恱恲恴恵恷恾悀\"],[\"9080\",\"悁悂悅悆悇悈悊悋悎悏悐悑悓悕悗悘悙悜悞悡悢悤悥悧悩悪悮悰悳悵悶悷悹悺悽\",7,\"惇惈惉惌\",4,\"惒惓惔惖惗惙惛惞惡\",4,\"惪惱惲惵惷惸惻\",4,\"愂愃愄愅愇愊愋愌愐\",4,\"愖愗愘愙愛愜愝愞愡愢愥愨愩愪愬\",18,\"慀\",6],[\"9140\",\"慇慉態慍慏慐慒慓慔慖\",6,\"慞慟慠慡慣慤慥慦慩\",6,\"慱慲慳慴慶慸\",18,\"憌憍憏\",4,\"憕\"],[\"9180\",\"憖\",6,\"憞\",8,\"憪憫憭\",9,\"憸\",5,\"憿懀懁懃\",4,\"應懌\",4,\"懓懕\",16,\"懧\",13,\"懶\",8,\"戀\",5,\"戇戉戓戔戙戜戝戞戠戣戦戧戨戩戫戭戯戰戱戲戵戶戸\",4,\"扂扄扅扆扊\"],[\"9240\",\"扏扐払扖扗扙扚扜\",6,\"扤扥扨扱扲扴扵扷扸扺扻扽抁抂抃抅抆抇抈抋\",5,\"抔抙抜抝択抣抦抧抩抪抭抮抯抰抲抳抴抶抷抸抺抾拀拁\"],[\"9280\",\"拃拋拏拑拕拝拞拠拡拤拪拫拰拲拵拸拹拺拻挀挃挄挅挆挊挋挌挍挏挐挒挓挔挕挗挘挙挜挦挧挩挬挭挮挰挱挳\",5,\"挻挼挾挿捀捁捄捇捈捊捑捒捓捔捖\",7,\"捠捤捥捦捨捪捫捬捯捰捲捳捴捵捸捹捼捽捾捿掁掃掄掅掆掋掍掑掓掔掕掗掙\",6,\"採掤掦掫掯掱掲掵掶掹掻掽掿揀\"],[\"9340\",\"揁揂揃揅揇揈揊揋揌揑揓揔揕揗\",6,\"揟揢揤\",4,\"揫揬揮揯揰揱揳揵揷揹揺揻揼揾搃搄搆\",4,\"損搎搑搒搕\",5,\"搝搟搢搣搤\"],[\"9380\",\"搥搧搨搩搫搮\",5,\"搵\",4,\"搻搼搾摀摂摃摉摋\",6,\"摓摕摖摗摙\",4,\"摟\",7,\"摨摪摫摬摮\",9,\"摻\",6,\"撃撆撈\",8,\"撓撔撗撘撚撛撜撝撟\",4,\"撥撦撧撨撪撫撯撱撲撳撴撶撹撻撽撾撿擁擃擄擆\",6,\"擏擑擓擔擕擖擙據\"],[\"9440\",\"擛擜擝擟擠擡擣擥擧\",24,\"攁\",7,\"攊\",7,\"攓\",4,\"攙\",8],[\"9480\",\"攢攣攤攦\",4,\"攬攭攰攱攲攳攷攺攼攽敀\",4,\"敆敇敊敋敍敎敐敒敓敔敗敘敚敜敟敠敡敤敥敧敨敩敪敭敮敯敱敳敵敶數\",14,\"斈斉斊斍斎斏斒斔斕斖斘斚斝斞斠斢斣斦斨斪斬斮斱\",7,\"斺斻斾斿旀旂旇旈旉旊旍旐旑旓旔旕旘\",7,\"旡旣旤旪旫\"],[\"9540\",\"旲旳旴旵旸旹旻\",4,\"昁昄昅昇昈昉昋昍昐昑昒昖昗昘昚昛昜昞昡昢昣昤昦昩昪昫昬昮昰昲昳昷\",4,\"昽昿晀時晄\",6,\"晍晎晐晑晘\"],[\"9580\",\"晙晛晜晝晞晠晢晣晥晧晩\",4,\"晱晲晳晵晸晹晻晼晽晿暀暁暃暅暆暈暉暊暋暍暎暏暐暒暓暔暕暘\",4,\"暞\",8,\"暩\",4,\"暯\",4,\"暵暶暷暸暺暻暼暽暿\",25,\"曚曞\",7,\"曧曨曪\",5,\"曱曵曶書曺曻曽朁朂會\"],[\"9640\",\"朄朅朆朇朌朎朏朑朒朓朖朘朙朚朜朞朠\",5,\"朧朩朮朰朲朳朶朷朸朹朻朼朾朿杁杄杅杇杊杋杍杒杔杕杗\",4,\"杝杢杣杤杦杧杫杬杮東杴杶\"],[\"9680\",\"杸杹杺杻杽枀枂枃枅枆枈枊枌枍枎枏枑枒枓枔枖枙枛枟枠枡枤枦枩枬枮枱枲枴枹\",7,\"柂柅\",9,\"柕柖柗柛柟柡柣柤柦柧柨柪柫柭柮柲柵\",7,\"柾栁栂栃栄栆栍栐栒栔栕栘\",4,\"栞栟栠栢\",6,\"栫\",6,\"栴栵栶栺栻栿桇桋桍桏桒桖\",5],[\"9740\",\"桜桝桞桟桪桬\",7,\"桵桸\",8,\"梂梄梇\",7,\"梐梑梒梔梕梖梘\",9,\"梣梤梥梩梪梫梬梮梱梲梴梶梷梸\"],[\"9780\",\"梹\",6,\"棁棃\",5,\"棊棌棎棏棐棑棓棔棖棗棙棛\",4,\"棡棢棤\",9,\"棯棲棳棴棶棷棸棻棽棾棿椀椂椃椄椆\",4,\"椌椏椑椓\",11,\"椡椢椣椥\",7,\"椮椯椱椲椳椵椶椷椸椺椻椼椾楀楁楃\",16,\"楕楖楘楙楛楜楟\"],[\"9840\",\"楡楢楤楥楧楨楩楪楬業楯楰楲\",4,\"楺楻楽楾楿榁榃榅榊榋榌榎\",5,\"榖榗榙榚榝\",9,\"榩榪榬榮榯榰榲榳榵榶榸榹榺榼榽\"],[\"9880\",\"榾榿槀槂\",7,\"構槍槏槑槒槓槕\",5,\"槜槝槞槡\",11,\"槮槯槰槱槳\",9,\"槾樀\",9,\"樋\",11,\"標\",5,\"樠樢\",5,\"権樫樬樭樮樰樲樳樴樶\",6,\"樿\",4,\"橅橆橈\",7,\"橑\",6,\"橚\"],[\"9940\",\"橜\",4,\"橢橣橤橦\",10,\"橲\",6,\"橺橻橽橾橿檁檂檃檅\",8,\"檏檒\",4,\"檘\",7,\"檡\",5],[\"9980\",\"檧檨檪檭\",114,\"欥欦欨\",6],[\"9a40\",\"欯欰欱欳欴欵欶欸欻欼欽欿歀歁歂歄歅歈歊歋歍\",11,\"歚\",7,\"歨歩歫\",13,\"歺歽歾歿殀殅殈\"],[\"9a80\",\"殌殎殏殐殑殔殕殗殘殙殜\",4,\"殢\",7,\"殫\",7,\"殶殸\",6,\"毀毃毄毆\",4,\"毌毎毐毑毘毚毜\",4,\"毢\",7,\"毬毭毮毰毱毲毴毶毷毸毺毻毼毾\",6,\"氈\",4,\"氎氒気氜氝氞氠氣氥氫氬氭氱氳氶氷氹氺氻氼氾氿汃汄汅汈汋\",4,\"汑汒汓汖汘\"],[\"9b40\",\"汙汚汢汣汥汦汧汫\",4,\"汱汳汵汷汸決汻汼汿沀沄沇沊沋沍沎沑沒沕沖沗沘沚沜沝沞沠沢沨沬沯沰沴沵沶沷沺泀況泂泃泆泇泈泋泍泎泏泑泒泘\"],[\"9b80\",\"泙泚泜泝泟泤泦泧泩泬泭泲泴泹泿洀洂洃洅洆洈洉洊洍洏洐洑洓洔洕洖洘洜洝洟\",5,\"洦洨洩洬洭洯洰洴洶洷洸洺洿浀浂浄浉浌浐浕浖浗浘浛浝浟浡浢浤浥浧浨浫浬浭浰浱浲浳浵浶浹浺浻浽\",4,\"涃涄涆涇涊涋涍涏涐涒涖\",4,\"涜涢涥涬涭涰涱涳涴涶涷涹\",5,\"淁淂淃淈淉淊\"],[\"9c40\",\"淍淎淏淐淒淓淔淕淗淚淛淜淟淢淣淥淧淨淩淪淭淯淰淲淴淵淶淸淺淽\",7,\"渆渇済渉渋渏渒渓渕渘渙減渜渞渟渢渦渧渨渪測渮渰渱渳渵\"],[\"9c80\",\"渶渷渹渻\",7,\"湅\",7,\"湏湐湑湒湕湗湙湚湜湝湞湠\",10,\"湬湭湯\",14,\"満溁溂溄溇溈溊\",4,\"溑\",6,\"溙溚溛溝溞溠溡溣溤溦溨溩溫溬溭溮溰溳溵溸溹溼溾溿滀滃滄滅滆滈滉滊滌滍滎滐滒滖滘滙滛滜滝滣滧滪\",5],[\"9d40\",\"滰滱滲滳滵滶滷滸滺\",7,\"漃漄漅漇漈漊\",4,\"漐漑漒漖\",9,\"漡漢漣漥漦漧漨漬漮漰漲漴漵漷\",6,\"漿潀潁潂\"],[\"9d80\",\"潃潄潅潈潉潊潌潎\",9,\"潙潚潛潝潟潠潡潣潤潥潧\",5,\"潯潰潱潳潵潶潷潹潻潽\",6,\"澅澆澇澊澋澏\",12,\"澝澞澟澠澢\",4,\"澨\",10,\"澴澵澷澸澺\",5,\"濁濃\",5,\"濊\",6,\"濓\",10,\"濟濢濣濤濥\"],[\"9e40\",\"濦\",7,\"濰\",32,\"瀒\",7,\"瀜\",6,\"瀤\",6],[\"9e80\",\"瀫\",9,\"瀶瀷瀸瀺\",17,\"灍灎灐\",13,\"灟\",11,\"灮灱灲灳灴灷灹灺灻災炁炂炃炄炆炇炈炋炌炍炏炐炑炓炗炘炚炛炞\",12,\"炰炲炴炵炶為炾炿烄烅烆烇烉烋\",12,\"烚\"],[\"9f40\",\"烜烝烞烠烡烢烣烥烪烮烰\",6,\"烸烺烻烼烾\",10,\"焋\",4,\"焑焒焔焗焛\",10,\"焧\",7,\"焲焳焴\"],[\"9f80\",\"焵焷\",13,\"煆煇煈煉煋煍煏\",12,\"煝煟\",4,\"煥煩\",4,\"煯煰煱煴煵煶煷煹煻煼煾\",5,\"熅\",4,\"熋熌熍熎熐熑熒熓熕熖熗熚\",4,\"熡\",6,\"熩熪熫熭\",5,\"熴熶熷熸熺\",8,\"燄\",9,\"燏\",4],[\"a040\",\"燖\",9,\"燡燢燣燤燦燨\",5,\"燯\",9,\"燺\",11,\"爇\",19],[\"a080\",\"爛爜爞\",9,\"爩爫爭爮爯爲爳爴爺爼爾牀\",6,\"牉牊牋牎牏牐牑牓牔牕牗牘牚牜牞牠牣牤牥牨牪牫牬牭牰牱牳牴牶牷牸牻牼牽犂犃犅\",4,\"犌犎犐犑犓\",11,\"犠\",11,\"犮犱犲犳犵犺\",6,\"狅狆狇狉狊狋狌狏狑狓狔狕狖狘狚狛\"],[\"a1a1\",\"　、。·ˉˇ¨〃々—～‖…‘’“”〔〕〈\",7,\"〖〗【】±×÷∶∧∨∑∏∪∩∈∷√⊥∥∠⌒⊙∫∮≡≌≈∽∝≠≮≯≤≥∞∵∴♂♀°′″℃＄¤￠￡‰§№☆★○●◎◇◆□■△▲※→←↑↓〓\"],[\"a2a1\",\"ⅰ\",9],[\"a2b1\",\"⒈\",19,\"⑴\",19,\"①\",9],[\"a2e5\",\"㈠\",9],[\"a2f1\",\"Ⅰ\",11],[\"a3a1\",\"！＂＃￥％\",88,\"￣\"],[\"a4a1\",\"ぁ\",82],[\"a5a1\",\"ァ\",85],[\"a6a1\",\"Α\",16,\"Σ\",6],[\"a6c1\",\"α\",16,\"σ\",6],[\"a6e0\",\"︵︶︹︺︿﹀︽︾﹁﹂﹃﹄\"],[\"a6ee\",\"︻︼︷︸︱\"],[\"a6f4\",\"︳︴\"],[\"a7a1\",\"А\",5,\"ЁЖ\",25],[\"a7d1\",\"а\",5,\"ёж\",25],[\"a840\",\"ˊˋ˙–―‥‵℅℉↖↗↘↙∕∟∣≒≦≧⊿═\",35,\"▁\",6],[\"a880\",\"█\",7,\"▓▔▕▼▽◢◣◤◥☉⊕〒〝〞\"],[\"a8a1\",\"āáǎàēéěèīíǐìōóǒòūúǔùǖǘǚǜüêɑ\"],[\"a8bd\",\"ńň\"],[\"a8c0\",\"ɡ\"],[\"a8c5\",\"ㄅ\",36],[\"a940\",\"〡\",8,\"㊣㎎㎏㎜㎝㎞㎡㏄㏎㏑㏒㏕︰￢￤\"],[\"a959\",\"℡㈱\"],[\"a95c\",\"‐\"],[\"a960\",\"ー゛゜ヽヾ〆ゝゞ﹉\",9,\"﹔﹕﹖﹗﹙\",8],[\"a980\",\"﹢\",4,\"﹨﹩﹪﹫\"],[\"a996\",\"〇\"],[\"a9a4\",\"─\",75],[\"aa40\",\"狜狝狟狢\",5,\"狪狫狵狶狹狽狾狿猀猂猄\",5,\"猋猌猍猏猐猑猒猔猘猙猚猟猠猣猤猦猧猨猭猯猰猲猳猵猶猺猻猼猽獀\",8],[\"aa80\",\"獉獊獋獌獎獏獑獓獔獕獖獘\",7,\"獡\",10,\"獮獰獱\"],[\"ab40\",\"獲\",11,\"獿\",4,\"玅玆玈玊玌玍玏玐玒玓玔玕玗玘玙玚玜玝玞玠玡玣\",5,\"玪玬玭玱玴玵玶玸玹玼玽玾玿珁珃\",4],[\"ab80\",\"珋珌珎珒\",6,\"珚珛珜珝珟珡珢珣珤珦珨珪珫珬珮珯珰珱珳\",4],[\"ac40\",\"珸\",10,\"琄琇琈琋琌琍琎琑\",8,\"琜\",5,\"琣琤琧琩琫琭琯琱琲琷\",4,\"琽琾琿瑀瑂\",11],[\"ac80\",\"瑎\",6,\"瑖瑘瑝瑠\",12,\"瑮瑯瑱\",4,\"瑸瑹瑺\"],[\"ad40\",\"瑻瑼瑽瑿璂璄璅璆璈璉璊璌璍璏璑\",10,\"璝璟\",7,\"璪\",15,\"璻\",12],[\"ad80\",\"瓈\",9,\"瓓\",8,\"瓝瓟瓡瓥瓧\",6,\"瓰瓱瓲\"],[\"ae40\",\"瓳瓵瓸\",6,\"甀甁甂甃甅\",7,\"甎甐甒甔甕甖甗甛甝甞甠\",4,\"甦甧甪甮甴甶甹甼甽甿畁畂畃畄畆畇畉畊畍畐畑畒畓畕畖畗畘\"],[\"ae80\",\"畝\",7,\"畧畨畩畫\",6,\"畳畵當畷畺\",4,\"疀疁疂疄疅疇\"],[\"af40\",\"疈疉疊疌疍疎疐疓疕疘疛疜疞疢疦\",4,\"疭疶疷疺疻疿痀痁痆痋痌痎痏痐痑痓痗痙痚痜痝痟痠痡痥痩痬痭痮痯痲痳痵痶痷痸痺痻痽痾瘂瘄瘆瘇\"],[\"af80\",\"瘈瘉瘋瘍瘎瘏瘑瘒瘓瘔瘖瘚瘜瘝瘞瘡瘣瘧瘨瘬瘮瘯瘱瘲瘶瘷瘹瘺瘻瘽癁療癄\"],[\"b040\",\"癅\",6,\"癎\",5,\"癕癗\",4,\"癝癟癠癡癢癤\",6,\"癬癭癮癰\",7,\"癹発發癿皀皁皃皅皉皊皌皍皏皐皒皔皕皗皘皚皛\"],[\"b080\",\"皜\",7,\"皥\",8,\"皯皰皳皵\",9,\"盀盁盃啊阿埃挨哎唉哀皑癌蔼矮艾碍爱隘鞍氨安俺按暗岸胺案肮昂盎凹敖熬翱袄傲奥懊澳芭捌扒叭吧笆八疤巴拔跋靶把耙坝霸罢爸白柏百摆佰败拜稗斑班搬扳般颁板版扮拌伴瓣半办绊邦帮梆榜膀绑棒磅蚌镑傍谤苞胞包褒剥\"],[\"b140\",\"盄盇盉盋盌盓盕盙盚盜盝盞盠\",4,\"盦\",7,\"盰盳盵盶盷盺盻盽盿眀眂眃眅眆眊県眎\",10,\"眛眜眝眞眡眣眤眥眧眪眫\"],[\"b180\",\"眬眮眰\",4,\"眹眻眽眾眿睂睄睅睆睈\",7,\"睒\",7,\"睜薄雹保堡饱宝抱报暴豹鲍爆杯碑悲卑北辈背贝钡倍狈备惫焙被奔苯本笨崩绷甭泵蹦迸逼鼻比鄙笔彼碧蓖蔽毕毙毖币庇痹闭敝弊必辟壁臂避陛鞭边编贬扁便变卞辨辩辫遍标彪膘表鳖憋别瘪彬斌濒滨宾摈兵冰柄丙秉饼炳\"],[\"b240\",\"睝睞睟睠睤睧睩睪睭\",11,\"睺睻睼瞁瞂瞃瞆\",5,\"瞏瞐瞓\",11,\"瞡瞣瞤瞦瞨瞫瞭瞮瞯瞱瞲瞴瞶\",4],[\"b280\",\"瞼瞾矀\",12,\"矎\",8,\"矘矙矚矝\",4,\"矤病并玻菠播拨钵波博勃搏铂箔伯帛舶脖膊渤泊驳捕卜哺补埠不布步簿部怖擦猜裁材才财睬踩采彩菜蔡餐参蚕残惭惨灿苍舱仓沧藏操糙槽曹草厕策侧册测层蹭插叉茬茶查碴搽察岔差诧拆柴豺搀掺蝉馋谗缠铲产阐颤昌猖\"],[\"b340\",\"矦矨矪矯矰矱矲矴矵矷矹矺矻矼砃\",5,\"砊砋砎砏砐砓砕砙砛砞砠砡砢砤砨砪砫砮砯砱砲砳砵砶砽砿硁硂硃硄硆硈硉硊硋硍硏硑硓硔硘硙硚\"],[\"b380\",\"硛硜硞\",11,\"硯\",7,\"硸硹硺硻硽\",6,\"场尝常长偿肠厂敞畅唱倡超抄钞朝嘲潮巢吵炒车扯撤掣彻澈郴臣辰尘晨忱沉陈趁衬撑称城橙成呈乘程惩澄诚承逞骋秤吃痴持匙池迟弛驰耻齿侈尺赤翅斥炽充冲虫崇宠抽酬畴踌稠愁筹仇绸瞅丑臭初出橱厨躇锄雏滁除楚\"],[\"b440\",\"碄碅碆碈碊碋碏碐碒碔碕碖碙碝碞碠碢碤碦碨\",7,\"碵碶碷碸確碻碼碽碿磀磂磃磄磆磇磈磌磍磎磏磑磒磓磖磗磘磚\",9],[\"b480\",\"磤磥磦磧磩磪磫磭\",4,\"磳磵磶磸磹磻\",5,\"礂礃礄礆\",6,\"础储矗搐触处揣川穿椽传船喘串疮窗幢床闯创吹炊捶锤垂春椿醇唇淳纯蠢戳绰疵茨磁雌辞慈瓷词此刺赐次聪葱囱匆从丛凑粗醋簇促蹿篡窜摧崔催脆瘁粹淬翠村存寸磋撮搓措挫错搭达答瘩打大呆歹傣戴带殆代贷袋待逮\"],[\"b540\",\"礍\",5,\"礔\",9,\"礟\",4,\"礥\",14,\"礵\",4,\"礽礿祂祃祄祅祇祊\",8,\"祔祕祘祙祡祣\"],[\"b580\",\"祤祦祩祪祫祬祮祰\",6,\"祹祻\",4,\"禂禃禆禇禈禉禋禌禍禎禐禑禒怠耽担丹单郸掸胆旦氮但惮淡诞弹蛋当挡党荡档刀捣蹈倒岛祷导到稻悼道盗德得的蹬灯登等瞪凳邓堤低滴迪敌笛狄涤翟嫡抵底地蒂第帝弟递缔颠掂滇碘点典靛垫电佃甸店惦奠淀殿碉叼雕凋刁掉吊钓调跌爹碟蝶迭谍叠\"],[\"b640\",\"禓\",6,\"禛\",11,\"禨\",10,\"禴\",4,\"禼禿秂秄秅秇秈秊秌秎秏秐秓秔秖秗秙\",5,\"秠秡秢秥秨秪\"],[\"b680\",\"秬秮秱\",6,\"秹秺秼秾秿稁稄稅稇稈稉稊稌稏\",4,\"稕稖稘稙稛稜丁盯叮钉顶鼎锭定订丢东冬董懂动栋侗恫冻洞兜抖斗陡豆逗痘都督毒犊独读堵睹赌杜镀肚度渡妒端短锻段断缎堆兑队对墩吨蹲敦顿囤钝盾遁掇哆多夺垛躲朵跺舵剁惰堕蛾峨鹅俄额讹娥恶厄扼遏鄂饿恩而儿耳尔饵洱二\"],[\"b740\",\"稝稟稡稢稤\",14,\"稴稵稶稸稺稾穀\",5,\"穇\",9,\"穒\",4,\"穘\",16],[\"b780\",\"穩\",6,\"穱穲穳穵穻穼穽穾窂窅窇窉窊窋窌窎窏窐窓窔窙窚窛窞窡窢贰发罚筏伐乏阀法珐藩帆番翻樊矾钒繁凡烦反返范贩犯饭泛坊芳方肪房防妨仿访纺放菲非啡飞肥匪诽吠肺废沸费芬酚吩氛分纷坟焚汾粉奋份忿愤粪丰封枫蜂峰锋风疯烽逢冯缝讽奉凤佛否夫敷肤孵扶拂辐幅氟符伏俘服\"],[\"b840\",\"窣窤窧窩窪窫窮\",4,\"窴\",10,\"竀\",10,\"竌\",9,\"竗竘竚竛竜竝竡竢竤竧\",5,\"竮竰竱竲竳\"],[\"b880\",\"竴\",4,\"竻竼竾笀笁笂笅笇笉笌笍笎笐笒笓笖笗笘笚笜笝笟笡笢笣笧笩笭浮涪福袱弗甫抚辅俯釜斧脯腑府腐赴副覆赋复傅付阜父腹负富讣附妇缚咐噶嘎该改概钙盖溉干甘杆柑竿肝赶感秆敢赣冈刚钢缸肛纲岗港杠篙皋高膏羔糕搞镐稿告哥歌搁戈鸽胳疙割革葛格蛤阁隔铬个各给根跟耕更庚羹\"],[\"b940\",\"笯笰笲笴笵笶笷笹笻笽笿\",5,\"筆筈筊筍筎筓筕筗筙筜筞筟筡筣\",10,\"筯筰筳筴筶筸筺筼筽筿箁箂箃箄箆\",6,\"箎箏\"],[\"b980\",\"箑箒箓箖箘箙箚箛箞箟箠箣箤箥箮箯箰箲箳箵箶箷箹\",7,\"篂篃範埂耿梗工攻功恭龚供躬公宫弓巩汞拱贡共钩勾沟苟狗垢构购够辜菇咕箍估沽孤姑鼓古蛊骨谷股故顾固雇刮瓜剐寡挂褂乖拐怪棺关官冠观管馆罐惯灌贯光广逛瑰规圭硅归龟闺轨鬼诡癸桂柜跪贵刽辊滚棍锅郭国果裹过哈\"],[\"ba40\",\"篅篈築篊篋篍篎篏篐篒篔\",4,\"篛篜篞篟篠篢篣篤篧篨篩篫篬篭篯篰篲\",4,\"篸篹篺篻篽篿\",7,\"簈簉簊簍簎簐\",5,\"簗簘簙\"],[\"ba80\",\"簚\",4,\"簠\",5,\"簨簩簫\",12,\"簹\",5,\"籂骸孩海氦亥害骇酣憨邯韩含涵寒函喊罕翰撼捍旱憾悍焊汗汉夯杭航壕嚎豪毫郝好耗号浩呵喝荷菏核禾和何合盒貉阂河涸赫褐鹤贺嘿黑痕很狠恨哼亨横衡恒轰哄烘虹鸿洪宏弘红喉侯猴吼厚候后呼乎忽瑚壶葫胡蝴狐糊湖\"],[\"bb40\",\"籃\",9,\"籎\",36,\"籵\",5,\"籾\",9],[\"bb80\",\"粈粊\",6,\"粓粔粖粙粚粛粠粡粣粦粧粨粩粫粬粭粯粰粴\",4,\"粺粻弧虎唬护互沪户花哗华猾滑画划化话槐徊怀淮坏欢环桓还缓换患唤痪豢焕涣宦幻荒慌黄磺蝗簧皇凰惶煌晃幌恍谎灰挥辉徽恢蛔回毁悔慧卉惠晦贿秽会烩汇讳诲绘荤昏婚魂浑混豁活伙火获或惑霍货祸击圾基机畸稽积箕\"],[\"bc40\",\"粿糀糂糃糄糆糉糋糎\",6,\"糘糚糛糝糞糡\",6,\"糩\",5,\"糰\",7,\"糹糺糼\",13,\"紋\",5],[\"bc80\",\"紑\",14,\"紡紣紤紥紦紨紩紪紬紭紮細\",6,\"肌饥迹激讥鸡姬绩缉吉极棘辑籍集及急疾汲即嫉级挤几脊己蓟技冀季伎祭剂悸济寄寂计记既忌际妓继纪嘉枷夹佳家加荚颊贾甲钾假稼价架驾嫁歼监坚尖笺间煎兼肩艰奸缄茧检柬碱硷拣捡简俭剪减荐槛鉴践贱见键箭件\"],[\"bd40\",\"紷\",54,\"絯\",7],[\"bd80\",\"絸\",32,\"健舰剑饯渐溅涧建僵姜将浆江疆蒋桨奖讲匠酱降蕉椒礁焦胶交郊浇骄娇嚼搅铰矫侥脚狡角饺缴绞剿教酵轿较叫窖揭接皆秸街阶截劫节桔杰捷睫竭洁结解姐戒藉芥界借介疥诫届巾筋斤金今津襟紧锦仅谨进靳晋禁近烬浸\"],[\"be40\",\"継\",12,\"綧\",6,\"綯\",42],[\"be80\",\"線\",32,\"尽劲荆兢茎睛晶鲸京惊精粳经井警景颈静境敬镜径痉靖竟竞净炯窘揪究纠玖韭久灸九酒厩救旧臼舅咎就疚鞠拘狙疽居驹菊局咀矩举沮聚拒据巨具距踞锯俱句惧炬剧捐鹃娟倦眷卷绢撅攫抉掘倔爵觉决诀绝均菌钧军君峻\"],[\"bf40\",\"緻\",62],[\"bf80\",\"縺縼\",4,\"繂\",4,\"繈\",21,\"俊竣浚郡骏喀咖卡咯开揩楷凯慨刊堪勘坎砍看康慷糠扛抗亢炕考拷烤靠坷苛柯棵磕颗科壳咳可渴克刻客课肯啃垦恳坑吭空恐孔控抠口扣寇枯哭窟苦酷库裤夸垮挎跨胯块筷侩快宽款匡筐狂框矿眶旷况亏盔岿窥葵奎魁傀\"],[\"c040\",\"繞\",35,\"纃\",23,\"纜纝纞\"],[\"c080\",\"纮纴纻纼绖绤绬绹缊缐缞缷缹缻\",6,\"罃罆\",9,\"罒罓馈愧溃坤昆捆困括扩廓阔垃拉喇蜡腊辣啦莱来赖蓝婪栏拦篮阑兰澜谰揽览懒缆烂滥琅榔狼廊郎朗浪捞劳牢老佬姥酪烙涝勒乐雷镭蕾磊累儡垒擂肋类泪棱楞冷厘梨犁黎篱狸离漓理李里鲤礼莉荔吏栗丽厉励砾历利傈例俐\"],[\"c140\",\"罖罙罛罜罝罞罠罣\",4,\"罫罬罭罯罰罳罵罶罷罸罺罻罼罽罿羀羂\",7,\"羋羍羏\",4,\"羕\",4,\"羛羜羠羢羣羥羦羨\",6,\"羱\"],[\"c180\",\"羳\",4,\"羺羻羾翀翂翃翄翆翇翈翉翋翍翏\",4,\"翖翗翙\",5,\"翢翣痢立粒沥隶力璃哩俩联莲连镰廉怜涟帘敛脸链恋炼练粮凉梁粱良两辆量晾亮谅撩聊僚疗燎寥辽潦了撂镣廖料列裂烈劣猎琳林磷霖临邻鳞淋凛赁吝拎玲菱零龄铃伶羚凌灵陵岭领另令溜琉榴硫馏留刘瘤流柳六龙聋咙笼窿\"],[\"c240\",\"翤翧翨翪翫翬翭翯翲翴\",6,\"翽翾翿耂耇耈耉耊耎耏耑耓耚耛耝耞耟耡耣耤耫\",5,\"耲耴耹耺耼耾聀聁聄聅聇聈聉聎聏聐聑聓聕聖聗\"],[\"c280\",\"聙聛\",13,\"聫\",5,\"聲\",11,\"隆垄拢陇楼娄搂篓漏陋芦卢颅庐炉掳卤虏鲁麓碌露路赂鹿潞禄录陆戮驴吕铝侣旅履屡缕虑氯律率滤绿峦挛孪滦卵乱掠略抡轮伦仑沦纶论萝螺罗逻锣箩骡裸落洛骆络妈麻玛码蚂马骂嘛吗埋买麦卖迈脉瞒馒蛮满蔓曼慢漫\"],[\"c340\",\"聾肁肂肅肈肊肍\",5,\"肔肕肗肙肞肣肦肧肨肬肰肳肵肶肸肹肻胅胇\",4,\"胏\",6,\"胘胟胠胢胣胦胮胵胷胹胻胾胿脀脁脃脄脅脇脈脋\"],[\"c380\",\"脌脕脗脙脛脜脝脟\",12,\"脭脮脰脳脴脵脷脹\",4,\"脿谩芒茫盲氓忙莽猫茅锚毛矛铆卯茂冒帽貌贸么玫枚梅酶霉煤没眉媒镁每美昧寐妹媚门闷们萌蒙檬盟锰猛梦孟眯醚靡糜迷谜弥米秘觅泌蜜密幂棉眠绵冕免勉娩缅面苗描瞄藐秒渺庙妙蔑灭民抿皿敏悯闽明螟鸣铭名命谬摸\"],[\"c440\",\"腀\",5,\"腇腉腍腎腏腒腖腗腘腛\",4,\"腡腢腣腤腦腨腪腫腬腯腲腳腵腶腷腸膁膃\",4,\"膉膋膌膍膎膐膒\",5,\"膙膚膞\",4,\"膤膥\"],[\"c480\",\"膧膩膫\",7,\"膴\",5,\"膼膽膾膿臄臅臇臈臉臋臍\",6,\"摹蘑模膜磨摩魔抹末莫墨默沫漠寞陌谋牟某拇牡亩姆母墓暮幕募慕木目睦牧穆拿哪呐钠那娜纳氖乃奶耐奈南男难囊挠脑恼闹淖呢馁内嫩能妮霓倪泥尼拟你匿腻逆溺蔫拈年碾撵捻念娘酿鸟尿捏聂孽啮镊镍涅您柠狞凝宁\"],[\"c540\",\"臔\",14,\"臤臥臦臨臩臫臮\",4,\"臵\",5,\"臽臿舃與\",4,\"舎舏舑舓舕\",5,\"舝舠舤舥舦舧舩舮舲舺舼舽舿\"],[\"c580\",\"艀艁艂艃艅艆艈艊艌艍艎艐\",7,\"艙艛艜艝艞艠\",7,\"艩拧泞牛扭钮纽脓浓农弄奴努怒女暖虐疟挪懦糯诺哦欧鸥殴藕呕偶沤啪趴爬帕怕琶拍排牌徘湃派攀潘盘磐盼畔判叛乓庞旁耪胖抛咆刨炮袍跑泡呸胚培裴赔陪配佩沛喷盆砰抨烹澎彭蓬棚硼篷膨朋鹏捧碰坯砒霹批披劈琵毗\"],[\"c640\",\"艪艫艬艭艱艵艶艷艸艻艼芀芁芃芅芆芇芉芌芐芓芔芕芖芚芛芞芠芢芣芧芲芵芶芺芻芼芿苀苂苃苅苆苉苐苖苙苚苝苢苧苨苩苪苬苭苮苰苲苳苵苶苸\"],[\"c680\",\"苺苼\",4,\"茊茋茍茐茒茓茖茘茙茝\",9,\"茩茪茮茰茲茷茻茽啤脾疲皮匹痞僻屁譬篇偏片骗飘漂瓢票撇瞥拼频贫品聘乒坪苹萍平凭瓶评屏坡泼颇婆破魄迫粕剖扑铺仆莆葡菩蒲埔朴圃普浦谱曝瀑期欺栖戚妻七凄漆柒沏其棋奇歧畦崎脐齐旗祈祁骑起岂乞企启契砌器气迄弃汽泣讫掐\"],[\"c740\",\"茾茿荁荂荄荅荈荊\",4,\"荓荕\",4,\"荝荢荰\",6,\"荹荺荾\",6,\"莇莈莊莋莌莍莏莐莑莔莕莖莗莙莚莝莟莡\",6,\"莬莭莮\"],[\"c780\",\"莯莵莻莾莿菂菃菄菆菈菉菋菍菎菐菑菒菓菕菗菙菚菛菞菢菣菤菦菧菨菫菬菭恰洽牵扦钎铅千迁签仟谦乾黔钱钳前潜遣浅谴堑嵌欠歉枪呛腔羌墙蔷强抢橇锹敲悄桥瞧乔侨巧鞘撬翘峭俏窍切茄且怯窃钦侵亲秦琴勤芹擒禽寝沁青轻氢倾卿清擎晴氰情顷请庆琼穷秋丘邱球求囚酋泅趋区蛆曲躯屈驱渠\"],[\"c840\",\"菮華菳\",4,\"菺菻菼菾菿萀萂萅萇萈萉萊萐萒\",5,\"萙萚萛萞\",5,\"萩\",7,\"萲\",5,\"萹萺萻萾\",7,\"葇葈葉\"],[\"c880\",\"葊\",6,\"葒\",4,\"葘葝葞葟葠葢葤\",4,\"葪葮葯葰葲葴葷葹葻葼取娶龋趣去圈颧权醛泉全痊拳犬券劝缺炔瘸却鹊榷确雀裙群然燃冉染瓤壤攘嚷让饶扰绕惹热壬仁人忍韧任认刃妊纫扔仍日戎茸蓉荣融熔溶容绒冗揉柔肉茹蠕儒孺如辱乳汝入褥软阮蕊瑞锐闰润若弱撒洒萨腮鳃塞赛三叁\"],[\"c940\",\"葽\",4,\"蒃蒄蒅蒆蒊蒍蒏\",7,\"蒘蒚蒛蒝蒞蒟蒠蒢\",12,\"蒰蒱蒳蒵蒶蒷蒻蒼蒾蓀蓂蓃蓅蓆蓇蓈蓋蓌蓎蓏蓒蓔蓕蓗\"],[\"c980\",\"蓘\",4,\"蓞蓡蓢蓤蓧\",4,\"蓭蓮蓯蓱\",10,\"蓽蓾蔀蔁蔂伞散桑嗓丧搔骚扫嫂瑟色涩森僧莎砂杀刹沙纱傻啥煞筛晒珊苫杉山删煽衫闪陕擅赡膳善汕扇缮墒伤商赏晌上尚裳梢捎稍烧芍勺韶少哨邵绍奢赊蛇舌舍赦摄射慑涉社设砷申呻伸身深娠绅神沈审婶甚肾慎渗声生甥牲升绳\"],[\"ca40\",\"蔃\",8,\"蔍蔎蔏蔐蔒蔔蔕蔖蔘蔙蔛蔜蔝蔞蔠蔢\",8,\"蔭\",9,\"蔾\",4,\"蕄蕅蕆蕇蕋\",10],[\"ca80\",\"蕗蕘蕚蕛蕜蕝蕟\",4,\"蕥蕦蕧蕩\",8,\"蕳蕵蕶蕷蕸蕼蕽蕿薀薁省盛剩胜圣师失狮施湿诗尸虱十石拾时什食蚀实识史矢使屎驶始式示士世柿事拭誓逝势是嗜噬适仕侍释饰氏市恃室视试收手首守寿授售受瘦兽蔬枢梳殊抒输叔舒淑疏书赎孰熟薯暑曙署蜀黍鼠属术述树束戍竖墅庶数漱\"],[\"cb40\",\"薂薃薆薈\",6,\"薐\",10,\"薝\",6,\"薥薦薧薩薫薬薭薱\",5,\"薸薺\",6,\"藂\",6,\"藊\",4,\"藑藒\"],[\"cb80\",\"藔藖\",5,\"藝\",6,\"藥藦藧藨藪\",14,\"恕刷耍摔衰甩帅栓拴霜双爽谁水睡税吮瞬顺舜说硕朔烁斯撕嘶思私司丝死肆寺嗣四伺似饲巳松耸怂颂送宋讼诵搜艘擞嗽苏酥俗素速粟僳塑溯宿诉肃酸蒜算虽隋随绥髓碎岁穗遂隧祟孙损笋蓑梭唆缩琐索锁所塌他它她塔\"],[\"cc40\",\"藹藺藼藽藾蘀\",4,\"蘆\",10,\"蘒蘓蘔蘕蘗\",15,\"蘨蘪\",13,\"蘹蘺蘻蘽蘾蘿虀\"],[\"cc80\",\"虁\",11,\"虒虓處\",4,\"虛虜虝號虠虡虣\",7,\"獭挞蹋踏胎苔抬台泰酞太态汰坍摊贪瘫滩坛檀痰潭谭谈坦毯袒碳探叹炭汤塘搪堂棠膛唐糖倘躺淌趟烫掏涛滔绦萄桃逃淘陶讨套特藤腾疼誊梯剔踢锑提题蹄啼体替嚏惕涕剃屉天添填田甜恬舔腆挑条迢眺跳贴铁帖厅听烃\"],[\"cd40\",\"虭虯虰虲\",6,\"蚃\",6,\"蚎\",4,\"蚔蚖\",5,\"蚞\",4,\"蚥蚦蚫蚭蚮蚲蚳蚷蚸蚹蚻\",4,\"蛁蛂蛃蛅蛈蛌蛍蛒蛓蛕蛖蛗蛚蛜\"],[\"cd80\",\"蛝蛠蛡蛢蛣蛥蛦蛧蛨蛪蛫蛬蛯蛵蛶蛷蛺蛻蛼蛽蛿蜁蜄蜅蜆蜋蜌蜎蜏蜐蜑蜔蜖汀廷停亭庭挺艇通桐酮瞳同铜彤童桶捅筒统痛偷投头透凸秃突图徒途涂屠土吐兔湍团推颓腿蜕褪退吞屯臀拖托脱鸵陀驮驼椭妥拓唾挖哇蛙洼娃瓦袜歪外豌弯湾玩顽丸烷完碗挽晚皖惋宛婉万腕汪王亡枉网往旺望忘妄威\"],[\"ce40\",\"蜙蜛蜝蜟蜠蜤蜦蜧蜨蜪蜫蜬蜭蜯蜰蜲蜳蜵蜶蜸蜹蜺蜼蜽蝀\",6,\"蝊蝋蝍蝏蝐蝑蝒蝔蝕蝖蝘蝚\",5,\"蝡蝢蝦\",7,\"蝯蝱蝲蝳蝵\"],[\"ce80\",\"蝷蝸蝹蝺蝿螀螁螄螆螇螉螊螌螎\",4,\"螔螕螖螘\",6,\"螠\",4,\"巍微危韦违桅围唯惟为潍维苇萎委伟伪尾纬未蔚味畏胃喂魏位渭谓尉慰卫瘟温蚊文闻纹吻稳紊问嗡翁瓮挝蜗涡窝我斡卧握沃巫呜钨乌污诬屋无芜梧吾吴毋武五捂午舞伍侮坞戊雾晤物勿务悟误昔熙析西硒矽晰嘻吸锡牺\"],[\"cf40\",\"螥螦螧螩螪螮螰螱螲螴螶螷螸螹螻螼螾螿蟁\",4,\"蟇蟈蟉蟌\",4,\"蟔\",6,\"蟜蟝蟞蟟蟡蟢蟣蟤蟦蟧蟨蟩蟫蟬蟭蟯\",9],[\"cf80\",\"蟺蟻蟼蟽蟿蠀蠁蠂蠄\",5,\"蠋\",7,\"蠔蠗蠘蠙蠚蠜\",4,\"蠣稀息希悉膝夕惜熄烯溪汐犀檄袭席习媳喜铣洗系隙戏细瞎虾匣霞辖暇峡侠狭下厦夏吓掀锨先仙鲜纤咸贤衔舷闲涎弦嫌显险现献县腺馅羡宪陷限线相厢镶香箱襄湘乡翔祥详想响享项巷橡像向象萧硝霄削哮嚣销消宵淆晓\"],[\"d040\",\"蠤\",13,\"蠳\",5,\"蠺蠻蠽蠾蠿衁衂衃衆\",5,\"衎\",5,\"衕衖衘衚\",6,\"衦衧衪衭衯衱衳衴衵衶衸衹衺\"],[\"d080\",\"衻衼袀袃袆袇袉袊袌袎袏袐袑袓袔袕袗\",4,\"袝\",4,\"袣袥\",5,\"小孝校肖啸笑效楔些歇蝎鞋协挟携邪斜胁谐写械卸蟹懈泄泻谢屑薪芯锌欣辛新忻心信衅星腥猩惺兴刑型形邢行醒幸杏性姓兄凶胸匈汹雄熊休修羞朽嗅锈秀袖绣墟戌需虚嘘须徐许蓄酗叙旭序畜恤絮婿绪续轩喧宣悬旋玄\"],[\"d140\",\"袬袮袯袰袲\",4,\"袸袹袺袻袽袾袿裀裃裄裇裈裊裋裌裍裏裐裑裓裖裗裚\",4,\"裠裡裦裧裩\",6,\"裲裵裶裷裺裻製裿褀褁褃\",5],[\"d180\",\"褉褋\",4,\"褑褔\",4,\"褜\",4,\"褢褣褤褦褧褨褩褬褭褮褯褱褲褳褵褷选癣眩绚靴薛学穴雪血勋熏循旬询寻驯巡殉汛训讯逊迅压押鸦鸭呀丫芽牙蚜崖衙涯雅哑亚讶焉咽阉烟淹盐严研蜒岩延言颜阎炎沿奄掩眼衍演艳堰燕厌砚雁唁彦焰宴谚验殃央鸯秧杨扬佯疡羊洋阳氧仰痒养样漾邀腰妖瑶\"],[\"d240\",\"褸\",8,\"襂襃襅\",24,\"襠\",5,\"襧\",19,\"襼\"],[\"d280\",\"襽襾覀覂覄覅覇\",26,\"摇尧遥窑谣姚咬舀药要耀椰噎耶爷野冶也页掖业叶曳腋夜液一壹医揖铱依伊衣颐夷遗移仪胰疑沂宜姨彝椅蚁倚已乙矣以艺抑易邑屹亿役臆逸肄疫亦裔意毅忆义益溢诣议谊译异翼翌绎茵荫因殷音阴姻吟银淫寅饮尹引隐\"],[\"d340\",\"覢\",30,\"觃觍觓觔觕觗觘觙觛觝觟觠觡觢觤觧觨觩觪觬觭觮觰觱觲觴\",6],[\"d380\",\"觻\",4,\"訁\",5,\"計\",21,\"印英樱婴鹰应缨莹萤营荧蝇迎赢盈影颖硬映哟拥佣臃痈庸雍踊蛹咏泳涌永恿勇用幽优悠忧尤由邮铀犹油游酉有友右佑釉诱又幼迂淤于盂榆虞愚舆余俞逾鱼愉渝渔隅予娱雨与屿禹宇语羽玉域芋郁吁遇喻峪御愈欲狱育誉\"],[\"d440\",\"訞\",31,\"訿\",8,\"詉\",21],[\"d480\",\"詟\",25,\"詺\",6,\"浴寓裕预豫驭鸳渊冤元垣袁原援辕园员圆猿源缘远苑愿怨院曰约越跃钥岳粤月悦阅耘云郧匀陨允运蕴酝晕韵孕匝砸杂栽哉灾宰载再在咱攒暂赞赃脏葬遭糟凿藻枣早澡蚤躁噪造皂灶燥责择则泽贼怎增憎曾赠扎喳渣札轧\"],[\"d540\",\"誁\",7,\"誋\",7,\"誔\",46],[\"d580\",\"諃\",32,\"铡闸眨栅榨咋乍炸诈摘斋宅窄债寨瞻毡詹粘沾盏斩辗崭展蘸栈占战站湛绽樟章彰漳张掌涨杖丈帐账仗胀瘴障招昭找沼赵照罩兆肇召遮折哲蛰辙者锗蔗这浙珍斟真甄砧臻贞针侦枕疹诊震振镇阵蒸挣睁征狰争怔整拯正政\"],[\"d640\",\"諤\",34,\"謈\",27],[\"d680\",\"謤謥謧\",30,\"帧症郑证芝枝支吱蜘知肢脂汁之织职直植殖执值侄址指止趾只旨纸志挚掷至致置帜峙制智秩稚质炙痔滞治窒中盅忠钟衷终种肿重仲众舟周州洲诌粥轴肘帚咒皱宙昼骤珠株蛛朱猪诸诛逐竹烛煮拄瞩嘱主著柱助蛀贮铸筑\"],[\"d740\",\"譆\",31,\"譧\",4,\"譭\",25],[\"d780\",\"讇\",24,\"讬讱讻诇诐诪谉谞住注祝驻抓爪拽专砖转撰赚篆桩庄装妆撞壮状椎锥追赘坠缀谆准捉拙卓桌琢茁酌啄着灼浊兹咨资姿滋淄孜紫仔籽滓子自渍字鬃棕踪宗综总纵邹走奏揍租足卒族祖诅阻组钻纂嘴醉最罪尊遵昨左佐柞做作坐座\"],[\"d840\",\"谸\",8,\"豂豃豄豅豈豊豋豍\",7,\"豖豗豘豙豛\",5,\"豣\",6,\"豬\",6,\"豴豵豶豷豻\",6,\"貃貄貆貇\"],[\"d880\",\"貈貋貍\",6,\"貕貖貗貙\",20,\"亍丌兀丐廿卅丕亘丞鬲孬噩丨禺丿匕乇夭爻卮氐囟胤馗毓睾鼗丶亟鼐乜乩亓芈孛啬嘏仄厍厝厣厥厮靥赝匚叵匦匮匾赜卦卣刂刈刎刭刳刿剀剌剞剡剜蒯剽劂劁劐劓冂罔亻仃仉仂仨仡仫仞伛仳伢佤仵伥伧伉伫佞佧攸佚佝\"],[\"d940\",\"貮\",62],[\"d980\",\"賭\",32,\"佟佗伲伽佶佴侑侉侃侏佾佻侪佼侬侔俦俨俪俅俚俣俜俑俟俸倩偌俳倬倏倮倭俾倜倌倥倨偾偃偕偈偎偬偻傥傧傩傺僖儆僭僬僦僮儇儋仝氽佘佥俎龠汆籴兮巽黉馘冁夔勹匍訇匐凫夙兕亠兖亳衮袤亵脔裒禀嬴蠃羸冫冱冽冼\"],[\"da40\",\"贎\",14,\"贠赑赒赗赟赥赨赩赪赬赮赯赱赲赸\",8,\"趂趃趆趇趈趉趌\",4,\"趒趓趕\",9,\"趠趡\"],[\"da80\",\"趢趤\",12,\"趲趶趷趹趻趽跀跁跂跅跇跈跉跊跍跐跒跓跔凇冖冢冥讠讦讧讪讴讵讷诂诃诋诏诎诒诓诔诖诘诙诜诟诠诤诨诩诮诰诳诶诹诼诿谀谂谄谇谌谏谑谒谔谕谖谙谛谘谝谟谠谡谥谧谪谫谮谯谲谳谵谶卩卺阝阢阡阱阪阽阼陂陉陔陟陧陬陲陴隈隍隗隰邗邛邝邙邬邡邴邳邶邺\"],[\"db40\",\"跕跘跙跜跠跡跢跥跦跧跩跭跮跰跱跲跴跶跼跾\",6,\"踆踇踈踋踍踎踐踑踒踓踕\",7,\"踠踡踤\",4,\"踫踭踰踲踳踴踶踷踸踻踼踾\"],[\"db80\",\"踿蹃蹅蹆蹌\",4,\"蹓\",5,\"蹚\",11,\"蹧蹨蹪蹫蹮蹱邸邰郏郅邾郐郄郇郓郦郢郜郗郛郫郯郾鄄鄢鄞鄣鄱鄯鄹酃酆刍奂劢劬劭劾哿勐勖勰叟燮矍廴凵凼鬯厶弁畚巯坌垩垡塾墼壅壑圩圬圪圳圹圮圯坜圻坂坩垅坫垆坼坻坨坭坶坳垭垤垌垲埏垧垴垓垠埕埘埚埙埒垸埴埯埸埤埝\"],[\"dc40\",\"蹳蹵蹷\",4,\"蹽蹾躀躂躃躄躆躈\",6,\"躑躒躓躕\",6,\"躝躟\",11,\"躭躮躰躱躳\",6,\"躻\",7],[\"dc80\",\"軃\",10,\"軏\",21,\"堋堍埽埭堀堞堙塄堠塥塬墁墉墚墀馨鼙懿艹艽艿芏芊芨芄芎芑芗芙芫芸芾芰苈苊苣芘芷芮苋苌苁芩芴芡芪芟苄苎芤苡茉苷苤茏茇苜苴苒苘茌苻苓茑茚茆茔茕苠苕茜荑荛荜茈莒茼茴茱莛荞茯荏荇荃荟荀茗荠茭茺茳荦荥\"],[\"dd40\",\"軥\",62],[\"dd80\",\"輤\",32,\"荨茛荩荬荪荭荮莰荸莳莴莠莪莓莜莅荼莶莩荽莸荻莘莞莨莺莼菁萁菥菘堇萘萋菝菽菖萜萸萑萆菔菟萏萃菸菹菪菅菀萦菰菡葜葑葚葙葳蒇蒈葺蒉葸萼葆葩葶蒌蒎萱葭蓁蓍蓐蓦蒽蓓蓊蒿蒺蓠蒡蒹蒴蒗蓥蓣蔌甍蔸蓰蔹蔟蔺\"],[\"de40\",\"轅\",32,\"轪辀辌辒辝辠辡辢辤辥辦辧辪辬辭辮辯農辳辴辵辷辸辺辻込辿迀迃迆\"],[\"de80\",\"迉\",4,\"迏迒迖迗迚迠迡迣迧迬迯迱迲迴迵迶迺迻迼迾迿逇逈逌逎逓逕逘蕖蔻蓿蓼蕙蕈蕨蕤蕞蕺瞢蕃蕲蕻薤薨薇薏蕹薮薜薅薹薷薰藓藁藜藿蘧蘅蘩蘖蘼廾弈夼奁耷奕奚奘匏尢尥尬尴扌扪抟抻拊拚拗拮挢拶挹捋捃掭揶捱捺掎掴捭掬掊捩掮掼揲揸揠揿揄揞揎摒揆掾摅摁搋搛搠搌搦搡摞撄摭撖\"],[\"df40\",\"這逜連逤逥逧\",5,\"逰\",4,\"逷逹逺逽逿遀遃遅遆遈\",4,\"過達違遖遙遚遜\",5,\"遤遦遧適遪遫遬遯\",4,\"遶\",6,\"遾邁\"],[\"df80\",\"還邅邆邇邉邊邌\",4,\"邒邔邖邘邚邜邞邟邠邤邥邧邨邩邫邭邲邷邼邽邿郀摺撷撸撙撺擀擐擗擤擢攉攥攮弋忒甙弑卟叱叽叩叨叻吒吖吆呋呒呓呔呖呃吡呗呙吣吲咂咔呷呱呤咚咛咄呶呦咝哐咭哂咴哒咧咦哓哔呲咣哕咻咿哌哙哚哜咩咪咤哝哏哞唛哧唠哽唔哳唢唣唏唑唧唪啧喏喵啉啭啁啕唿啐唼\"],[\"e040\",\"郂郃郆郈郉郋郌郍郒郔郕郖郘郙郚郞郟郠郣郤郥郩郪郬郮郰郱郲郳郵郶郷郹郺郻郼郿鄀鄁鄃鄅\",19,\"鄚鄛鄜\"],[\"e080\",\"鄝鄟鄠鄡鄤\",10,\"鄰鄲\",6,\"鄺\",8,\"酄唷啖啵啶啷唳唰啜喋嗒喃喱喹喈喁喟啾嗖喑啻嗟喽喾喔喙嗪嗷嗉嘟嗑嗫嗬嗔嗦嗝嗄嗯嗥嗲嗳嗌嗍嗨嗵嗤辔嘞嘈嘌嘁嘤嘣嗾嘀嘧嘭噘嘹噗嘬噍噢噙噜噌噔嚆噤噱噫噻噼嚅嚓嚯囔囗囝囡囵囫囹囿圄圊圉圜帏帙帔帑帱帻帼\"],[\"e140\",\"酅酇酈酑酓酔酕酖酘酙酛酜酟酠酦酧酨酫酭酳酺酻酼醀\",4,\"醆醈醊醎醏醓\",6,\"醜\",5,\"醤\",5,\"醫醬醰醱醲醳醶醷醸醹醻\"],[\"e180\",\"醼\",10,\"釈釋釐釒\",9,\"針\",8,\"帷幄幔幛幞幡岌屺岍岐岖岈岘岙岑岚岜岵岢岽岬岫岱岣峁岷峄峒峤峋峥崂崃崧崦崮崤崞崆崛嵘崾崴崽嵬嵛嵯嵝嵫嵋嵊嵩嵴嶂嶙嶝豳嶷巅彳彷徂徇徉後徕徙徜徨徭徵徼衢彡犭犰犴犷犸狃狁狎狍狒狨狯狩狲狴狷猁狳猃狺\"],[\"e240\",\"釦\",62],[\"e280\",\"鈥\",32,\"狻猗猓猡猊猞猝猕猢猹猥猬猸猱獐獍獗獠獬獯獾舛夥飧夤夂饣饧\",5,\"饴饷饽馀馄馇馊馍馐馑馓馔馕庀庑庋庖庥庠庹庵庾庳赓廒廑廛廨廪膺忄忉忖忏怃忮怄忡忤忾怅怆忪忭忸怙怵怦怛怏怍怩怫怊怿怡恸恹恻恺恂\"],[\"e340\",\"鉆\",45,\"鉵\",16],[\"e380\",\"銆\",7,\"銏\",24,\"恪恽悖悚悭悝悃悒悌悛惬悻悱惝惘惆惚悴愠愦愕愣惴愀愎愫慊慵憬憔憧憷懔懵忝隳闩闫闱闳闵闶闼闾阃阄阆阈阊阋阌阍阏阒阕阖阗阙阚丬爿戕氵汔汜汊沣沅沐沔沌汨汩汴汶沆沩泐泔沭泷泸泱泗沲泠泖泺泫泮沱泓泯泾\"],[\"e440\",\"銨\",5,\"銯\",24,\"鋉\",31],[\"e480\",\"鋩\",32,\"洹洧洌浃浈洇洄洙洎洫浍洮洵洚浏浒浔洳涑浯涞涠浞涓涔浜浠浼浣渚淇淅淞渎涿淠渑淦淝淙渖涫渌涮渫湮湎湫溲湟溆湓湔渲渥湄滟溱溘滠漭滢溥溧溽溻溷滗溴滏溏滂溟潢潆潇漤漕滹漯漶潋潴漪漉漩澉澍澌潸潲潼潺濑\"],[\"e540\",\"錊\",51,\"錿\",10],[\"e580\",\"鍊\",31,\"鍫濉澧澹澶濂濡濮濞濠濯瀚瀣瀛瀹瀵灏灞宀宄宕宓宥宸甯骞搴寤寮褰寰蹇謇辶迓迕迥迮迤迩迦迳迨逅逄逋逦逑逍逖逡逵逶逭逯遄遑遒遐遨遘遢遛暹遴遽邂邈邃邋彐彗彖彘尻咫屐屙孱屣屦羼弪弩弭艴弼鬻屮妁妃妍妩妪妣\"],[\"e640\",\"鍬\",34,\"鎐\",27],[\"e680\",\"鎬\",29,\"鏋鏌鏍妗姊妫妞妤姒妲妯姗妾娅娆姝娈姣姘姹娌娉娲娴娑娣娓婀婧婊婕娼婢婵胬媪媛婷婺媾嫫媲嫒嫔媸嫠嫣嫱嫖嫦嫘嫜嬉嬗嬖嬲嬷孀尕尜孚孥孳孑孓孢驵驷驸驺驿驽骀骁骅骈骊骐骒骓骖骘骛骜骝骟骠骢骣骥骧纟纡纣纥纨纩\"],[\"e740\",\"鏎\",7,\"鏗\",54],[\"e780\",\"鐎\",32,\"纭纰纾绀绁绂绉绋绌绐绔绗绛绠绡绨绫绮绯绱绲缍绶绺绻绾缁缂缃缇缈缋缌缏缑缒缗缙缜缛缟缡\",6,\"缪缫缬缭缯\",4,\"缵幺畿巛甾邕玎玑玮玢玟珏珂珑玷玳珀珉珈珥珙顼琊珩珧珞玺珲琏琪瑛琦琥琨琰琮琬\"],[\"e840\",\"鐯\",14,\"鐿\",43,\"鑬鑭鑮鑯\"],[\"e880\",\"鑰\",20,\"钑钖钘铇铏铓铔铚铦铻锜锠琛琚瑁瑜瑗瑕瑙瑷瑭瑾璜璎璀璁璇璋璞璨璩璐璧瓒璺韪韫韬杌杓杞杈杩枥枇杪杳枘枧杵枨枞枭枋杷杼柰栉柘栊柩枰栌柙枵柚枳柝栀柃枸柢栎柁柽栲栳桠桡桎桢桄桤梃栝桕桦桁桧桀栾桊桉栩梵梏桴桷梓桫棂楮棼椟椠棹\"],[\"e940\",\"锧锳锽镃镈镋镕镚镠镮镴镵長\",7,\"門\",42],[\"e980\",\"閫\",32,\"椤棰椋椁楗棣椐楱椹楠楂楝榄楫榀榘楸椴槌榇榈槎榉楦楣楹榛榧榻榫榭槔榱槁槊槟榕槠榍槿樯槭樗樘橥槲橄樾檠橐橛樵檎橹樽樨橘橼檑檐檩檗檫猷獒殁殂殇殄殒殓殍殚殛殡殪轫轭轱轲轳轵轶轸轷轹轺轼轾辁辂辄辇辋\"],[\"ea40\",\"闌\",27,\"闬闿阇阓阘阛阞阠阣\",6,\"阫阬阭阯阰阷阸阹阺阾陁陃陊陎陏陑陒陓陖陗\"],[\"ea80\",\"陘陙陚陜陝陞陠陣陥陦陫陭\",4,\"陳陸\",12,\"隇隉隊辍辎辏辘辚軎戋戗戛戟戢戡戥戤戬臧瓯瓴瓿甏甑甓攴旮旯旰昊昙杲昃昕昀炅曷昝昴昱昶昵耆晟晔晁晏晖晡晗晷暄暌暧暝暾曛曜曦曩贲贳贶贻贽赀赅赆赈赉赇赍赕赙觇觊觋觌觎觏觐觑牮犟牝牦牯牾牿犄犋犍犏犒挈挲掰\"],[\"eb40\",\"隌階隑隒隓隕隖隚際隝\",9,\"隨\",7,\"隱隲隴隵隷隸隺隻隿雂雃雈雊雋雐雑雓雔雖\",9,\"雡\",6,\"雫\"],[\"eb80\",\"雬雭雮雰雱雲雴雵雸雺電雼雽雿霂霃霅霊霋霌霐霑霒霔霕霗\",4,\"霝霟霠搿擘耄毪毳毽毵毹氅氇氆氍氕氘氙氚氡氩氤氪氲攵敕敫牍牒牖爰虢刖肟肜肓肼朊肽肱肫肭肴肷胧胨胩胪胛胂胄胙胍胗朐胝胫胱胴胭脍脎胲胼朕脒豚脶脞脬脘脲腈腌腓腴腙腚腱腠腩腼腽腭腧塍媵膈膂膑滕膣膪臌朦臊膻\"],[\"ec40\",\"霡\",8,\"霫霬霮霯霱霳\",4,\"霺霻霼霽霿\",18,\"靔靕靗靘靚靜靝靟靣靤靦靧靨靪\",7],[\"ec80\",\"靲靵靷\",4,\"靽\",7,\"鞆\",4,\"鞌鞎鞏鞐鞓鞕鞖鞗鞙\",4,\"臁膦欤欷欹歃歆歙飑飒飓飕飙飚殳彀毂觳斐齑斓於旆旄旃旌旎旒旖炀炜炖炝炻烀炷炫炱烨烊焐焓焖焯焱煳煜煨煅煲煊煸煺熘熳熵熨熠燠燔燧燹爝爨灬焘煦熹戾戽扃扈扉礻祀祆祉祛祜祓祚祢祗祠祯祧祺禅禊禚禧禳忑忐\"],[\"ed40\",\"鞞鞟鞡鞢鞤\",6,\"鞬鞮鞰鞱鞳鞵\",46],[\"ed80\",\"韤韥韨韮\",4,\"韴韷\",23,\"怼恝恚恧恁恙恣悫愆愍慝憩憝懋懑戆肀聿沓泶淼矶矸砀砉砗砘砑斫砭砜砝砹砺砻砟砼砥砬砣砩硎硭硖硗砦硐硇硌硪碛碓碚碇碜碡碣碲碹碥磔磙磉磬磲礅磴礓礤礞礴龛黹黻黼盱眄眍盹眇眈眚眢眙眭眦眵眸睐睑睇睃睚睨\"],[\"ee40\",\"頏\",62],[\"ee80\",\"顎\",32,\"睢睥睿瞍睽瞀瞌瞑瞟瞠瞰瞵瞽町畀畎畋畈畛畲畹疃罘罡罟詈罨罴罱罹羁罾盍盥蠲钅钆钇钋钊钌钍钏钐钔钗钕钚钛钜钣钤钫钪钭钬钯钰钲钴钶\",4,\"钼钽钿铄铈\",6,\"铐铑铒铕铖铗铙铘铛铞铟铠铢铤铥铧铨铪\"],[\"ef40\",\"顯\",5,\"颋颎颒颕颙颣風\",37,\"飏飐飔飖飗飛飜飝飠\",4],[\"ef80\",\"飥飦飩\",30,\"铩铫铮铯铳铴铵铷铹铼铽铿锃锂锆锇锉锊锍锎锏锒\",4,\"锘锛锝锞锟锢锪锫锩锬锱锲锴锶锷锸锼锾锿镂锵镄镅镆镉镌镎镏镒镓镔镖镗镘镙镛镞镟镝镡镢镤\",8,\"镯镱镲镳锺矧矬雉秕秭秣秫稆嵇稃稂稞稔\"],[\"f040\",\"餈\",4,\"餎餏餑\",28,\"餯\",26],[\"f080\",\"饊\",9,\"饖\",12,\"饤饦饳饸饹饻饾馂馃馉稹稷穑黏馥穰皈皎皓皙皤瓞瓠甬鸠鸢鸨\",4,\"鸲鸱鸶鸸鸷鸹鸺鸾鹁鹂鹄鹆鹇鹈鹉鹋鹌鹎鹑鹕鹗鹚鹛鹜鹞鹣鹦\",6,\"鹱鹭鹳疒疔疖疠疝疬疣疳疴疸痄疱疰痃痂痖痍痣痨痦痤痫痧瘃痱痼痿瘐瘀瘅瘌瘗瘊瘥瘘瘕瘙\"],[\"f140\",\"馌馎馚\",10,\"馦馧馩\",47],[\"f180\",\"駙\",32,\"瘛瘼瘢瘠癀瘭瘰瘿瘵癃瘾瘳癍癞癔癜癖癫癯翊竦穸穹窀窆窈窕窦窠窬窨窭窳衤衩衲衽衿袂袢裆袷袼裉裢裎裣裥裱褚裼裨裾裰褡褙褓褛褊褴褫褶襁襦襻疋胥皲皴矜耒耔耖耜耠耢耥耦耧耩耨耱耋耵聃聆聍聒聩聱覃顸颀颃\"],[\"f240\",\"駺\",62],[\"f280\",\"騹\",32,\"颉颌颍颏颔颚颛颞颟颡颢颥颦虍虔虬虮虿虺虼虻蚨蚍蚋蚬蚝蚧蚣蚪蚓蚩蚶蛄蚵蛎蚰蚺蚱蚯蛉蛏蚴蛩蛱蛲蛭蛳蛐蜓蛞蛴蛟蛘蛑蜃蜇蛸蜈蜊蜍蜉蜣蜻蜞蜥蜮蜚蜾蝈蜴蜱蜩蜷蜿螂蜢蝽蝾蝻蝠蝰蝌蝮螋蝓蝣蝼蝤蝙蝥螓螯螨蟒\"],[\"f340\",\"驚\",17,\"驲骃骉骍骎骔骕骙骦骩\",6,\"骲骳骴骵骹骻骽骾骿髃髄髆\",4,\"髍髎髏髐髒體髕髖髗髙髚髛髜\"],[\"f380\",\"髝髞髠髢髣髤髥髧髨髩髪髬髮髰\",8,\"髺髼\",6,\"鬄鬅鬆蟆螈螅螭螗螃螫蟥螬螵螳蟋蟓螽蟑蟀蟊蟛蟪蟠蟮蠖蠓蟾蠊蠛蠡蠹蠼缶罂罄罅舐竺竽笈笃笄笕笊笫笏筇笸笪笙笮笱笠笥笤笳笾笞筘筚筅筵筌筝筠筮筻筢筲筱箐箦箧箸箬箝箨箅箪箜箢箫箴篑篁篌篝篚篥篦篪簌篾篼簏簖簋\"],[\"f440\",\"鬇鬉\",5,\"鬐鬑鬒鬔\",10,\"鬠鬡鬢鬤\",10,\"鬰鬱鬳\",7,\"鬽鬾鬿魀魆魊魋魌魎魐魒魓魕\",5],[\"f480\",\"魛\",32,\"簟簪簦簸籁籀臾舁舂舄臬衄舡舢舣舭舯舨舫舸舻舳舴舾艄艉艋艏艚艟艨衾袅袈裘裟襞羝羟羧羯羰羲籼敉粑粝粜粞粢粲粼粽糁糇糌糍糈糅糗糨艮暨羿翎翕翥翡翦翩翮翳糸絷綦綮繇纛麸麴赳趄趔趑趱赧赭豇豉酊酐酎酏酤\"],[\"f540\",\"魼\",62],[\"f580\",\"鮻\",32,\"酢酡酰酩酯酽酾酲酴酹醌醅醐醍醑醢醣醪醭醮醯醵醴醺豕鹾趸跫踅蹙蹩趵趿趼趺跄跖跗跚跞跎跏跛跆跬跷跸跣跹跻跤踉跽踔踝踟踬踮踣踯踺蹀踹踵踽踱蹉蹁蹂蹑蹒蹊蹰蹶蹼蹯蹴躅躏躔躐躜躞豸貂貊貅貘貔斛觖觞觚觜\"],[\"f640\",\"鯜\",62],[\"f680\",\"鰛\",32,\"觥觫觯訾謦靓雩雳雯霆霁霈霏霎霪霭霰霾龀龃龅\",5,\"龌黾鼋鼍隹隼隽雎雒瞿雠銎銮鋈錾鍪鏊鎏鐾鑫鱿鲂鲅鲆鲇鲈稣鲋鲎鲐鲑鲒鲔鲕鲚鲛鲞\",5,\"鲥\",4,\"鲫鲭鲮鲰\",7,\"鲺鲻鲼鲽鳄鳅鳆鳇鳊鳋\"],[\"f740\",\"鰼\",62],[\"f780\",\"鱻鱽鱾鲀鲃鲄鲉鲊鲌鲏鲓鲖鲗鲘鲙鲝鲪鲬鲯鲹鲾\",4,\"鳈鳉鳑鳒鳚鳛鳠鳡鳌\",4,\"鳓鳔鳕鳗鳘鳙鳜鳝鳟鳢靼鞅鞑鞒鞔鞯鞫鞣鞲鞴骱骰骷鹘骶骺骼髁髀髅髂髋髌髑魅魃魇魉魈魍魑飨餍餮饕饔髟髡髦髯髫髻髭髹鬈鬏鬓鬟鬣麽麾縻麂麇麈麋麒鏖麝麟黛黜黝黠黟黢黩黧黥黪黯鼢鼬鼯鼹鼷鼽鼾齄\"],[\"f840\",\"鳣\",62],[\"f880\",\"鴢\",32],[\"f940\",\"鵃\",62],[\"f980\",\"鶂\",32],[\"fa40\",\"鶣\",62],[\"fa80\",\"鷢\",32],[\"fb40\",\"鸃\",27,\"鸤鸧鸮鸰鸴鸻鸼鹀鹍鹐鹒鹓鹔鹖鹙鹝鹟鹠鹡鹢鹥鹮鹯鹲鹴\",9,\"麀\"],[\"fb80\",\"麁麃麄麅麆麉麊麌\",5,\"麔\",8,\"麞麠\",5,\"麧麨麩麪\"],[\"fc40\",\"麫\",8,\"麵麶麷麹麺麼麿\",4,\"黅黆黇黈黊黋黌黐黒黓黕黖黗黙黚點黡黣黤黦黨黫黬黭黮黰\",8,\"黺黽黿\",6],[\"fc80\",\"鼆\",4,\"鼌鼏鼑鼒鼔鼕鼖鼘鼚\",5,\"鼡鼣\",8,\"鼭鼮鼰鼱\"],[\"fd40\",\"鼲\",4,\"鼸鼺鼼鼿\",4,\"齅\",10,\"齒\",38],[\"fd80\",\"齹\",5,\"龁龂龍\",11,\"龜龝龞龡\",4,\"郎凉秊裏隣\"],[\"fe40\",\"兀嗀﨎﨏﨑﨓﨔礼﨟蘒﨡﨣﨤﨧﨨﨩\"]]");
 
-const require$$3$1 = [
+const require$$3 = [
 	[
 		"a140",
 		"",
@@ -31633,7 +31698,7 @@ function requireDbcsData () {
 	    // GBK (~22000 chars) is an extension of CP936 that added user-mapped chars and some other.
 	    'gbk': {
 	        type: '_dbcs',
-	        table: function() { return require$$2$1.concat(require$$3$1) },
+	        table: function() { return require$$2$1.concat(require$$3) },
 	    },
 	    'xgbk': 'gbk',
 	    'isoir58': 'gbk',
@@ -31645,7 +31710,7 @@ function requireDbcsData () {
 	    // http://www.khngai.com/chinese/charmap/tblgbk.php?page=0
 	    'gb18030': {
 	        type: '_dbcs',
-	        table: function() { return require$$2$1.concat(require$$3$1) },
+	        table: function() { return require$$2$1.concat(require$$3) },
 	        gb18030: function() { return require$$4$1 },
 	        encodeSkipVals: [0x80],
 	        encodeAdd: {'€': 0xA2E3},
@@ -31931,7 +31996,7 @@ function requireUncompress_stream$3 () {
 	const yauzl = requireYauzl();
 	const stream = require$$1$1;
 	const UncompressBaseStream = requireBase_write_stream();
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 
 	// lazy load iconv-lite
 	let iconv;
@@ -32064,7 +32129,7 @@ function requireZip () {
 	if (hasRequiredZip) return zip;
 	hasRequiredZip = 1;
 
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const ZipStream = requireStream$2();
 	const ZipFileStream = requireFile_stream$3();
 	const ZipUncompressStream = requireUncompress_stream$3();
@@ -32127,7 +32192,7 @@ function requireFile_stream$2 () {
 
 	const fs = fs__default;
 	const zlib = require$$1$2;
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const streamifier = requireLib$2();
 
 	class GzipFileStream extends zlib.Gzip {
@@ -32173,7 +32238,7 @@ function requireUncompress_stream$2 () {
 
 	const fs = fs__default;
 	const zlib = require$$1$2;
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const streamifier = requireLib$2();
 
 	class GzipUncompressStream extends zlib.Unzip {
@@ -32216,7 +32281,7 @@ function requireGzip () {
 	if (hasRequiredGzip) return gzip;
 	hasRequiredGzip = 1;
 
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const GzipFileStream = requireFile_stream$2();
 	const GzipUncompressStream = requireUncompress_stream$2();
 
@@ -32241,7 +32306,7 @@ function requireFile_stream$1 () {
 	const path = path__default$1;
 	const stream = require$$1$1;
 	const tar = requireTarStream();
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const ready = requireGetReady();
 
 	class TarFileStream extends stream.Transform {
@@ -32333,7 +32398,7 @@ function requireUncompress_stream$1 () {
 
 	const fs = fs__default;
 	const tar = requireTarStream();
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const streamifier = requireLib$2();
 
 	// stream.Writable
@@ -32377,7 +32442,7 @@ function requireTar () {
 	if (hasRequiredTar) return tar;
 	hasRequiredTar = 1;
 
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const TarStream = requireStream$3();
 	const TarFileStream = requireFile_stream$1();
 	const TarUncompressStream = requireUncompress_stream$1();
@@ -32438,7 +32503,7 @@ function requireFile_stream () {
 
 	const tar = requireTar();
 	const gzip = requireGzip();
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const stream = require$$1$1;
 	const pump = requirePump();
 	const ready = requireGetReady();
@@ -32544,7 +32609,7 @@ function requireUncompress_stream () {
 	hasRequiredUncompress_stream = 1;
 
 	const fs = fs__default;
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const ready = requireGetReady();
 	const streamifier = requireLib$2();
 	const FlushWritable = requireFlushWritable();
@@ -32614,7 +32679,7 @@ function requireTgz () {
 	if (hasRequiredTgz) return tgz;
 	hasRequiredTgz = 1;
 
-	const utils = requireUtils$2();
+	const utils = requireUtils$1();
 	const TgzStream = requireStream$1();
 	const TgzFileStream = requireFile_stream();
 	const TgzUncompressStream = requireUncompress_stream();
@@ -32943,7 +33008,7 @@ class FFmpegExecAdapter {
   async getVideoInfo(videoPath) {
     const [fileType, duration] = await Promise.all([
       fileTypeFromFile(videoPath).catch(() => null),
-      this.getDuration(videoPath)
+      this.getDuration(videoPath).catch(() => 60)
     ]);
     const thumbnailPath = `${videoPath}.thumbnail.bmp`;
     let width = 100;
@@ -32968,24 +33033,23 @@ class FFmpegExecAdapter {
     };
   }
   /**
-     * 获取时长
-     */
+   * 获取时长
+   */
   async getDuration(filePath) {
-    try {
-      const { stdout } = await execFileAsync(this.ffprobePath, [
-        "-v",
-        "error",
-        "-show_entries",
-        "format=duration",
-        "-of",
-        "default=noprint_wrappers=1:nokey=1",
-        filePath
-      ]);
-      const duration = parseFloat(stdout.trim());
-      return isNaN(duration) ? 60 : duration;
-    } catch {
-      return 60;
+    const { stdout } = await execFileAsync(this.ffprobePath, [
+      "-v",
+      "error",
+      "-show_entries",
+      "format=duration",
+      "-of",
+      "default=noprint_wrappers=1:nokey=1",
+      filePath
+    ]);
+    const duration = parseFloat(stdout.trim());
+    if (isNaN(duration)) {
+      throw new Error(`ffprobe 返回了无效的时长值: "${stdout.trim()}"`);
     }
+    return duration;
   }
   /**
    * 判断是否为 Silk 格式
@@ -33873,12 +33937,12 @@ var winston$1 = {};
 
 var browser$2 = {};
 
-var format$4;
-var hasRequiredFormat$3;
+var format$2;
+var hasRequiredFormat$1;
 
-function requireFormat$3 () {
-	if (hasRequiredFormat$3) return format$4;
-	hasRequiredFormat$3 = 1;
+function requireFormat$1 () {
+	if (hasRequiredFormat$1) return format$2;
+	hasRequiredFormat$1 = 1;
 
 	/*
 	 * Displays a helpful message and the source of
@@ -33912,7 +33976,7 @@ function requireFormat$3 () {
 	 * function format (formatFn)
 	 * Returns a create function for the `formatFn`.
 	 */
-	format$4 = function (formatFn) {
+	format$2 = function (formatFn) {
 	  if (formatFn.length > 2) {
 	    throw new InvalidFormatError(formatFn);
 	  }
@@ -33945,7 +34009,7 @@ function requireFormat$3 () {
 	  createFormatWrap.Format = Format;
 	  return createFormatWrap;
 	};
-	return format$4;
+	return format$2;
 }
 
 var colorize = {exports: {}};
@@ -35177,7 +35241,7 @@ function requireAlign () {
 	if (hasRequiredAlign) return align;
 	hasRequiredAlign = 1;
 
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 
 	/*
 	 * function align (info)
@@ -35391,7 +35455,7 @@ function requireCombine () {
 	if (hasRequiredCombine) return combine$1.exports;
 	hasRequiredCombine = 1;
 
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 
 	/*
 	 * function cascade(formats)
@@ -35456,18 +35520,18 @@ function requireCombine () {
 
 /* eslint no-undefined: 0 */
 
-var errors$1;
-var hasRequiredErrors$1;
+var errors;
+var hasRequiredErrors;
 
-function requireErrors$1 () {
-	if (hasRequiredErrors$1) return errors$1;
-	hasRequiredErrors$1 = 1;
+function requireErrors () {
+	if (hasRequiredErrors) return errors;
+	hasRequiredErrors = 1;
 
 	function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 	function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: true, configurable: true, writable: true }) : e[r] = t, e; }
 	function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 	function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var _require = requireTripleBeam(),
 	  LEVEL = _require.LEVEL,
 	  MESSAGE = _require.MESSAGE;
@@ -35479,7 +35543,7 @@ function requireErrors$1 () {
 	 *
 	 * Optionally, the Error's `stack` and/or `cause` properties can also be appended to the `info` object.
 	 */
-	errors$1 = format(function (einfo, _ref) {
+	errors = format(function (einfo, _ref) {
 	  var stack = _ref.stack,
 	    cause = _ref.cause;
 	  if (einfo instanceof Error) {
@@ -35504,7 +35568,7 @@ function requireErrors$1 () {
 	  if (cause) einfo.cause = err.cause;
 	  return einfo;
 	});
-	return errors$1;
+	return errors;
 }
 
 var safeStableStringify = {exports: {}};
@@ -36150,7 +36214,7 @@ function requireJson$1 () {
 	if (hasRequiredJson$1) return json$1;
 	hasRequiredJson$1 = 1;
 
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var _require = requireTripleBeam(),
 	  MESSAGE = _require.MESSAGE;
 	var stringify = requireSafeStableStringify();
@@ -36188,7 +36252,7 @@ function requireLabel () {
 	if (hasRequiredLabel) return label;
 	hasRequiredLabel = 1;
 
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 
 	/*
 	 * function label (info)
@@ -36214,7 +36278,7 @@ function requireLogstash () {
 	if (hasRequiredLogstash) return logstash;
 	hasRequiredLogstash = 1;
 
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var _require = requireTripleBeam(),
 	  MESSAGE = _require.MESSAGE;
 	var jsonStringify = requireSafeStableStringify();
@@ -36243,18 +36307,18 @@ function requireLogstash () {
 	return logstash;
 }
 
-var metadata$1;
-var hasRequiredMetadata$1;
+var metadata;
+var hasRequiredMetadata;
 
-function requireMetadata$1 () {
-	if (hasRequiredMetadata$1) return metadata$1;
-	hasRequiredMetadata$1 = 1;
+function requireMetadata () {
+	if (hasRequiredMetadata) return metadata;
+	hasRequiredMetadata = 1;
 
 	function _typeof(o) { "@babel/helpers - typeof"; return _typeof = "function" == typeof Symbol && "symbol" == typeof Symbol.iterator ? function (o) { return typeof o; } : function (o) { return o && "function" == typeof Symbol && o.constructor === Symbol && o !== Symbol.prototype ? "symbol" : typeof o; }, _typeof(o); }
 	function _defineProperty(e, r, t) { return (r = _toPropertyKey(r)) in e ? Object.defineProperty(e, r, { value: t, enumerable: true, configurable: true, writable: true }) : e[r] = t, e; }
 	function _toPropertyKey(t) { var i = _toPrimitive(t, "string"); return "symbol" == _typeof(i) ? i : i + ""; }
 	function _toPrimitive(t, r) { if ("object" != _typeof(t) || !t) return t; var e = t[Symbol.toPrimitive]; if (void 0 !== e) { var i = e.call(t, r); if ("object" != _typeof(i)) return i; throw new TypeError("@@toPrimitive must return a primitive value."); } return ("string" === r ? String : Number)(t); }
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	function fillExcept(info, fillExceptKeys, metadataKey) {
 	  var savedKeys = fillExceptKeys.reduce(function (acc, key) {
 	    acc[key] = info[key];
@@ -36282,7 +36346,7 @@ function requireMetadata$1 () {
 	 * Adds in a "metadata" object to collect extraneous data, similar to the metadata
 	 * object in winston 2.x.
 	 */
-	metadata$1 = format(function (info) {
+	metadata = format(function (info) {
 	  var opts = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 	  var metadataKey = 'metadata';
 	  if (opts.key) {
@@ -36304,7 +36368,7 @@ function requireMetadata$1 () {
 	  }
 	  return info;
 	});
-	return metadata$1;
+	return metadata;
 }
 
 var ms_1;
@@ -36315,7 +36379,7 @@ function requireMs$1 () {
 	hasRequiredMs$1 = 1;
 
 	var _this = void 0;
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var ms = requireMs$2();
 
 	/*
@@ -36341,7 +36405,7 @@ function requirePrettyPrint () {
 	hasRequiredPrettyPrint = 1;
 
 	var inspect = require$$0$6.inspect;
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var _require = requireTripleBeam(),
 	  LEVEL = _require.LEVEL,
 	  MESSAGE = _require.MESSAGE,
@@ -36424,7 +36488,7 @@ function requireSimple () {
 	if (hasRequiredSimple) return simple;
 	hasRequiredSimple = 1;
 
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var _require = requireTripleBeam(),
 	  MESSAGE = _require.MESSAGE;
 	var jsonStringify = requireSafeStableStringify();
@@ -36846,7 +36910,7 @@ var setGlobalDateMasks = function (masks) { return assign$1(globalMasks, masks);
  * @param {string} mask Format of the date, i.e. 'mm-dd-yy' or 'shortDate'
  * @returns {string} Formatted date string
  */
-var format$3 = function (dateObj, mask, i18n) {
+var format$1 = function (dateObj, mask, i18n) {
     if (mask === void 0) { mask = globalMasks["default"]; }
     if (i18n === void 0) { i18n = {}; }
     if (typeof dateObj === "number") {
@@ -37000,7 +37064,7 @@ function parse$1(dateStr, format, i18n) {
     return dateTZ;
 }
 var fecha = {
-    format: format$3,
+    format: format$1,
     parse: parse$1,
     defaultI18n: defaultI18n,
     setGlobalDateI18n: setGlobalDateI18n,
@@ -37012,7 +37076,7 @@ const fecha$1 = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.defineProperty({
     assign: assign$1,
     default: fecha,
     defaultI18n,
-    format: format$3,
+    format: format$1,
     parse: parse$1,
     setGlobalDateI18n,
     setGlobalDateMasks
@@ -37028,7 +37092,7 @@ function requireTimestamp () {
 	hasRequiredTimestamp = 1;
 
 	var fecha = require$$0$2;
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 
 	/*
 	 * function timestamp (info)
@@ -37062,7 +37126,7 @@ function requireUncolorize () {
 	hasRequiredUncolorize = 1;
 
 	var colors = requireSafe();
-	var format = requireFormat$3();
+	var format = requireFormat$1();
 	var _require = requireTripleBeam(),
 	  MESSAGE = _require.MESSAGE;
 
@@ -37099,7 +37163,7 @@ function requireBrowser$2 () {
 	 * Both the construction method and set of exposed
 	 * formats.
 	 */
-	var format = browser$2.format = requireFormat$3();
+	var format = browser$2.format = requireFormat$1();
 
 	/*
 	 * @api public
@@ -37125,7 +37189,7 @@ function requireBrowser$2 () {
 	  value: requireCombine()
 	});
 	Object.defineProperty(format, 'errors', {
-	  value: requireErrors$1()
+	  value: requireErrors()
 	});
 	Object.defineProperty(format, 'json', {
 	  value: requireJson$1()
@@ -37137,7 +37201,7 @@ function requireBrowser$2 () {
 	  value: requireLogstash()
 	});
 	Object.defineProperty(format, 'metadata', {
-	  value: requireMetadata$1()
+	  value: requireMetadata()
 	});
 	Object.defineProperty(format, 'ms', {
 	  value: requireMs$1()
@@ -47540,12 +47604,12 @@ function requireProfiler () {
 	return profiler;
 }
 
-var format$2;
-var hasRequiredFormat$2;
+var format;
+var hasRequiredFormat;
 
-function requireFormat$2 () {
-	if (hasRequiredFormat$2) return format$2;
-	hasRequiredFormat$2 = 1;
+function requireFormat () {
+	if (hasRequiredFormat) return format;
+	hasRequiredFormat = 1;
 
 	/*
 	 * Displays a helpful message and the source of
@@ -47564,7 +47628,7 @@ Found: ${formatFn.toString().split('\n')[0]}\n`);
 	 * function format (formatFn)
 	 * Returns a create function for the `formatFn`.
 	 */
-	format$2 = formatFn => {
+	format = formatFn => {
 	  if (formatFn.length > 2) {
 	    throw new InvalidFormatError(formatFn);
 	  }
@@ -47597,7 +47661,7 @@ Found: ${formatFn.toString().split('\n')[0]}\n`);
 	  createFormatWrap.Format = Format;
 	  return createFormatWrap;
 	};
-	return format$2;
+	return format;
 }
 
 var json;
@@ -47607,7 +47671,7 @@ function requireJson () {
 	if (hasRequiredJson) return json;
 	hasRequiredJson = 1;
 
-	const format = requireFormat$2();
+	const format = requireFormat();
 	const { MESSAGE } = requireTripleBeam();
 	const stringify = requireSafeStableStringify();
 
@@ -48847,12 +48911,15 @@ class Subscription {
 }
 const logSubscription$1 = new Subscription();
 class LogWrapper {
-  fileLogEnabled = true;
+  fileLogEnabled = false;
   consoleLogEnabled = true;
   logger;
+  logPath;
+  fileTransportAdded = false;
+  fileLogLevel = "debug" /* DEBUG */;
   constructor(logDir) {
     const filename = `${getFormattedTimestamp()}.log`;
-    const logPath = path__default.join(logDir, filename);
+    this.logPath = path__default.join(logDir, filename);
     this.logger = winston.createLogger({
       level: "debug",
       format: winstonExports.format.combine(
@@ -48863,13 +48930,6 @@ class LogWrapper {
         })
       ),
       transports: [
-        new winstonExports.transports.File({
-          filename: logPath,
-          level: "debug",
-          maxsize: 5 * 1024 * 1024,
-          // 5MB
-          maxFiles: 5
-        }),
         new winstonExports.transports.Console({
           format: winstonExports.format.combine(
             winstonExports.format.colorize(),
@@ -48892,7 +48952,7 @@ class LogWrapper {
         this.deleteOldLogFile(filePath, oneWeekAgo);
       });
     }).catch((err) => {
-      this.logger.error("Failed to read log directory", err);
+      this.logError("Failed to read log directory", err);
     });
   }
   deleteOldLogFile(filePath, oneWeekAgo) {
@@ -48901,20 +48961,21 @@ class LogWrapper {
         fs$2.unlink(filePath).catch((err) => {
           if (err) {
             if (err.code === "ENOENT") {
-              this.logger.warn(`File already deleted: ${filePath}`);
+              this.logWarn(`File already deleted: ${filePath}`);
             } else {
-              this.logger.error("Failed to delete old log file", err);
+              this.logError("Failed to delete old log file", err);
             }
           } else {
-            this.logger.info(`Deleted old log file: ${filePath}`);
+            this.log(`Deleted old log file: ${filePath}`);
           }
         });
       }
     }).catch((err) => {
-      this.logger.error("Failed to get file stats", err);
+      this.logError("Failed to get file stats", err);
     });
   }
   setFileAndConsoleLogLevel(fileLogLevel, consoleLogLevel) {
+    this.fileLogLevel = fileLogLevel;
     this.logger.transports.forEach((transport) => {
       if (transport instanceof winstonExports.transports.File) {
         transport.level = fileLogLevel;
@@ -48929,6 +48990,16 @@ class LogWrapper {
   }
   setFileLogEnabled(isEnabled) {
     this.fileLogEnabled = isEnabled;
+    if (isEnabled && !this.fileTransportAdded) {
+      this.fileTransportAdded = true;
+      this.logger.add(new winstonExports.transports.File({
+        filename: this.logPath,
+        level: this.fileLogLevel,
+        maxsize: 5 * 1024 * 1024,
+        // 5MB
+        maxFiles: 5
+      }));
+    }
     this.logger.transports.forEach((transport) => {
       if (transport instanceof winstonExports.transports.File) {
         transport.silent = !isEnabled;
@@ -48954,15 +49025,17 @@ class LogWrapper {
     }).join(" ");
   }
   _log(level, ...args) {
-    const message = this.formatMsg(args);
-    if (this.consoleLogEnabled && this.fileLogEnabled) {
-      this.logger.log(level, message);
-    } else if (this.consoleLogEnabled) {
-      this.logger.log(level, message);
-    } else if (this.fileLogEnabled) {
-      this.logger.log(level, message.replace(/\x1B[@-_][0-?]*[ -/]*[@-~]/g, ""));
+    if (this.consoleLogEnabled || this.fileLogEnabled) {
+      const message = this.formatMsg(args);
+      if (this.consoleLogEnabled && this.fileLogEnabled) {
+        this.logger.log(level, message);
+      } else if (this.consoleLogEnabled) {
+        this.logger.log(level, message);
+      } else if (this.fileLogEnabled) {
+        this.logger.log(level, message.replace(/\x1B[@-_][0-?]*[ -/]*[@-~]/g, ""));
+      }
+      logSubscription$1.notify(JSON.stringify({ level, message }));
     }
-    logSubscription$1.notify(JSON.stringify({ level, message }));
   }
   log(...args) {
     this._log("info" /* INFO */, ...args);
@@ -49123,6 +49196,9 @@ class NapCoreContext {
   get config() {
     return this.core.configLoader.configData;
   }
+  get napi2nativeLoader() {
+    return this.core.context.napi2nativeLoader;
+  }
   sendSsoCmdReqByContend = (cmd, data) => this.core.context.session.getMsgService().sendSsoCmdReqByContend(cmd, data);
 }
 
@@ -49131,36 +49207,29 @@ class NativePacketClient {
   logger;
   cb = /* @__PURE__ */ new Map();
   // hash-type callback
+  napi2nativeLoader;
   logStack;
   available = false;
-  supportedPlatforms = ["win32.x64", "linux.x64", "linux.arm64", "darwin.x64", "darwin.arm64"];
-  MoeHooExport = { exports: {} };
-  constructor(napCore, logger, logStack) {
+  constructor(napCore, logger, logStack, napi2nativeLoader) {
     this.napcore = napCore;
     this.logger = logger;
     this.logStack = logStack;
+    this.napi2nativeLoader = napi2nativeLoader;
   }
   check() {
-    const platform = process.platform + "." + process.arch;
-    if (!this.supportedPlatforms.includes(platform)) {
-      this.logStack.pushLogWarn(`NativePacketClient: 不支持的平台: ${platform}`);
-      return false;
-    }
-    const moehoo_path = path__default$1.join(dirname(fileURLToPath(import.meta.url)), "./native/napi2native/napi2native." + platform + ".node");
-    if (!fs__default.existsSync(moehoo_path)) {
-      this.logStack.pushLogWarn(`NativePacketClient: 缺失运行时文件: ${moehoo_path}`);
+    if (!this.napi2nativeLoader.loaded) {
+      this.logStack.pushLogWarn("NativePacketClient: Napi2NativeLoader 未成功加载");
       return false;
     }
     return true;
   }
   async init(_pid, recv, send) {
-    const platform = process.platform + "." + process.arch;
     const isNewQQ = this.napcore.basicInfo.requireMinNTQQBuild("40824");
     if (isNewQQ) {
-      const moehoo_path = path__default$1.join(dirname(fileURLToPath(import.meta.url)), "./native/napi2native/napi2native." + platform + ".node");
-      process.dlopen(this.MoeHooExport, moehoo_path, constants.dlopen.RTLD_LAZY);
-      this.MoeHooExport?.exports.initHook?.(send, recv);
-      this.available = true;
+      const success = this.napi2nativeLoader.initHook(send, recv);
+      if (success) {
+        this.available = true;
+      }
     }
   }
   async sendPacket(cmd, data, rsp = false, timeout = 5e3) {
@@ -49226,11 +49295,13 @@ class PacketClientContext {
   napCore;
   logger;
   logStack;
+  napi2nativeLoader;
   _client;
-  constructor(napCore, logger) {
+  constructor(napCore, logger, napi2nativeLoader) {
     this.napCore = napCore;
     this.logger = logger;
     this.logStack = new LogStack(logger);
+    this.napi2nativeLoader = napi2nativeLoader;
     this._client = this.newClient();
   }
   get available() {
@@ -49248,7 +49319,7 @@ class PacketClientContext {
   }
   newClient() {
     this.logger.info("使用 NativePacketClient 作为后端");
-    const client = new NativePacketClient(this.napCore, this.logger, this.logStack);
+    const client = new NativePacketClient(this.napCore, this.logger, this.logStack, this.napi2nativeLoader);
     if (!client.check()) {
       throw new Error("[Core] [Packet] NativePacketClient 不可用，NapCat.Packet将不会加载！");
     }
@@ -49369,6 +49440,14 @@ class PacketOperationContext {
   }
   async SetGroupTodo(groupUin, msgSeq) {
     const req = SetGroupTodo_default.build(groupUin, msgSeq);
+    await this.context.client.sendOidbPacket(req, true);
+  }
+  async CompleteGroupTodo(groupUin, msgSeq) {
+    const req = CompleteGroupTodo_default.build(groupUin, msgSeq);
+    await this.context.client.sendOidbPacket(req, true);
+  }
+  async CancelGroupTodo(groupUin, msgSeq) {
+    const req = CancelGroupTodo_default.build(groupUin, msgSeq);
     await this.context.client.sendOidbPacket(req, true);
   }
   async FetchRkey(timeout = 1e4) {
@@ -49541,7 +49620,7 @@ class PacketOperationContext {
     return res.result.resId;
   }
   async UploadForwardMsgV2(msg, groupUin = 0) {
-    await Promise.allSettled(msg.map(async (item) => {
+    await Promise.allSettled(msg.filter((item) => item.actionMsg).map(async (item) => {
       return await this.SendPreprocess(item.actionMsg, groupUin);
     }));
     const req = UploadForwardMsgV2_default.build(this.context.napcore.basicInfo.uid, msg, groupUin);
@@ -49606,6 +49685,14 @@ class PacketOperationContext {
       if (!res.msgInfo) continue;
       return res.msgInfo;
     }
+  }
+  async FetchForwardMsgRaw(resId) {
+    const req = DownloadForwardMsg_default.build(this.context.napcore.basicInfo.uid, resId);
+    const resp = await this.context.client.sendOidbPacket(req, true);
+    const res = DownloadForwardMsg_default.parse(resp);
+    const inflate = gunzipSync$1(res.result.payload);
+    const result = new NapProtoMsg(LongMsgResult).decode(inflate);
+    return result.action;
   }
   async FetchForwardMsg(res_id) {
     const req = DownloadForwardMsg_default.build(this.context.napcore.basicInfo.uid, res_id);
@@ -49689,7 +49776,7 @@ class PacketContext {
     this.msgConverter = new PacketMsgConverter();
     this.napcore = new NapCoreContext(core);
     this.logger = new PacketLogger(this.napcore);
-    this.client = new PacketClientContext(this.napcore, this.logger);
+    this.client = new PacketClientContext(this.napcore, this.logger, this.napcore.napi2nativeLoader);
     this.highway = new PacketHighwayContext(this.napcore, this.logger, this.client);
     this.operation = new PacketOperationContext(this);
   }
@@ -49766,7 +49853,7 @@ class NTQQPacketApi {
     this.pkt = new PacketClientSession(this.core);
     await this.pkt.init(process.pid, table.recv, table.send);
     try {
-      await this.pkt.operation.FetchRkey(1500);
+      await this.pkt.operation.FetchRkey(3e3);
     } catch (error) {
       this.logger.logError("测试Packet状态异常", error);
       return false;
@@ -50244,6 +50331,507 @@ class NTQQFlashApi {
   }
 }
 
+const EXT_HEADER_SIZE = 1024;
+const PAGE_SIZE = 4096;
+const SALT_SIZE = 16;
+const KEY_SIZE = 32;
+const IV_SIZE = 16;
+const RESERVE_SIZE = 48;
+const KDF_ITERATIONS = 4e3;
+const FAST_ITERATIONS = 2;
+const HMAC_MASK = 58;
+const SQLITE_HEADER = Buffer.from("SQLite header 3\0");
+const SQLITE_FORMAT = Buffer.from("SQLite format 3\0");
+
+function deriveKeys(passphrase, salt) {
+  const encKey = pbkdf2Sync(passphrase, salt, KDF_ITERATIONS, KEY_SIZE, "sha512");
+  const hmacSalt = Buffer.alloc(salt.length);
+  for (let i = 0; i < salt.length; i++) {
+    hmacSalt[i] = salt[i] ^ HMAC_MASK;
+  }
+  const hmacKey = pbkdf2Sync(encKey, hmacSalt, FAST_ITERATIONS, KEY_SIZE, "sha512");
+  return { encKey, hmacKey };
+}
+
+function decryptPage(pageData, encKey, skipSalt = 0) {
+  const data = pageData.subarray(skipSalt);
+  const contentLen = data.length - RESERVE_SIZE;
+  const encrypted = data.subarray(0, contentLen);
+  const iv = data.subarray(contentLen, contentLen + IV_SIZE);
+  const decipher = createDecipheriv("aes-256-cbc", encKey, iv);
+  decipher.setAutoPadding(false);
+  return Buffer.concat([decipher.update(encrypted), decipher.final()]);
+}
+function isEncryptedNTDB(fileData) {
+  if (fileData.length < EXT_HEADER_SIZE + PAGE_SIZE) return false;
+  return fileData.subarray(0, 16).equals(SQLITE_HEADER);
+}
+function decryptDatabase(fileData, passphrase) {
+  if (!isEncryptedNTDB(fileData)) return null;
+  const scData = fileData.subarray(EXT_HEADER_SIZE);
+  const totalPages = Math.floor(scData.length / PAGE_SIZE);
+  if (totalPages === 0) return null;
+  const salt = scData.subarray(0, SALT_SIZE);
+  const { encKey } = deriveKeys(passphrase, salt);
+  const output = Buffer.alloc(totalPages * PAGE_SIZE);
+  let offset = 0;
+  for (let pgno = 1; pgno <= totalPages; pgno++) {
+    const pageOffset = (pgno - 1) * PAGE_SIZE;
+    const rawPage = scData.subarray(pageOffset, pageOffset + PAGE_SIZE);
+    const skip = pgno === 1 ? SALT_SIZE : 0;
+    const decrypted = decryptPage(rawPage, encKey, skip);
+    if (pgno === 1) {
+      SQLITE_FORMAT.copy(output, 0);
+      decrypted.copy(output, 16);
+      output.writeUInt16BE(PAGE_SIZE, 16);
+      offset = PAGE_SIZE;
+    } else {
+      decrypted.copy(output, offset);
+      offset += PAGE_SIZE;
+    }
+  }
+  return output;
+}
+function decryptDatabaseFile(inputPath, passphrase, outputPath) {
+  const fileData = fs__default$1.readFileSync(inputPath);
+  const result = decryptDatabase(fileData, passphrase);
+  if (!result) return null;
+  if (!outputPath) {
+    const dotIdx = inputPath.lastIndexOf(".");
+    outputPath = dotIdx > 0 ? inputPath.substring(0, dotIdx) + "_decrypted" + inputPath.substring(dotIdx) : inputPath + "_decrypted";
+  }
+  fs__default$1.writeFileSync(outputPath, result);
+  return outputPath;
+}
+
+let _DatabaseSync = null;
+let _sqliteChecked = false;
+async function loadSqlite() {
+  if (_sqliteChecked) return _DatabaseSync;
+  _sqliteChecked = true;
+  try {
+    const mod = await import('node:sqlite');
+    _DatabaseSync = mod.DatabaseSync;
+    return _DatabaseSync;
+  } catch {
+    _DatabaseSync = null;
+    return null;
+  }
+}
+function getDatabaseSync() {
+  if (!_DatabaseSync) {
+    throw new Error(
+      "node:sqlite 不可用。请使用 Node.js 22+ 并添加 --experimental-sqlite 标志，或调用 checkSqliteAvailable() 检查可用性。"
+    );
+  }
+  return _DatabaseSync;
+}
+async function checkSqliteAvailable() {
+  const ctor = await loadSqlite();
+  return ctor !== null;
+}
+class DatabaseHandle {
+  db;
+  _closed = false;
+  filePath;
+  readOnly;
+  constructor(filePath, readOnly = false) {
+    const DB = getDatabaseSync();
+    this.db = new DB(filePath, { readOnly });
+    this.filePath = filePath;
+    this.readOnly = readOnly;
+  }
+  /** 数据库是否已关闭 */
+  get closed() {
+    return this._closed;
+  }
+  ensureOpen() {
+    if (this._closed) throw new Error("数据库已关闭");
+  }
+  /**
+   * 执行 SELECT 查询，返回所有结果行
+   * @param sql    SQL 语句
+   * @param params 绑定参数 (位置参数数组 或 命名参数对象)
+   */
+  query(sql, params) {
+    this.ensureOpen();
+    const stmt = this.db.prepare(sql);
+    if (params) {
+      if (Array.isArray(params)) {
+        return stmt.all(...params);
+      }
+      return stmt.all(params);
+    }
+    return stmt.all();
+  }
+  /**
+   * 执行 SELECT 查询，仅返回第一行
+   * @param sql    SQL 语句
+   * @param params 绑定参数
+   */
+  queryOne(sql, params) {
+    this.ensureOpen();
+    const stmt = this.db.prepare(sql);
+    if (params) {
+      if (Array.isArray(params)) {
+        return stmt.get(...params);
+      }
+      return stmt.get(params);
+    }
+    return stmt.get();
+  }
+  /**
+   * 执行非查询 SQL (INSERT/UPDATE/DELETE/CREATE 等)
+   * @param sql    SQL 语句
+   * @param params 绑定参数
+   * @returns      受影响的行数信息
+   */
+  execute(sql, params) {
+    this.ensureOpen();
+    const stmt = this.db.prepare(sql);
+    if (params) {
+      if (Array.isArray(params)) {
+        return stmt.run(...params);
+      }
+      return stmt.run(params);
+    }
+    return stmt.run();
+  }
+  /** 列出所有表的信息 */
+  listTables() {
+    this.ensureOpen();
+    return extractTablesInfo(this.db);
+  }
+  /** 获取指定表的列信息 */
+  getTableColumns(tableName) {
+    this.ensureOpen();
+    const cols = this.db.prepare(`PRAGMA table_info([${tableName}])`).all();
+    return cols.map((col) => ({
+      cid: col.cid,
+      name: col.name,
+      type: col.type,
+      notnull: col.notnull === 1,
+      pk: col.pk === 1
+    }));
+  }
+  /** 获取表的行数 */
+  getRowCount(tableName) {
+    this.ensureOpen();
+    const cnt = this.db.prepare(`SELECT count(*) as cnt FROM [${tableName}]`).get();
+    return cnt?.cnt ?? 0;
+  }
+  /** 关闭数据库连接 */
+  close() {
+    if (!this._closed) {
+      this.db.close();
+      this._closed = true;
+    }
+  }
+}
+function openDatabase(filePath, readOnly = true) {
+  return new DatabaseHandle(filePath, readOnly);
+}
+function decryptAndOpen(dbPath, passphrase, cacheDir, readOnly = true) {
+  const filename = path__default.basename(dbPath);
+  if (cacheDir) {
+    const cachedPath = path__default.join(cacheDir, filename);
+    if (fs__default$1.existsSync(cachedPath)) {
+      return new DatabaseHandle(cachedPath, readOnly);
+    }
+    fs__default$1.mkdirSync(cacheDir, { recursive: true });
+    const outPath = decryptDatabaseFile(dbPath, passphrase, cachedPath);
+    if (!outPath) throw new Error(`解密失败: ${dbPath}`);
+    return new DatabaseHandle(outPath, readOnly);
+  }
+  const tmpPath = path__default.join(os$1.tmpdir(), `napcat_db_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
+  const fileData = fs__default$1.readFileSync(dbPath);
+  const decryptedBuf = decryptDatabase(fileData, passphrase);
+  if (!decryptedBuf) throw new Error(`解密失败: ${dbPath}`);
+  fs__default$1.writeFileSync(tmpPath, decryptedBuf);
+  return new DatabaseHandle(tmpPath, readOnly);
+}
+function extractTablesInfo(db) {
+  const tables = [];
+  const masterRows = db.prepare(
+    "SELECT name, type FROM sqlite_master WHERE type IN ('table', 'view') ORDER BY name"
+  ).all();
+  for (const { name: tableName, type: tableType } of masterRows) {
+    const columns = [];
+    try {
+      const cols = db.prepare(`PRAGMA table_info([${tableName}])`).all();
+      for (const col of cols) {
+        columns.push({
+          cid: col.cid,
+          name: col.name,
+          type: col.type,
+          notnull: col.notnull === 1,
+          pk: col.pk === 1
+        });
+      }
+    } catch {
+    }
+    let rowCount = 0;
+    try {
+      const cnt = db.prepare(`SELECT count(*) as cnt FROM [${tableName}]`).get();
+      rowCount = cnt?.cnt ?? 0;
+    } catch {
+      rowCount = -1;
+    }
+    tables.push({
+      name: tableName,
+      type: tableType,
+      rowCount,
+      columns
+    });
+  }
+  return tables;
+}
+function listTablesFromFile(filePath) {
+  const DB = getDatabaseSync();
+  const db = new DB(filePath, { readOnly: true });
+  try {
+    return extractTablesInfo(db);
+  } finally {
+    db.close();
+  }
+}
+function listTablesFromBuffer(data) {
+  const tmpPath = path__default.join(os$1.tmpdir(), `napcat_db_${Date.now()}_${Math.random().toString(36).slice(2)}.db`);
+  try {
+    fs__default$1.writeFileSync(tmpPath, data);
+    return listTablesFromFile(tmpPath);
+  } finally {
+    try {
+      fs__default$1.unlinkSync(tmpPath);
+    } catch {
+    }
+  }
+}
+function readSingleDatabase(dbPath, passphrase, options) {
+  const filename = path__default.basename(dbPath);
+  const result = {
+    filename,
+    sourcePath: dbPath,
+    success: false,
+    tables: []
+  };
+  try {
+    if (options?.cacheDir) {
+      const cachedPath = path__default.join(options.cacheDir, filename);
+      result.cachePath = cachedPath;
+      if (options?.skipExistingCache !== false && fs__default$1.existsSync(cachedPath)) {
+        result.tables = listTablesFromFile(cachedPath);
+        result.success = true;
+        return result;
+      }
+    }
+    const fileData = fs__default$1.readFileSync(dbPath);
+    if (!isEncryptedNTDB(fileData)) {
+      result.error = "Not an encrypted NTQQ database";
+      return result;
+    }
+    if (options?.cacheDir) {
+      fs__default$1.mkdirSync(options.cacheDir, { recursive: true });
+      const outPath = decryptDatabaseFile(dbPath, passphrase, result.cachePath);
+      if (!outPath) {
+        result.error = "Decryption failed";
+        return result;
+      }
+      result.cachePath = outPath;
+      result.tables = listTablesFromFile(outPath);
+    } else {
+      const decryptedBuf = decryptDatabase(fileData, passphrase);
+      if (!decryptedBuf) {
+        result.error = "Decryption returned null";
+        return result;
+      }
+      result.tables = listTablesFromBuffer(decryptedBuf);
+    }
+    result.success = true;
+  } catch (e) {
+    result.error = e instanceof Error ? e.message : String(e);
+  }
+  return result;
+}
+function scanAllDatabases(dbDir, passphrase, options) {
+  const results = [];
+  if (!fs__default$1.existsSync(dbDir)) return results;
+  const files = fs__default$1.readdirSync(dbDir).filter((f) => f.endsWith(".db")).sort();
+  for (const filename of files) {
+    const filePath = path__default.join(dbDir, filename);
+    const result = readSingleDatabase(filePath, passphrase, options);
+    results.push(result);
+  }
+  return results;
+}
+function formatScanResults(results) {
+  const lines = [];
+  let totalTables = 0;
+  let successCount = 0;
+  for (const db of results) {
+    if (db.success) {
+      successCount++;
+      const cacheNote = db.cachePath ? ` → ${db.cachePath}` : "";
+      lines.push(`=== ${db.filename} (${db.tables.length} tables)${cacheNote} ===`);
+      for (const table of db.tables) {
+        totalTables++;
+        const colList = table.columns.map((c) => `${c.name}:${c.type || "?"}`).join(", ");
+        lines.push(`  ${table.name}: ${table.rowCount} rows [${colList}]`);
+      }
+    } else {
+      lines.push(`=== ${db.filename}: SKIP (${db.error}) ===`);
+    }
+    lines.push("");
+  }
+  lines.push(`Summary: ${successCount}/${results.length} databases decrypted, ${totalTables} total tables`);
+  return lines.join("\n");
+}
+
+class NTQQDatabaseApi {
+  context;
+  core;
+  constructor(context, core) {
+    this.context = context;
+    this.core = core;
+  }
+  /** node:sqlite 是否可用 */
+  async isSqliteAvailable() {
+    return checkSqliteAvailable();
+  }
+  /** 获取当前账号的 nt_db 目录 */
+  getNtDbDir() {
+    return path__default.resolve(this.core.dataPath, this.core.selfInfo.uin, "nt_qq", "nt_db");
+  }
+  /**
+   * 获取解密缓存目录
+   * 默认: <NapCatDataPath>/db_<uin>/
+   * 可通过 customDir 完全自定义
+   */
+  getDefaultCacheDir(customDir) {
+    if (customDir) return customDir;
+    return path__default.resolve(this.core.NapCatDataPath, `db_${this.core.selfInfo.uin}`);
+  }
+  /** 当前是否已获取到数据库 passphrase */
+  hasPassphrase() {
+    return !!this.core.dbPassphrase;
+  }
+  /** 获取 passphrase Buffer，未获取时返回 null */
+  getPassphraseBuffer() {
+    return this.core.dbPassphrase ? Buffer.from(this.core.dbPassphrase) : null;
+  }
+  // ======================== SQLite 数据库操作 ========================
+  /**
+   * 打开一个已解密的 SQLite 数据库文件
+   * @param filePath  解密后 .db 文件路径
+   * @param readOnly  是否只读 (默认 true)
+   * @returns         DatabaseHandle 实例，使用完毕后需调用 .close()
+   */
+  openDecryptedDb(filePath, readOnly = true) {
+    return openDatabase(filePath, readOnly);
+  }
+  /**
+   * 解密并打开一个 NTQQ 加密数据库
+   * @param dbName    数据库文件名 (如 'nt_msg.db') 或完整路径
+   * @param readOnly  是否只读 (默认 true)
+   * @param cacheDir  自定义缓存目录，默认 db_<uin>
+   * @returns         DatabaseHandle 实例，使用完毕后需调用 .close()
+   */
+  openDatabase(dbName, readOnly = true, cacheDir) {
+    const passphrase = this.getPassphraseBuffer();
+    if (!passphrase) return null;
+    const dbPath = path__default.isAbsolute(dbName) ? dbName : path__default.resolve(this.getNtDbDir(), dbName);
+    const resolvedCacheDir = this.getDefaultCacheDir(cacheDir);
+    return decryptAndOpen(dbPath, passphrase, resolvedCacheDir, readOnly);
+  }
+  /**
+   * 对加密数据库执行查询并自动关闭连接
+   * @param dbName  数据库文件名或完整路径
+   * @param sql     SQL 查询语句
+   * @param params  绑定参数
+   * @returns       查询结果行数组，passphrase 不可用时返回 null
+   */
+  query(dbName, sql, params) {
+    const db = this.openDatabase(dbName);
+    if (!db) return null;
+    try {
+      return db.query(sql, params);
+    } finally {
+      db.close();
+    }
+  }
+  /**
+   * 对加密数据库执行查询，仅返回第一行
+   * @param dbName  数据库文件名或完整路径
+   * @param sql     SQL 查询语句
+   * @param params  绑定参数
+   */
+  queryOne(dbName, sql, params) {
+    const db = this.openDatabase(dbName);
+    if (!db) return null;
+    try {
+      return db.queryOne(sql, params);
+    } finally {
+      db.close();
+    }
+  }
+  /**
+   * 对加密数据库执行非查询 SQL (INSERT/UPDATE/DELETE 等) 并自动关闭
+   * @param dbName  数据库文件名或完整路径
+   * @param sql     SQL 语句
+   * @param params  绑定参数
+   */
+  execute(dbName, sql, params) {
+    const db = this.openDatabase(dbName, false);
+    if (!db) return null;
+    try {
+      return db.execute(sql, params);
+    } finally {
+      db.close();
+    }
+  }
+  // ======================== 批量扫描 ========================
+  /**
+   * 读取单个加密数据库的表信息
+   * @param dbName    数据库文件名 (如 'nt_msg.db')，或完整路径
+   * @param cacheDir  自定义缓存目录，默认 db_<uin>
+   * @param options   其他选项
+   */
+  readDatabase(dbName, cacheDir, options) {
+    const passphrase = this.getPassphraseBuffer();
+    if (!passphrase) return null;
+    const dbPath = path__default.isAbsolute(dbName) ? dbName : path__default.resolve(this.getNtDbDir(), dbName);
+    const resolvedCacheDir = this.getDefaultCacheDir(cacheDir);
+    return readSingleDatabase(dbPath, passphrase, { cacheDir: resolvedCacheDir, ...options });
+  }
+  /**
+   * 扫描所有加密数据库
+   * @param cacheDir  自定义缓存目录，默认 db_<uin>
+   * @param options   其他选项
+   */
+  scanDatabases(cacheDir, options) {
+    const passphrase = this.getPassphraseBuffer();
+    if (!passphrase) return [];
+    const resolvedCacheDir = this.getDefaultCacheDir(cacheDir);
+    return scanAllDatabases(this.getNtDbDir(), passphrase, { cacheDir: resolvedCacheDir, ...options });
+  }
+  /**
+   * 仅解密数据库文件（不读取表信息，不需要 node:sqlite）
+   * @param dbName    数据库文件名或完整路径
+   * @param outputPath  输出路径，默认保存到 db_<uin>/<dbName>
+   */
+  decryptDatabase(dbName, outputPath) {
+    const passphrase = this.getPassphraseBuffer();
+    if (!passphrase) return null;
+    const dbPath = path__default.isAbsolute(dbName) ? dbName : path__default.resolve(this.getNtDbDir(), dbName);
+    const outPath = outputPath ?? path__default.resolve(this.getDefaultCacheDir(), path__default.basename(dbName));
+    return decryptDatabaseFile(dbPath, passphrase, outPath);
+  }
+  /** 格式化扫描结果为可读字符串 */
+  formatResults(results) {
+    return formatScanResults(results);
+  }
+}
+
 class NTQQCollectionApi {
   context;
   core;
@@ -50598,7 +51186,7 @@ var unicode = {
 	ID_Continue: ID_Continue
 };
 
-var util$2 = {
+var util$1 = {
     isSpaceSeparator (c) {
         return typeof c === 'string' && unicode.Space_Separator.test(c)
     },
@@ -50787,7 +51375,7 @@ const lexStates = {
             return newToken('eof')
         }
 
-        if (util$2.isSpaceSeparator(c)) {
+        if (util$1.isSpaceSeparator(c)) {
             read();
             return
         }
@@ -50954,7 +51542,7 @@ const lexStates = {
             break
 
         default:
-            if (!util$2.isIdStartChar(u)) {
+            if (!util$1.isIdStartChar(u)) {
                 throw invalidIdentifier()
             }
 
@@ -50980,7 +51568,7 @@ const lexStates = {
             return
         }
 
-        if (util$2.isIdContinueChar(c)) {
+        if (util$1.isIdContinueChar(c)) {
             buffer += read();
             return
         }
@@ -51003,7 +51591,7 @@ const lexStates = {
             break
 
         default:
-            if (!util$2.isIdContinueChar(u)) {
+            if (!util$1.isIdContinueChar(u)) {
                 throw invalidIdentifier()
             }
 
@@ -51090,7 +51678,7 @@ const lexStates = {
             return
         }
 
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             return
         }
@@ -51099,7 +51687,7 @@ const lexStates = {
     },
 
     decimalPointLeading () {
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             lexState = 'decimalFraction';
             return
@@ -51117,7 +51705,7 @@ const lexStates = {
             return
         }
 
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             lexState = 'decimalFraction';
             return
@@ -51135,7 +51723,7 @@ const lexStates = {
             return
         }
 
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             return
         }
@@ -51152,7 +51740,7 @@ const lexStates = {
             return
         }
 
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             lexState = 'decimalExponentInteger';
             return
@@ -51162,7 +51750,7 @@ const lexStates = {
     },
 
     decimalExponentSign () {
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             lexState = 'decimalExponentInteger';
             return
@@ -51172,7 +51760,7 @@ const lexStates = {
     },
 
     decimalExponentInteger () {
-        if (util$2.isDigit(c)) {
+        if (util$1.isDigit(c)) {
             buffer += read();
             return
         }
@@ -51181,7 +51769,7 @@ const lexStates = {
     },
 
     hexadecimal () {
-        if (util$2.isHexDigit(c)) {
+        if (util$1.isHexDigit(c)) {
             buffer += read();
             lexState = 'hexadecimalInteger';
             return
@@ -51191,7 +51779,7 @@ const lexStates = {
     },
 
     hexadecimalInteger () {
-        if (util$2.isHexDigit(c)) {
+        if (util$1.isHexDigit(c)) {
             buffer += read();
             return
         }
@@ -51277,7 +51865,7 @@ const lexStates = {
             return
         }
 
-        if (util$2.isIdStartChar(c)) {
+        if (util$1.isIdStartChar(c)) {
             buffer += read();
             lexState = 'identifierName';
             return
@@ -51387,7 +51975,7 @@ function escape$2 () {
 
     case '0':
         read();
-        if (util$2.isDigit(peek())) {
+        if (util$1.isDigit(peek())) {
             throw invalidChar(read())
         }
 
@@ -51437,14 +52025,14 @@ function hexEscape () {
     let buffer = '';
     let c = peek();
 
-    if (!util$2.isHexDigit(c)) {
+    if (!util$1.isHexDigit(c)) {
         throw invalidChar(read())
     }
 
     buffer += read();
 
     c = peek();
-    if (!util$2.isHexDigit(c)) {
+    if (!util$1.isHexDigit(c)) {
         throw invalidChar(read())
     }
 
@@ -51459,7 +52047,7 @@ function unicodeEscape () {
 
     while (count-- > 0) {
         const c = peek();
-        if (!util$2.isHexDigit(c)) {
+        if (!util$1.isHexDigit(c)) {
             throw invalidChar(read())
         }
 
@@ -51879,7 +52467,7 @@ var stringify = function stringify (value, replacer, space) {
                 continue
 
             case '\0':
-                if (util$2.isDigit(value[i + 1])) {
+                if (util$1.isDigit(value[i + 1])) {
                     product += '\\x00';
                     continue
                 }
@@ -51956,12 +52544,12 @@ var stringify = function stringify (value, replacer, space) {
         }
 
         const firstChar = String.fromCodePoint(key.codePointAt(0));
-        if (!util$2.isIdStartChar(firstChar)) {
+        if (!util$1.isIdStartChar(firstChar)) {
             return quoteString(key)
         }
 
         for (let i = firstChar.length; i < key.length; i++) {
-            if (!util$2.isIdContinueChar(String.fromCodePoint(key.codePointAt(i)))) {
+            if (!util$1.isIdContinueChar(String.fromCodePoint(key.codePointAt(i)))) {
                 return quoteString(key)
             }
         }
@@ -52012,7193 +52600,108 @@ const JSON5 = {
 
 var lib$2 = JSON5;
 
-var ajv = {exports: {}};
-
-var core$1 = {};
-
-var validate = {};
-
-var boolSchema = {};
-
-var errors = {};
-
-var codegen = {};
-
-var code$1 = {};
-
-var hasRequiredCode$1;
-
-function requireCode$1 () {
-	if (hasRequiredCode$1) return code$1;
-	hasRequiredCode$1 = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.regexpCode = exports$1.getEsmExportName = exports$1.getProperty = exports$1.safeStringify = exports$1.stringify = exports$1.strConcat = exports$1.addCodeArg = exports$1.str = exports$1._ = exports$1.nil = exports$1._Code = exports$1.Name = exports$1.IDENTIFIER = exports$1._CodeOrName = void 0;
-		// eslint-disable-next-line @typescript-eslint/no-extraneous-class
-		class _CodeOrName {
-		}
-		exports$1._CodeOrName = _CodeOrName;
-		exports$1.IDENTIFIER = /^[a-z$_][a-z$_0-9]*$/i;
-		class Name extends _CodeOrName {
-		    constructor(s) {
-		        super();
-		        if (!exports$1.IDENTIFIER.test(s))
-		            throw new Error("CodeGen: name must be a valid identifier");
-		        this.str = s;
-		    }
-		    toString() {
-		        return this.str;
-		    }
-		    emptyStr() {
-		        return false;
-		    }
-		    get names() {
-		        return { [this.str]: 1 };
-		    }
-		}
-		exports$1.Name = Name;
-		class _Code extends _CodeOrName {
-		    constructor(code) {
-		        super();
-		        this._items = typeof code === "string" ? [code] : code;
-		    }
-		    toString() {
-		        return this.str;
-		    }
-		    emptyStr() {
-		        if (this._items.length > 1)
-		            return false;
-		        const item = this._items[0];
-		        return item === "" || item === '""';
-		    }
-		    get str() {
-		        var _a;
-		        return ((_a = this._str) !== null && _a !== void 0 ? _a : (this._str = this._items.reduce((s, c) => `${s}${c}`, "")));
-		    }
-		    get names() {
-		        var _a;
-		        return ((_a = this._names) !== null && _a !== void 0 ? _a : (this._names = this._items.reduce((names, c) => {
-		            if (c instanceof Name)
-		                names[c.str] = (names[c.str] || 0) + 1;
-		            return names;
-		        }, {})));
-		    }
-		}
-		exports$1._Code = _Code;
-		exports$1.nil = new _Code("");
-		function _(strs, ...args) {
-		    const code = [strs[0]];
-		    let i = 0;
-		    while (i < args.length) {
-		        addCodeArg(code, args[i]);
-		        code.push(strs[++i]);
-		    }
-		    return new _Code(code);
-		}
-		exports$1._ = _;
-		const plus = new _Code("+");
-		function str(strs, ...args) {
-		    const expr = [safeStringify(strs[0])];
-		    let i = 0;
-		    while (i < args.length) {
-		        expr.push(plus);
-		        addCodeArg(expr, args[i]);
-		        expr.push(plus, safeStringify(strs[++i]));
-		    }
-		    optimize(expr);
-		    return new _Code(expr);
-		}
-		exports$1.str = str;
-		function addCodeArg(code, arg) {
-		    if (arg instanceof _Code)
-		        code.push(...arg._items);
-		    else if (arg instanceof Name)
-		        code.push(arg);
-		    else
-		        code.push(interpolate(arg));
-		}
-		exports$1.addCodeArg = addCodeArg;
-		function optimize(expr) {
-		    let i = 1;
-		    while (i < expr.length - 1) {
-		        if (expr[i] === plus) {
-		            const res = mergeExprItems(expr[i - 1], expr[i + 1]);
-		            if (res !== undefined) {
-		                expr.splice(i - 1, 3, res);
-		                continue;
-		            }
-		            expr[i++] = "+";
-		        }
-		        i++;
-		    }
-		}
-		function mergeExprItems(a, b) {
-		    if (b === '""')
-		        return a;
-		    if (a === '""')
-		        return b;
-		    if (typeof a == "string") {
-		        if (b instanceof Name || a[a.length - 1] !== '"')
-		            return;
-		        if (typeof b != "string")
-		            return `${a.slice(0, -1)}${b}"`;
-		        if (b[0] === '"')
-		            return a.slice(0, -1) + b.slice(1);
-		        return;
-		    }
-		    if (typeof b == "string" && b[0] === '"' && !(a instanceof Name))
-		        return `"${a}${b.slice(1)}`;
-		    return;
-		}
-		function strConcat(c1, c2) {
-		    return c2.emptyStr() ? c1 : c1.emptyStr() ? c2 : str `${c1}${c2}`;
-		}
-		exports$1.strConcat = strConcat;
-		// TODO do not allow arrays here
-		function interpolate(x) {
-		    return typeof x == "number" || typeof x == "boolean" || x === null
-		        ? x
-		        : safeStringify(Array.isArray(x) ? x.join(",") : x);
-		}
-		function stringify(x) {
-		    return new _Code(safeStringify(x));
-		}
-		exports$1.stringify = stringify;
-		function safeStringify(x) {
-		    return JSON.stringify(x)
-		        .replace(/\u2028/g, "\\u2028")
-		        .replace(/\u2029/g, "\\u2029");
-		}
-		exports$1.safeStringify = safeStringify;
-		function getProperty(key) {
-		    return typeof key == "string" && exports$1.IDENTIFIER.test(key) ? new _Code(`.${key}`) : _ `[${key}]`;
-		}
-		exports$1.getProperty = getProperty;
-		//Does best effort to format the name properly
-		function getEsmExportName(key) {
-		    if (typeof key == "string" && exports$1.IDENTIFIER.test(key)) {
-		        return new _Code(`${key}`);
-		    }
-		    throw new Error(`CodeGen: invalid export name: ${key}, use explicit $id name mapping`);
-		}
-		exports$1.getEsmExportName = getEsmExportName;
-		function regexpCode(rx) {
-		    return new _Code(rx.toString());
-		}
-		exports$1.regexpCode = regexpCode;
-		
-	} (code$1));
-	return code$1;
-}
-
-var scope = {};
-
-var hasRequiredScope;
-
-function requireScope () {
-	if (hasRequiredScope) return scope;
-	hasRequiredScope = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.ValueScope = exports$1.ValueScopeName = exports$1.Scope = exports$1.varKinds = exports$1.UsedValueState = void 0;
-		const code_1 = requireCode$1();
-		class ValueError extends Error {
-		    constructor(name) {
-		        super(`CodeGen: "code" for ${name} not defined`);
-		        this.value = name.value;
-		    }
-		}
-		var UsedValueState;
-		(function (UsedValueState) {
-		    UsedValueState[UsedValueState["Started"] = 0] = "Started";
-		    UsedValueState[UsedValueState["Completed"] = 1] = "Completed";
-		})(UsedValueState || (exports$1.UsedValueState = UsedValueState = {}));
-		exports$1.varKinds = {
-		    const: new code_1.Name("const"),
-		    let: new code_1.Name("let"),
-		    var: new code_1.Name("var"),
-		};
-		class Scope {
-		    constructor({ prefixes, parent } = {}) {
-		        this._names = {};
-		        this._prefixes = prefixes;
-		        this._parent = parent;
-		    }
-		    toName(nameOrPrefix) {
-		        return nameOrPrefix instanceof code_1.Name ? nameOrPrefix : this.name(nameOrPrefix);
-		    }
-		    name(prefix) {
-		        return new code_1.Name(this._newName(prefix));
-		    }
-		    _newName(prefix) {
-		        const ng = this._names[prefix] || this._nameGroup(prefix);
-		        return `${prefix}${ng.index++}`;
-		    }
-		    _nameGroup(prefix) {
-		        var _a, _b;
-		        if (((_b = (_a = this._parent) === null || _a === void 0 ? void 0 : _a._prefixes) === null || _b === void 0 ? void 0 : _b.has(prefix)) || (this._prefixes && !this._prefixes.has(prefix))) {
-		            throw new Error(`CodeGen: prefix "${prefix}" is not allowed in this scope`);
-		        }
-		        return (this._names[prefix] = { prefix, index: 0 });
-		    }
-		}
-		exports$1.Scope = Scope;
-		class ValueScopeName extends code_1.Name {
-		    constructor(prefix, nameStr) {
-		        super(nameStr);
-		        this.prefix = prefix;
-		    }
-		    setValue(value, { property, itemIndex }) {
-		        this.value = value;
-		        this.scopePath = (0, code_1._) `.${new code_1.Name(property)}[${itemIndex}]`;
-		    }
-		}
-		exports$1.ValueScopeName = ValueScopeName;
-		const line = (0, code_1._) `\n`;
-		class ValueScope extends Scope {
-		    constructor(opts) {
-		        super(opts);
-		        this._values = {};
-		        this._scope = opts.scope;
-		        this.opts = { ...opts, _n: opts.lines ? line : code_1.nil };
-		    }
-		    get() {
-		        return this._scope;
-		    }
-		    name(prefix) {
-		        return new ValueScopeName(prefix, this._newName(prefix));
-		    }
-		    value(nameOrPrefix, value) {
-		        var _a;
-		        if (value.ref === undefined)
-		            throw new Error("CodeGen: ref must be passed in value");
-		        const name = this.toName(nameOrPrefix);
-		        const { prefix } = name;
-		        const valueKey = (_a = value.key) !== null && _a !== void 0 ? _a : value.ref;
-		        let vs = this._values[prefix];
-		        if (vs) {
-		            const _name = vs.get(valueKey);
-		            if (_name)
-		                return _name;
-		        }
-		        else {
-		            vs = this._values[prefix] = new Map();
-		        }
-		        vs.set(valueKey, name);
-		        const s = this._scope[prefix] || (this._scope[prefix] = []);
-		        const itemIndex = s.length;
-		        s[itemIndex] = value.ref;
-		        name.setValue(value, { property: prefix, itemIndex });
-		        return name;
-		    }
-		    getValue(prefix, keyOrRef) {
-		        const vs = this._values[prefix];
-		        if (!vs)
-		            return;
-		        return vs.get(keyOrRef);
-		    }
-		    scopeRefs(scopeName, values = this._values) {
-		        return this._reduceValues(values, (name) => {
-		            if (name.scopePath === undefined)
-		                throw new Error(`CodeGen: name "${name}" has no value`);
-		            return (0, code_1._) `${scopeName}${name.scopePath}`;
-		        });
-		    }
-		    scopeCode(values = this._values, usedValues, getCode) {
-		        return this._reduceValues(values, (name) => {
-		            if (name.value === undefined)
-		                throw new Error(`CodeGen: name "${name}" has no value`);
-		            return name.value.code;
-		        }, usedValues, getCode);
-		    }
-		    _reduceValues(values, valueCode, usedValues = {}, getCode) {
-		        let code = code_1.nil;
-		        for (const prefix in values) {
-		            const vs = values[prefix];
-		            if (!vs)
-		                continue;
-		            const nameSet = (usedValues[prefix] = usedValues[prefix] || new Map());
-		            vs.forEach((name) => {
-		                if (nameSet.has(name))
-		                    return;
-		                nameSet.set(name, UsedValueState.Started);
-		                let c = valueCode(name);
-		                if (c) {
-		                    const def = this.opts.es5 ? exports$1.varKinds.var : exports$1.varKinds.const;
-		                    code = (0, code_1._) `${code}${def} ${name} = ${c};${this.opts._n}`;
-		                }
-		                else if ((c = getCode === null || getCode === void 0 ? void 0 : getCode(name))) {
-		                    code = (0, code_1._) `${code}${c}${this.opts._n}`;
-		                }
-		                else {
-		                    throw new ValueError(name);
-		                }
-		                nameSet.set(name, UsedValueState.Completed);
-		            });
-		        }
-		        return code;
-		    }
-		}
-		exports$1.ValueScope = ValueScope;
-		
-	} (scope));
-	return scope;
-}
-
-var hasRequiredCodegen;
-
-function requireCodegen () {
-	if (hasRequiredCodegen) return codegen;
-	hasRequiredCodegen = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.or = exports$1.and = exports$1.not = exports$1.CodeGen = exports$1.operators = exports$1.varKinds = exports$1.ValueScopeName = exports$1.ValueScope = exports$1.Scope = exports$1.Name = exports$1.regexpCode = exports$1.stringify = exports$1.getProperty = exports$1.nil = exports$1.strConcat = exports$1.str = exports$1._ = void 0;
-		const code_1 = requireCode$1();
-		const scope_1 = requireScope();
-		var code_2 = requireCode$1();
-		Object.defineProperty(exports$1, "_", { enumerable: true, get: function () { return code_2._; } });
-		Object.defineProperty(exports$1, "str", { enumerable: true, get: function () { return code_2.str; } });
-		Object.defineProperty(exports$1, "strConcat", { enumerable: true, get: function () { return code_2.strConcat; } });
-		Object.defineProperty(exports$1, "nil", { enumerable: true, get: function () { return code_2.nil; } });
-		Object.defineProperty(exports$1, "getProperty", { enumerable: true, get: function () { return code_2.getProperty; } });
-		Object.defineProperty(exports$1, "stringify", { enumerable: true, get: function () { return code_2.stringify; } });
-		Object.defineProperty(exports$1, "regexpCode", { enumerable: true, get: function () { return code_2.regexpCode; } });
-		Object.defineProperty(exports$1, "Name", { enumerable: true, get: function () { return code_2.Name; } });
-		var scope_2 = requireScope();
-		Object.defineProperty(exports$1, "Scope", { enumerable: true, get: function () { return scope_2.Scope; } });
-		Object.defineProperty(exports$1, "ValueScope", { enumerable: true, get: function () { return scope_2.ValueScope; } });
-		Object.defineProperty(exports$1, "ValueScopeName", { enumerable: true, get: function () { return scope_2.ValueScopeName; } });
-		Object.defineProperty(exports$1, "varKinds", { enumerable: true, get: function () { return scope_2.varKinds; } });
-		exports$1.operators = {
-		    GT: new code_1._Code(">"),
-		    GTE: new code_1._Code(">="),
-		    LT: new code_1._Code("<"),
-		    LTE: new code_1._Code("<="),
-		    EQ: new code_1._Code("==="),
-		    NEQ: new code_1._Code("!=="),
-		    NOT: new code_1._Code("!"),
-		    OR: new code_1._Code("||"),
-		    AND: new code_1._Code("&&"),
-		    ADD: new code_1._Code("+"),
-		};
-		class Node {
-		    optimizeNodes() {
-		        return this;
-		    }
-		    optimizeNames(_names, _constants) {
-		        return this;
-		    }
-		}
-		class Def extends Node {
-		    constructor(varKind, name, rhs) {
-		        super();
-		        this.varKind = varKind;
-		        this.name = name;
-		        this.rhs = rhs;
-		    }
-		    render({ es5, _n }) {
-		        const varKind = es5 ? scope_1.varKinds.var : this.varKind;
-		        const rhs = this.rhs === undefined ? "" : ` = ${this.rhs}`;
-		        return `${varKind} ${this.name}${rhs};` + _n;
-		    }
-		    optimizeNames(names, constants) {
-		        if (!names[this.name.str])
-		            return;
-		        if (this.rhs)
-		            this.rhs = optimizeExpr(this.rhs, names, constants);
-		        return this;
-		    }
-		    get names() {
-		        return this.rhs instanceof code_1._CodeOrName ? this.rhs.names : {};
-		    }
-		}
-		class Assign extends Node {
-		    constructor(lhs, rhs, sideEffects) {
-		        super();
-		        this.lhs = lhs;
-		        this.rhs = rhs;
-		        this.sideEffects = sideEffects;
-		    }
-		    render({ _n }) {
-		        return `${this.lhs} = ${this.rhs};` + _n;
-		    }
-		    optimizeNames(names, constants) {
-		        if (this.lhs instanceof code_1.Name && !names[this.lhs.str] && !this.sideEffects)
-		            return;
-		        this.rhs = optimizeExpr(this.rhs, names, constants);
-		        return this;
-		    }
-		    get names() {
-		        const names = this.lhs instanceof code_1.Name ? {} : { ...this.lhs.names };
-		        return addExprNames(names, this.rhs);
-		    }
-		}
-		class AssignOp extends Assign {
-		    constructor(lhs, op, rhs, sideEffects) {
-		        super(lhs, rhs, sideEffects);
-		        this.op = op;
-		    }
-		    render({ _n }) {
-		        return `${this.lhs} ${this.op}= ${this.rhs};` + _n;
-		    }
-		}
-		class Label extends Node {
-		    constructor(label) {
-		        super();
-		        this.label = label;
-		        this.names = {};
-		    }
-		    render({ _n }) {
-		        return `${this.label}:` + _n;
-		    }
-		}
-		class Break extends Node {
-		    constructor(label) {
-		        super();
-		        this.label = label;
-		        this.names = {};
-		    }
-		    render({ _n }) {
-		        const label = this.label ? ` ${this.label}` : "";
-		        return `break${label};` + _n;
-		    }
-		}
-		class Throw extends Node {
-		    constructor(error) {
-		        super();
-		        this.error = error;
-		    }
-		    render({ _n }) {
-		        return `throw ${this.error};` + _n;
-		    }
-		    get names() {
-		        return this.error.names;
-		    }
-		}
-		class AnyCode extends Node {
-		    constructor(code) {
-		        super();
-		        this.code = code;
-		    }
-		    render({ _n }) {
-		        return `${this.code};` + _n;
-		    }
-		    optimizeNodes() {
-		        return `${this.code}` ? this : undefined;
-		    }
-		    optimizeNames(names, constants) {
-		        this.code = optimizeExpr(this.code, names, constants);
-		        return this;
-		    }
-		    get names() {
-		        return this.code instanceof code_1._CodeOrName ? this.code.names : {};
-		    }
-		}
-		class ParentNode extends Node {
-		    constructor(nodes = []) {
-		        super();
-		        this.nodes = nodes;
-		    }
-		    render(opts) {
-		        return this.nodes.reduce((code, n) => code + n.render(opts), "");
-		    }
-		    optimizeNodes() {
-		        const { nodes } = this;
-		        let i = nodes.length;
-		        while (i--) {
-		            const n = nodes[i].optimizeNodes();
-		            if (Array.isArray(n))
-		                nodes.splice(i, 1, ...n);
-		            else if (n)
-		                nodes[i] = n;
-		            else
-		                nodes.splice(i, 1);
-		        }
-		        return nodes.length > 0 ? this : undefined;
-		    }
-		    optimizeNames(names, constants) {
-		        const { nodes } = this;
-		        let i = nodes.length;
-		        while (i--) {
-		            // iterating backwards improves 1-pass optimization
-		            const n = nodes[i];
-		            if (n.optimizeNames(names, constants))
-		                continue;
-		            subtractNames(names, n.names);
-		            nodes.splice(i, 1);
-		        }
-		        return nodes.length > 0 ? this : undefined;
-		    }
-		    get names() {
-		        return this.nodes.reduce((names, n) => addNames(names, n.names), {});
-		    }
-		}
-		class BlockNode extends ParentNode {
-		    render(opts) {
-		        return "{" + opts._n + super.render(opts) + "}" + opts._n;
-		    }
-		}
-		class Root extends ParentNode {
-		}
-		class Else extends BlockNode {
-		}
-		Else.kind = "else";
-		class If extends BlockNode {
-		    constructor(condition, nodes) {
-		        super(nodes);
-		        this.condition = condition;
-		    }
-		    render(opts) {
-		        let code = `if(${this.condition})` + super.render(opts);
-		        if (this.else)
-		            code += "else " + this.else.render(opts);
-		        return code;
-		    }
-		    optimizeNodes() {
-		        super.optimizeNodes();
-		        const cond = this.condition;
-		        if (cond === true)
-		            return this.nodes; // else is ignored here
-		        let e = this.else;
-		        if (e) {
-		            const ns = e.optimizeNodes();
-		            e = this.else = Array.isArray(ns) ? new Else(ns) : ns;
-		        }
-		        if (e) {
-		            if (cond === false)
-		                return e instanceof If ? e : e.nodes;
-		            if (this.nodes.length)
-		                return this;
-		            return new If(not(cond), e instanceof If ? [e] : e.nodes);
-		        }
-		        if (cond === false || !this.nodes.length)
-		            return undefined;
-		        return this;
-		    }
-		    optimizeNames(names, constants) {
-		        var _a;
-		        this.else = (_a = this.else) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-		        if (!(super.optimizeNames(names, constants) || this.else))
-		            return;
-		        this.condition = optimizeExpr(this.condition, names, constants);
-		        return this;
-		    }
-		    get names() {
-		        const names = super.names;
-		        addExprNames(names, this.condition);
-		        if (this.else)
-		            addNames(names, this.else.names);
-		        return names;
-		    }
-		}
-		If.kind = "if";
-		class For extends BlockNode {
-		}
-		For.kind = "for";
-		class ForLoop extends For {
-		    constructor(iteration) {
-		        super();
-		        this.iteration = iteration;
-		    }
-		    render(opts) {
-		        return `for(${this.iteration})` + super.render(opts);
-		    }
-		    optimizeNames(names, constants) {
-		        if (!super.optimizeNames(names, constants))
-		            return;
-		        this.iteration = optimizeExpr(this.iteration, names, constants);
-		        return this;
-		    }
-		    get names() {
-		        return addNames(super.names, this.iteration.names);
-		    }
-		}
-		class ForRange extends For {
-		    constructor(varKind, name, from, to) {
-		        super();
-		        this.varKind = varKind;
-		        this.name = name;
-		        this.from = from;
-		        this.to = to;
-		    }
-		    render(opts) {
-		        const varKind = opts.es5 ? scope_1.varKinds.var : this.varKind;
-		        const { name, from, to } = this;
-		        return `for(${varKind} ${name}=${from}; ${name}<${to}; ${name}++)` + super.render(opts);
-		    }
-		    get names() {
-		        const names = addExprNames(super.names, this.from);
-		        return addExprNames(names, this.to);
-		    }
-		}
-		class ForIter extends For {
-		    constructor(loop, varKind, name, iterable) {
-		        super();
-		        this.loop = loop;
-		        this.varKind = varKind;
-		        this.name = name;
-		        this.iterable = iterable;
-		    }
-		    render(opts) {
-		        return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(opts);
-		    }
-		    optimizeNames(names, constants) {
-		        if (!super.optimizeNames(names, constants))
-		            return;
-		        this.iterable = optimizeExpr(this.iterable, names, constants);
-		        return this;
-		    }
-		    get names() {
-		        return addNames(super.names, this.iterable.names);
-		    }
-		}
-		class Func extends BlockNode {
-		    constructor(name, args, async) {
-		        super();
-		        this.name = name;
-		        this.args = args;
-		        this.async = async;
-		    }
-		    render(opts) {
-		        const _async = this.async ? "async " : "";
-		        return `${_async}function ${this.name}(${this.args})` + super.render(opts);
-		    }
-		}
-		Func.kind = "func";
-		class Return extends ParentNode {
-		    render(opts) {
-		        return "return " + super.render(opts);
-		    }
-		}
-		Return.kind = "return";
-		class Try extends BlockNode {
-		    render(opts) {
-		        let code = "try" + super.render(opts);
-		        if (this.catch)
-		            code += this.catch.render(opts);
-		        if (this.finally)
-		            code += this.finally.render(opts);
-		        return code;
-		    }
-		    optimizeNodes() {
-		        var _a, _b;
-		        super.optimizeNodes();
-		        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNodes();
-		        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNodes();
-		        return this;
-		    }
-		    optimizeNames(names, constants) {
-		        var _a, _b;
-		        super.optimizeNames(names, constants);
-		        (_a = this.catch) === null || _a === void 0 ? void 0 : _a.optimizeNames(names, constants);
-		        (_b = this.finally) === null || _b === void 0 ? void 0 : _b.optimizeNames(names, constants);
-		        return this;
-		    }
-		    get names() {
-		        const names = super.names;
-		        if (this.catch)
-		            addNames(names, this.catch.names);
-		        if (this.finally)
-		            addNames(names, this.finally.names);
-		        return names;
-		    }
-		}
-		class Catch extends BlockNode {
-		    constructor(error) {
-		        super();
-		        this.error = error;
-		    }
-		    render(opts) {
-		        return `catch(${this.error})` + super.render(opts);
-		    }
-		}
-		Catch.kind = "catch";
-		class Finally extends BlockNode {
-		    render(opts) {
-		        return "finally" + super.render(opts);
-		    }
-		}
-		Finally.kind = "finally";
-		class CodeGen {
-		    constructor(extScope, opts = {}) {
-		        this._values = {};
-		        this._blockStarts = [];
-		        this._constants = {};
-		        this.opts = { ...opts, _n: opts.lines ? "\n" : "" };
-		        this._extScope = extScope;
-		        this._scope = new scope_1.Scope({ parent: extScope });
-		        this._nodes = [new Root()];
-		    }
-		    toString() {
-		        return this._root.render(this.opts);
-		    }
-		    // returns unique name in the internal scope
-		    name(prefix) {
-		        return this._scope.name(prefix);
-		    }
-		    // reserves unique name in the external scope
-		    scopeName(prefix) {
-		        return this._extScope.name(prefix);
-		    }
-		    // reserves unique name in the external scope and assigns value to it
-		    scopeValue(prefixOrName, value) {
-		        const name = this._extScope.value(prefixOrName, value);
-		        const vs = this._values[name.prefix] || (this._values[name.prefix] = new Set());
-		        vs.add(name);
-		        return name;
-		    }
-		    getScopeValue(prefix, keyOrRef) {
-		        return this._extScope.getValue(prefix, keyOrRef);
-		    }
-		    // return code that assigns values in the external scope to the names that are used internally
-		    // (same names that were returned by gen.scopeName or gen.scopeValue)
-		    scopeRefs(scopeName) {
-		        return this._extScope.scopeRefs(scopeName, this._values);
-		    }
-		    scopeCode() {
-		        return this._extScope.scopeCode(this._values);
-		    }
-		    _def(varKind, nameOrPrefix, rhs, constant) {
-		        const name = this._scope.toName(nameOrPrefix);
-		        if (rhs !== undefined && constant)
-		            this._constants[name.str] = rhs;
-		        this._leafNode(new Def(varKind, name, rhs));
-		        return name;
-		    }
-		    // `const` declaration (`var` in es5 mode)
-		    const(nameOrPrefix, rhs, _constant) {
-		        return this._def(scope_1.varKinds.const, nameOrPrefix, rhs, _constant);
-		    }
-		    // `let` declaration with optional assignment (`var` in es5 mode)
-		    let(nameOrPrefix, rhs, _constant) {
-		        return this._def(scope_1.varKinds.let, nameOrPrefix, rhs, _constant);
-		    }
-		    // `var` declaration with optional assignment
-		    var(nameOrPrefix, rhs, _constant) {
-		        return this._def(scope_1.varKinds.var, nameOrPrefix, rhs, _constant);
-		    }
-		    // assignment code
-		    assign(lhs, rhs, sideEffects) {
-		        return this._leafNode(new Assign(lhs, rhs, sideEffects));
-		    }
-		    // `+=` code
-		    add(lhs, rhs) {
-		        return this._leafNode(new AssignOp(lhs, exports$1.operators.ADD, rhs));
-		    }
-		    // appends passed SafeExpr to code or executes Block
-		    code(c) {
-		        if (typeof c == "function")
-		            c();
-		        else if (c !== code_1.nil)
-		            this._leafNode(new AnyCode(c));
-		        return this;
-		    }
-		    // returns code for object literal for the passed argument list of key-value pairs
-		    object(...keyValues) {
-		        const code = ["{"];
-		        for (const [key, value] of keyValues) {
-		            if (code.length > 1)
-		                code.push(",");
-		            code.push(key);
-		            if (key !== value || this.opts.es5) {
-		                code.push(":");
-		                (0, code_1.addCodeArg)(code, value);
-		            }
-		        }
-		        code.push("}");
-		        return new code_1._Code(code);
-		    }
-		    // `if` clause (or statement if `thenBody` and, optionally, `elseBody` are passed)
-		    if(condition, thenBody, elseBody) {
-		        this._blockNode(new If(condition));
-		        if (thenBody && elseBody) {
-		            this.code(thenBody).else().code(elseBody).endIf();
-		        }
-		        else if (thenBody) {
-		            this.code(thenBody).endIf();
-		        }
-		        else if (elseBody) {
-		            throw new Error('CodeGen: "else" body without "then" body');
-		        }
-		        return this;
-		    }
-		    // `else if` clause - invalid without `if` or after `else` clauses
-		    elseIf(condition) {
-		        return this._elseNode(new If(condition));
-		    }
-		    // `else` clause - only valid after `if` or `else if` clauses
-		    else() {
-		        return this._elseNode(new Else());
-		    }
-		    // end `if` statement (needed if gen.if was used only with condition)
-		    endIf() {
-		        return this._endBlockNode(If, Else);
-		    }
-		    _for(node, forBody) {
-		        this._blockNode(node);
-		        if (forBody)
-		            this.code(forBody).endFor();
-		        return this;
-		    }
-		    // a generic `for` clause (or statement if `forBody` is passed)
-		    for(iteration, forBody) {
-		        return this._for(new ForLoop(iteration), forBody);
-		    }
-		    // `for` statement for a range of values
-		    forRange(nameOrPrefix, from, to, forBody, varKind = this.opts.es5 ? scope_1.varKinds.var : scope_1.varKinds.let) {
-		        const name = this._scope.toName(nameOrPrefix);
-		        return this._for(new ForRange(varKind, name, from, to), () => forBody(name));
-		    }
-		    // `for-of` statement (in es5 mode replace with a normal for loop)
-		    forOf(nameOrPrefix, iterable, forBody, varKind = scope_1.varKinds.const) {
-		        const name = this._scope.toName(nameOrPrefix);
-		        if (this.opts.es5) {
-		            const arr = iterable instanceof code_1.Name ? iterable : this.var("_arr", iterable);
-		            return this.forRange("_i", 0, (0, code_1._) `${arr}.length`, (i) => {
-		                this.var(name, (0, code_1._) `${arr}[${i}]`);
-		                forBody(name);
-		            });
-		        }
-		        return this._for(new ForIter("of", varKind, name, iterable), () => forBody(name));
-		    }
-		    // `for-in` statement.
-		    // With option `ownProperties` replaced with a `for-of` loop for object keys
-		    forIn(nameOrPrefix, obj, forBody, varKind = this.opts.es5 ? scope_1.varKinds.var : scope_1.varKinds.const) {
-		        if (this.opts.ownProperties) {
-		            return this.forOf(nameOrPrefix, (0, code_1._) `Object.keys(${obj})`, forBody);
-		        }
-		        const name = this._scope.toName(nameOrPrefix);
-		        return this._for(new ForIter("in", varKind, name, obj), () => forBody(name));
-		    }
-		    // end `for` loop
-		    endFor() {
-		        return this._endBlockNode(For);
-		    }
-		    // `label` statement
-		    label(label) {
-		        return this._leafNode(new Label(label));
-		    }
-		    // `break` statement
-		    break(label) {
-		        return this._leafNode(new Break(label));
-		    }
-		    // `return` statement
-		    return(value) {
-		        const node = new Return();
-		        this._blockNode(node);
-		        this.code(value);
-		        if (node.nodes.length !== 1)
-		            throw new Error('CodeGen: "return" should have one node');
-		        return this._endBlockNode(Return);
-		    }
-		    // `try` statement
-		    try(tryBody, catchCode, finallyCode) {
-		        if (!catchCode && !finallyCode)
-		            throw new Error('CodeGen: "try" without "catch" and "finally"');
-		        const node = new Try();
-		        this._blockNode(node);
-		        this.code(tryBody);
-		        if (catchCode) {
-		            const error = this.name("e");
-		            this._currNode = node.catch = new Catch(error);
-		            catchCode(error);
-		        }
-		        if (finallyCode) {
-		            this._currNode = node.finally = new Finally();
-		            this.code(finallyCode);
-		        }
-		        return this._endBlockNode(Catch, Finally);
-		    }
-		    // `throw` statement
-		    throw(error) {
-		        return this._leafNode(new Throw(error));
-		    }
-		    // start self-balancing block
-		    block(body, nodeCount) {
-		        this._blockStarts.push(this._nodes.length);
-		        if (body)
-		            this.code(body).endBlock(nodeCount);
-		        return this;
-		    }
-		    // end the current self-balancing block
-		    endBlock(nodeCount) {
-		        const len = this._blockStarts.pop();
-		        if (len === undefined)
-		            throw new Error("CodeGen: not in self-balancing block");
-		        const toClose = this._nodes.length - len;
-		        if (toClose < 0 || (nodeCount !== undefined && toClose !== nodeCount)) {
-		            throw new Error(`CodeGen: wrong number of nodes: ${toClose} vs ${nodeCount} expected`);
-		        }
-		        this._nodes.length = len;
-		        return this;
-		    }
-		    // `function` heading (or definition if funcBody is passed)
-		    func(name, args = code_1.nil, async, funcBody) {
-		        this._blockNode(new Func(name, args, async));
-		        if (funcBody)
-		            this.code(funcBody).endFunc();
-		        return this;
-		    }
-		    // end function definition
-		    endFunc() {
-		        return this._endBlockNode(Func);
-		    }
-		    optimize(n = 1) {
-		        while (n-- > 0) {
-		            this._root.optimizeNodes();
-		            this._root.optimizeNames(this._root.names, this._constants);
-		        }
-		    }
-		    _leafNode(node) {
-		        this._currNode.nodes.push(node);
-		        return this;
-		    }
-		    _blockNode(node) {
-		        this._currNode.nodes.push(node);
-		        this._nodes.push(node);
-		    }
-		    _endBlockNode(N1, N2) {
-		        const n = this._currNode;
-		        if (n instanceof N1 || (N2 && n instanceof N2)) {
-		            this._nodes.pop();
-		            return this;
-		        }
-		        throw new Error(`CodeGen: not in block "${N2 ? `${N1.kind}/${N2.kind}` : N1.kind}"`);
-		    }
-		    _elseNode(node) {
-		        const n = this._currNode;
-		        if (!(n instanceof If)) {
-		            throw new Error('CodeGen: "else" without "if"');
-		        }
-		        this._currNode = n.else = node;
-		        return this;
-		    }
-		    get _root() {
-		        return this._nodes[0];
-		    }
-		    get _currNode() {
-		        const ns = this._nodes;
-		        return ns[ns.length - 1];
-		    }
-		    set _currNode(node) {
-		        const ns = this._nodes;
-		        ns[ns.length - 1] = node;
-		    }
-		}
-		exports$1.CodeGen = CodeGen;
-		function addNames(names, from) {
-		    for (const n in from)
-		        names[n] = (names[n] || 0) + (from[n] || 0);
-		    return names;
-		}
-		function addExprNames(names, from) {
-		    return from instanceof code_1._CodeOrName ? addNames(names, from.names) : names;
-		}
-		function optimizeExpr(expr, names, constants) {
-		    if (expr instanceof code_1.Name)
-		        return replaceName(expr);
-		    if (!canOptimize(expr))
-		        return expr;
-		    return new code_1._Code(expr._items.reduce((items, c) => {
-		        if (c instanceof code_1.Name)
-		            c = replaceName(c);
-		        if (c instanceof code_1._Code)
-		            items.push(...c._items);
-		        else
-		            items.push(c);
-		        return items;
-		    }, []));
-		    function replaceName(n) {
-		        const c = constants[n.str];
-		        if (c === undefined || names[n.str] !== 1)
-		            return n;
-		        delete names[n.str];
-		        return c;
-		    }
-		    function canOptimize(e) {
-		        return (e instanceof code_1._Code &&
-		            e._items.some((c) => c instanceof code_1.Name && names[c.str] === 1 && constants[c.str] !== undefined));
-		    }
-		}
-		function subtractNames(names, from) {
-		    for (const n in from)
-		        names[n] = (names[n] || 0) - (from[n] || 0);
-		}
-		function not(x) {
-		    return typeof x == "boolean" || typeof x == "number" || x === null ? !x : (0, code_1._) `!${par(x)}`;
-		}
-		exports$1.not = not;
-		const andCode = mappend(exports$1.operators.AND);
-		// boolean AND (&&) expression with the passed arguments
-		function and(...args) {
-		    return args.reduce(andCode);
-		}
-		exports$1.and = and;
-		const orCode = mappend(exports$1.operators.OR);
-		// boolean OR (||) expression with the passed arguments
-		function or(...args) {
-		    return args.reduce(orCode);
-		}
-		exports$1.or = or;
-		function mappend(op) {
-		    return (x, y) => (x === code_1.nil ? y : y === code_1.nil ? x : (0, code_1._) `${par(x)} ${op} ${par(y)}`);
-		}
-		function par(x) {
-		    return x instanceof code_1.Name ? x : (0, code_1._) `(${x})`;
-		}
-		
-	} (codegen));
-	return codegen;
-}
-
-var util$1 = {};
-
-var hasRequiredUtil$1;
-
-function requireUtil$1 () {
-	if (hasRequiredUtil$1) return util$1;
-	hasRequiredUtil$1 = 1;
-	Object.defineProperty(util$1, "__esModule", { value: true });
-	util$1.checkStrictMode = util$1.getErrorPath = util$1.Type = util$1.useFunc = util$1.setEvaluated = util$1.evaluatedPropsToName = util$1.mergeEvaluated = util$1.eachItem = util$1.unescapeJsonPointer = util$1.escapeJsonPointer = util$1.escapeFragment = util$1.unescapeFragment = util$1.schemaRefOrVal = util$1.schemaHasRulesButRef = util$1.schemaHasRules = util$1.checkUnknownRules = util$1.alwaysValidSchema = util$1.toHash = void 0;
-	const codegen_1 = requireCodegen();
-	const code_1 = requireCode$1();
-	// TODO refactor to use Set
-	function toHash(arr) {
-	    const hash = {};
-	    for (const item of arr)
-	        hash[item] = true;
-	    return hash;
-	}
-	util$1.toHash = toHash;
-	function alwaysValidSchema(it, schema) {
-	    if (typeof schema == "boolean")
-	        return schema;
-	    if (Object.keys(schema).length === 0)
-	        return true;
-	    checkUnknownRules(it, schema);
-	    return !schemaHasRules(schema, it.self.RULES.all);
-	}
-	util$1.alwaysValidSchema = alwaysValidSchema;
-	function checkUnknownRules(it, schema = it.schema) {
-	    const { opts, self } = it;
-	    if (!opts.strictSchema)
-	        return;
-	    if (typeof schema === "boolean")
-	        return;
-	    const rules = self.RULES.keywords;
-	    for (const key in schema) {
-	        if (!rules[key])
-	            checkStrictMode(it, `unknown keyword: "${key}"`);
-	    }
-	}
-	util$1.checkUnknownRules = checkUnknownRules;
-	function schemaHasRules(schema, rules) {
-	    if (typeof schema == "boolean")
-	        return !schema;
-	    for (const key in schema)
-	        if (rules[key])
-	            return true;
-	    return false;
-	}
-	util$1.schemaHasRules = schemaHasRules;
-	function schemaHasRulesButRef(schema, RULES) {
-	    if (typeof schema == "boolean")
-	        return !schema;
-	    for (const key in schema)
-	        if (key !== "$ref" && RULES.all[key])
-	            return true;
-	    return false;
-	}
-	util$1.schemaHasRulesButRef = schemaHasRulesButRef;
-	function schemaRefOrVal({ topSchemaRef, schemaPath }, schema, keyword, $data) {
-	    if (!$data) {
-	        if (typeof schema == "number" || typeof schema == "boolean")
-	            return schema;
-	        if (typeof schema == "string")
-	            return (0, codegen_1._) `${schema}`;
-	    }
-	    return (0, codegen_1._) `${topSchemaRef}${schemaPath}${(0, codegen_1.getProperty)(keyword)}`;
-	}
-	util$1.schemaRefOrVal = schemaRefOrVal;
-	function unescapeFragment(str) {
-	    return unescapeJsonPointer(decodeURIComponent(str));
-	}
-	util$1.unescapeFragment = unescapeFragment;
-	function escapeFragment(str) {
-	    return encodeURIComponent(escapeJsonPointer(str));
-	}
-	util$1.escapeFragment = escapeFragment;
-	function escapeJsonPointer(str) {
-	    if (typeof str == "number")
-	        return `${str}`;
-	    return str.replace(/~/g, "~0").replace(/\//g, "~1");
-	}
-	util$1.escapeJsonPointer = escapeJsonPointer;
-	function unescapeJsonPointer(str) {
-	    return str.replace(/~1/g, "/").replace(/~0/g, "~");
-	}
-	util$1.unescapeJsonPointer = unescapeJsonPointer;
-	function eachItem(xs, f) {
-	    if (Array.isArray(xs)) {
-	        for (const x of xs)
-	            f(x);
-	    }
-	    else {
-	        f(xs);
-	    }
-	}
-	util$1.eachItem = eachItem;
-	function makeMergeEvaluated({ mergeNames, mergeToName, mergeValues, resultToName, }) {
-	    return (gen, from, to, toName) => {
-	        const res = to === undefined
-	            ? from
-	            : to instanceof codegen_1.Name
-	                ? (from instanceof codegen_1.Name ? mergeNames(gen, from, to) : mergeToName(gen, from, to), to)
-	                : from instanceof codegen_1.Name
-	                    ? (mergeToName(gen, to, from), from)
-	                    : mergeValues(from, to);
-	        return toName === codegen_1.Name && !(res instanceof codegen_1.Name) ? resultToName(gen, res) : res;
-	    };
-	}
-	util$1.mergeEvaluated = {
-	    props: makeMergeEvaluated({
-	        mergeNames: (gen, from, to) => gen.if((0, codegen_1._) `${to} !== true && ${from} !== undefined`, () => {
-	            gen.if((0, codegen_1._) `${from} === true`, () => gen.assign(to, true), () => gen.assign(to, (0, codegen_1._) `${to} || {}`).code((0, codegen_1._) `Object.assign(${to}, ${from})`));
-	        }),
-	        mergeToName: (gen, from, to) => gen.if((0, codegen_1._) `${to} !== true`, () => {
-	            if (from === true) {
-	                gen.assign(to, true);
-	            }
-	            else {
-	                gen.assign(to, (0, codegen_1._) `${to} || {}`);
-	                setEvaluated(gen, to, from);
-	            }
-	        }),
-	        mergeValues: (from, to) => (from === true ? true : { ...from, ...to }),
-	        resultToName: evaluatedPropsToName,
-	    }),
-	    items: makeMergeEvaluated({
-	        mergeNames: (gen, from, to) => gen.if((0, codegen_1._) `${to} !== true && ${from} !== undefined`, () => gen.assign(to, (0, codegen_1._) `${from} === true ? true : ${to} > ${from} ? ${to} : ${from}`)),
-	        mergeToName: (gen, from, to) => gen.if((0, codegen_1._) `${to} !== true`, () => gen.assign(to, from === true ? true : (0, codegen_1._) `${to} > ${from} ? ${to} : ${from}`)),
-	        mergeValues: (from, to) => (from === true ? true : Math.max(from, to)),
-	        resultToName: (gen, items) => gen.var("items", items),
-	    }),
-	};
-	function evaluatedPropsToName(gen, ps) {
-	    if (ps === true)
-	        return gen.var("props", true);
-	    const props = gen.var("props", (0, codegen_1._) `{}`);
-	    if (ps !== undefined)
-	        setEvaluated(gen, props, ps);
-	    return props;
-	}
-	util$1.evaluatedPropsToName = evaluatedPropsToName;
-	function setEvaluated(gen, props, ps) {
-	    Object.keys(ps).forEach((p) => gen.assign((0, codegen_1._) `${props}${(0, codegen_1.getProperty)(p)}`, true));
-	}
-	util$1.setEvaluated = setEvaluated;
-	const snippets = {};
-	function useFunc(gen, f) {
-	    return gen.scopeValue("func", {
-	        ref: f,
-	        code: snippets[f.code] || (snippets[f.code] = new code_1._Code(f.code)),
-	    });
-	}
-	util$1.useFunc = useFunc;
-	var Type;
-	(function (Type) {
-	    Type[Type["Num"] = 0] = "Num";
-	    Type[Type["Str"] = 1] = "Str";
-	})(Type || (util$1.Type = Type = {}));
-	function getErrorPath(dataProp, dataPropType, jsPropertySyntax) {
-	    // let path
-	    if (dataProp instanceof codegen_1.Name) {
-	        const isNumber = dataPropType === Type.Num;
-	        return jsPropertySyntax
-	            ? isNumber
-	                ? (0, codegen_1._) `"[" + ${dataProp} + "]"`
-	                : (0, codegen_1._) `"['" + ${dataProp} + "']"`
-	            : isNumber
-	                ? (0, codegen_1._) `"/" + ${dataProp}`
-	                : (0, codegen_1._) `"/" + ${dataProp}.replace(/~/g, "~0").replace(/\\//g, "~1")`; // TODO maybe use global escapePointer
-	    }
-	    return jsPropertySyntax ? (0, codegen_1.getProperty)(dataProp).toString() : "/" + escapeJsonPointer(dataProp);
-	}
-	util$1.getErrorPath = getErrorPath;
-	function checkStrictMode(it, msg, mode = it.opts.strictSchema) {
-	    if (!mode)
-	        return;
-	    msg = `strict mode: ${msg}`;
-	    if (mode === true)
-	        throw new Error(msg);
-	    it.self.logger.warn(msg);
-	}
-	util$1.checkStrictMode = checkStrictMode;
-	
-	return util$1;
-}
-
-var names$1 = {};
-
-var hasRequiredNames;
-
-function requireNames () {
-	if (hasRequiredNames) return names$1;
-	hasRequiredNames = 1;
-	Object.defineProperty(names$1, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const names = {
-	    // validation function arguments
-	    data: new codegen_1.Name("data"), // data passed to validation function
-	    // args passed from referencing schema
-	    valCxt: new codegen_1.Name("valCxt"), // validation/data context - should not be used directly, it is destructured to the names below
-	    instancePath: new codegen_1.Name("instancePath"),
-	    parentData: new codegen_1.Name("parentData"),
-	    parentDataProperty: new codegen_1.Name("parentDataProperty"),
-	    rootData: new codegen_1.Name("rootData"), // root data - same as the data passed to the first/top validation function
-	    dynamicAnchors: new codegen_1.Name("dynamicAnchors"), // used to support recursiveRef and dynamicRef
-	    // function scoped variables
-	    vErrors: new codegen_1.Name("vErrors"), // null or array of validation errors
-	    errors: new codegen_1.Name("errors"), // counter of validation errors
-	    this: new codegen_1.Name("this"),
-	    // "globals"
-	    self: new codegen_1.Name("self"),
-	    scope: new codegen_1.Name("scope"),
-	    // JTD serialize/parse name for JSON string and position
-	    json: new codegen_1.Name("json"),
-	    jsonPos: new codegen_1.Name("jsonPos"),
-	    jsonLen: new codegen_1.Name("jsonLen"),
-	    jsonPart: new codegen_1.Name("jsonPart"),
-	};
-	names$1.default = names;
-	
-	return names$1;
-}
-
-var hasRequiredErrors;
-
-function requireErrors () {
-	if (hasRequiredErrors) return errors;
-	hasRequiredErrors = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.extendErrors = exports$1.resetErrorsCount = exports$1.reportExtraError = exports$1.reportError = exports$1.keyword$DataError = exports$1.keywordError = void 0;
-		const codegen_1 = requireCodegen();
-		const util_1 = requireUtil$1();
-		const names_1 = requireNames();
-		exports$1.keywordError = {
-		    message: ({ keyword }) => (0, codegen_1.str) `must pass "${keyword}" keyword validation`,
-		};
-		exports$1.keyword$DataError = {
-		    message: ({ keyword, schemaType }) => schemaType
-		        ? (0, codegen_1.str) `"${keyword}" keyword must be ${schemaType} ($data)`
-		        : (0, codegen_1.str) `"${keyword}" keyword is invalid ($data)`,
-		};
-		function reportError(cxt, error = exports$1.keywordError, errorPaths, overrideAllErrors) {
-		    const { it } = cxt;
-		    const { gen, compositeRule, allErrors } = it;
-		    const errObj = errorObjectCode(cxt, error, errorPaths);
-		    if (overrideAllErrors !== null && overrideAllErrors !== void 0 ? overrideAllErrors : (compositeRule || allErrors)) {
-		        addError(gen, errObj);
-		    }
-		    else {
-		        returnErrors(it, (0, codegen_1._) `[${errObj}]`);
-		    }
-		}
-		exports$1.reportError = reportError;
-		function reportExtraError(cxt, error = exports$1.keywordError, errorPaths) {
-		    const { it } = cxt;
-		    const { gen, compositeRule, allErrors } = it;
-		    const errObj = errorObjectCode(cxt, error, errorPaths);
-		    addError(gen, errObj);
-		    if (!(compositeRule || allErrors)) {
-		        returnErrors(it, names_1.default.vErrors);
-		    }
-		}
-		exports$1.reportExtraError = reportExtraError;
-		function resetErrorsCount(gen, errsCount) {
-		    gen.assign(names_1.default.errors, errsCount);
-		    gen.if((0, codegen_1._) `${names_1.default.vErrors} !== null`, () => gen.if(errsCount, () => gen.assign((0, codegen_1._) `${names_1.default.vErrors}.length`, errsCount), () => gen.assign(names_1.default.vErrors, null)));
-		}
-		exports$1.resetErrorsCount = resetErrorsCount;
-		function extendErrors({ gen, keyword, schemaValue, data, errsCount, it, }) {
-		    /* istanbul ignore if */
-		    if (errsCount === undefined)
-		        throw new Error("ajv implementation error");
-		    const err = gen.name("err");
-		    gen.forRange("i", errsCount, names_1.default.errors, (i) => {
-		        gen.const(err, (0, codegen_1._) `${names_1.default.vErrors}[${i}]`);
-		        gen.if((0, codegen_1._) `${err}.instancePath === undefined`, () => gen.assign((0, codegen_1._) `${err}.instancePath`, (0, codegen_1.strConcat)(names_1.default.instancePath, it.errorPath)));
-		        gen.assign((0, codegen_1._) `${err}.schemaPath`, (0, codegen_1.str) `${it.errSchemaPath}/${keyword}`);
-		        if (it.opts.verbose) {
-		            gen.assign((0, codegen_1._) `${err}.schema`, schemaValue);
-		            gen.assign((0, codegen_1._) `${err}.data`, data);
-		        }
-		    });
-		}
-		exports$1.extendErrors = extendErrors;
-		function addError(gen, errObj) {
-		    const err = gen.const("err", errObj);
-		    gen.if((0, codegen_1._) `${names_1.default.vErrors} === null`, () => gen.assign(names_1.default.vErrors, (0, codegen_1._) `[${err}]`), (0, codegen_1._) `${names_1.default.vErrors}.push(${err})`);
-		    gen.code((0, codegen_1._) `${names_1.default.errors}++`);
-		}
-		function returnErrors(it, errs) {
-		    const { gen, validateName, schemaEnv } = it;
-		    if (schemaEnv.$async) {
-		        gen.throw((0, codegen_1._) `new ${it.ValidationError}(${errs})`);
-		    }
-		    else {
-		        gen.assign((0, codegen_1._) `${validateName}.errors`, errs);
-		        gen.return(false);
-		    }
-		}
-		const E = {
-		    keyword: new codegen_1.Name("keyword"),
-		    schemaPath: new codegen_1.Name("schemaPath"), // also used in JTD errors
-		    params: new codegen_1.Name("params"),
-		    propertyName: new codegen_1.Name("propertyName"),
-		    message: new codegen_1.Name("message"),
-		    schema: new codegen_1.Name("schema"),
-		    parentSchema: new codegen_1.Name("parentSchema"),
-		};
-		function errorObjectCode(cxt, error, errorPaths) {
-		    const { createErrors } = cxt.it;
-		    if (createErrors === false)
-		        return (0, codegen_1._) `{}`;
-		    return errorObject(cxt, error, errorPaths);
-		}
-		function errorObject(cxt, error, errorPaths = {}) {
-		    const { gen, it } = cxt;
-		    const keyValues = [
-		        errorInstancePath(it, errorPaths),
-		        errorSchemaPath(cxt, errorPaths),
-		    ];
-		    extraErrorProps(cxt, error, keyValues);
-		    return gen.object(...keyValues);
-		}
-		function errorInstancePath({ errorPath }, { instancePath }) {
-		    const instPath = instancePath
-		        ? (0, codegen_1.str) `${errorPath}${(0, util_1.getErrorPath)(instancePath, util_1.Type.Str)}`
-		        : errorPath;
-		    return [names_1.default.instancePath, (0, codegen_1.strConcat)(names_1.default.instancePath, instPath)];
-		}
-		function errorSchemaPath({ keyword, it: { errSchemaPath } }, { schemaPath, parentSchema }) {
-		    let schPath = parentSchema ? errSchemaPath : (0, codegen_1.str) `${errSchemaPath}/${keyword}`;
-		    if (schemaPath) {
-		        schPath = (0, codegen_1.str) `${schPath}${(0, util_1.getErrorPath)(schemaPath, util_1.Type.Str)}`;
-		    }
-		    return [E.schemaPath, schPath];
-		}
-		function extraErrorProps(cxt, { params, message }, keyValues) {
-		    const { keyword, data, schemaValue, it } = cxt;
-		    const { opts, propertyName, topSchemaRef, schemaPath } = it;
-		    keyValues.push([E.keyword, keyword], [E.params, typeof params == "function" ? params(cxt) : params || (0, codegen_1._) `{}`]);
-		    if (opts.messages) {
-		        keyValues.push([E.message, typeof message == "function" ? message(cxt) : message]);
-		    }
-		    if (opts.verbose) {
-		        keyValues.push([E.schema, schemaValue], [E.parentSchema, (0, codegen_1._) `${topSchemaRef}${schemaPath}`], [names_1.default.data, data]);
-		    }
-		    if (propertyName)
-		        keyValues.push([E.propertyName, propertyName]);
-		}
-		
-	} (errors));
-	return errors;
-}
-
-var hasRequiredBoolSchema;
-
-function requireBoolSchema () {
-	if (hasRequiredBoolSchema) return boolSchema;
-	hasRequiredBoolSchema = 1;
-	Object.defineProperty(boolSchema, "__esModule", { value: true });
-	boolSchema.boolOrEmptySchema = boolSchema.topBoolOrEmptySchema = void 0;
-	const errors_1 = requireErrors();
-	const codegen_1 = requireCodegen();
-	const names_1 = requireNames();
-	const boolError = {
-	    message: "boolean schema is false",
-	};
-	function topBoolOrEmptySchema(it) {
-	    const { gen, schema, validateName } = it;
-	    if (schema === false) {
-	        falseSchemaError(it, false);
-	    }
-	    else if (typeof schema == "object" && schema.$async === true) {
-	        gen.return(names_1.default.data);
-	    }
-	    else {
-	        gen.assign((0, codegen_1._) `${validateName}.errors`, null);
-	        gen.return(true);
-	    }
-	}
-	boolSchema.topBoolOrEmptySchema = topBoolOrEmptySchema;
-	function boolOrEmptySchema(it, valid) {
-	    const { gen, schema } = it;
-	    if (schema === false) {
-	        gen.var(valid, false); // TODO var
-	        falseSchemaError(it);
-	    }
-	    else {
-	        gen.var(valid, true); // TODO var
-	    }
-	}
-	boolSchema.boolOrEmptySchema = boolOrEmptySchema;
-	function falseSchemaError(it, overrideAllErrors) {
-	    const { gen, data } = it;
-	    // TODO maybe some other interface should be used for non-keyword validation errors...
-	    const cxt = {
-	        gen,
-	        keyword: "false schema",
-	        data,
-	        schema: false,
-	        schemaCode: false,
-	        schemaValue: false,
-	        params: {},
-	        it,
-	    };
-	    (0, errors_1.reportError)(cxt, boolError, undefined, overrideAllErrors);
-	}
-	
-	return boolSchema;
-}
-
-var dataType = {};
-
-var rules = {};
-
-var hasRequiredRules;
-
-function requireRules () {
-	if (hasRequiredRules) return rules;
-	hasRequiredRules = 1;
-	Object.defineProperty(rules, "__esModule", { value: true });
-	rules.getRules = rules.isJSONType = void 0;
-	const _jsonTypes = ["string", "number", "integer", "boolean", "null", "object", "array"];
-	const jsonTypes = new Set(_jsonTypes);
-	function isJSONType(x) {
-	    return typeof x == "string" && jsonTypes.has(x);
-	}
-	rules.isJSONType = isJSONType;
-	function getRules() {
-	    const groups = {
-	        number: { type: "number", rules: [] },
-	        string: { type: "string", rules: [] },
-	        array: { type: "array", rules: [] },
-	        object: { type: "object", rules: [] },
-	    };
-	    return {
-	        types: { ...groups, integer: true, boolean: true, null: true },
-	        rules: [{ rules: [] }, groups.number, groups.string, groups.array, groups.object],
-	        post: { rules: [] },
-	        all: {},
-	        keywords: {},
-	    };
-	}
-	rules.getRules = getRules;
-	
-	return rules;
-}
-
-var applicability = {};
-
-var hasRequiredApplicability;
-
-function requireApplicability () {
-	if (hasRequiredApplicability) return applicability;
-	hasRequiredApplicability = 1;
-	Object.defineProperty(applicability, "__esModule", { value: true });
-	applicability.shouldUseRule = applicability.shouldUseGroup = applicability.schemaHasRulesForType = void 0;
-	function schemaHasRulesForType({ schema, self }, type) {
-	    const group = self.RULES.types[type];
-	    return group && group !== true && shouldUseGroup(schema, group);
-	}
-	applicability.schemaHasRulesForType = schemaHasRulesForType;
-	function shouldUseGroup(schema, group) {
-	    return group.rules.some((rule) => shouldUseRule(schema, rule));
-	}
-	applicability.shouldUseGroup = shouldUseGroup;
-	function shouldUseRule(schema, rule) {
-	    var _a;
-	    return (schema[rule.keyword] !== undefined ||
-	        ((_a = rule.definition.implements) === null || _a === void 0 ? void 0 : _a.some((kwd) => schema[kwd] !== undefined)));
-	}
-	applicability.shouldUseRule = shouldUseRule;
-	
-	return applicability;
-}
-
-var hasRequiredDataType;
-
-function requireDataType () {
-	if (hasRequiredDataType) return dataType;
-	hasRequiredDataType = 1;
-	Object.defineProperty(dataType, "__esModule", { value: true });
-	dataType.reportTypeError = dataType.checkDataTypes = dataType.checkDataType = dataType.coerceAndCheckDataType = dataType.getJSONTypes = dataType.getSchemaTypes = dataType.DataType = void 0;
-	const rules_1 = requireRules();
-	const applicability_1 = requireApplicability();
-	const errors_1 = requireErrors();
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	var DataType;
-	(function (DataType) {
-	    DataType[DataType["Correct"] = 0] = "Correct";
-	    DataType[DataType["Wrong"] = 1] = "Wrong";
-	})(DataType || (dataType.DataType = DataType = {}));
-	function getSchemaTypes(schema) {
-	    const types = getJSONTypes(schema.type);
-	    const hasNull = types.includes("null");
-	    if (hasNull) {
-	        if (schema.nullable === false)
-	            throw new Error("type: null contradicts nullable: false");
-	    }
-	    else {
-	        if (!types.length && schema.nullable !== undefined) {
-	            throw new Error('"nullable" cannot be used without "type"');
-	        }
-	        if (schema.nullable === true)
-	            types.push("null");
-	    }
-	    return types;
-	}
-	dataType.getSchemaTypes = getSchemaTypes;
-	// eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-	function getJSONTypes(ts) {
-	    const types = Array.isArray(ts) ? ts : ts ? [ts] : [];
-	    if (types.every(rules_1.isJSONType))
-	        return types;
-	    throw new Error("type must be JSONType or JSONType[]: " + types.join(","));
-	}
-	dataType.getJSONTypes = getJSONTypes;
-	function coerceAndCheckDataType(it, types) {
-	    const { gen, data, opts } = it;
-	    const coerceTo = coerceToTypes(types, opts.coerceTypes);
-	    const checkTypes = types.length > 0 &&
-	        !(coerceTo.length === 0 && types.length === 1 && (0, applicability_1.schemaHasRulesForType)(it, types[0]));
-	    if (checkTypes) {
-	        const wrongType = checkDataTypes(types, data, opts.strictNumbers, DataType.Wrong);
-	        gen.if(wrongType, () => {
-	            if (coerceTo.length)
-	                coerceData(it, types, coerceTo);
-	            else
-	                reportTypeError(it);
-	        });
-	    }
-	    return checkTypes;
-	}
-	dataType.coerceAndCheckDataType = coerceAndCheckDataType;
-	const COERCIBLE = new Set(["string", "number", "integer", "boolean", "null"]);
-	function coerceToTypes(types, coerceTypes) {
-	    return coerceTypes
-	        ? types.filter((t) => COERCIBLE.has(t) || (coerceTypes === "array" && t === "array"))
-	        : [];
-	}
-	function coerceData(it, types, coerceTo) {
-	    const { gen, data, opts } = it;
-	    const dataType = gen.let("dataType", (0, codegen_1._) `typeof ${data}`);
-	    const coerced = gen.let("coerced", (0, codegen_1._) `undefined`);
-	    if (opts.coerceTypes === "array") {
-	        gen.if((0, codegen_1._) `${dataType} == 'object' && Array.isArray(${data}) && ${data}.length == 1`, () => gen
-	            .assign(data, (0, codegen_1._) `${data}[0]`)
-	            .assign(dataType, (0, codegen_1._) `typeof ${data}`)
-	            .if(checkDataTypes(types, data, opts.strictNumbers), () => gen.assign(coerced, data)));
-	    }
-	    gen.if((0, codegen_1._) `${coerced} !== undefined`);
-	    for (const t of coerceTo) {
-	        if (COERCIBLE.has(t) || (t === "array" && opts.coerceTypes === "array")) {
-	            coerceSpecificType(t);
-	        }
-	    }
-	    gen.else();
-	    reportTypeError(it);
-	    gen.endIf();
-	    gen.if((0, codegen_1._) `${coerced} !== undefined`, () => {
-	        gen.assign(data, coerced);
-	        assignParentData(it, coerced);
-	    });
-	    function coerceSpecificType(t) {
-	        switch (t) {
-	            case "string":
-	                gen
-	                    .elseIf((0, codegen_1._) `${dataType} == "number" || ${dataType} == "boolean"`)
-	                    .assign(coerced, (0, codegen_1._) `"" + ${data}`)
-	                    .elseIf((0, codegen_1._) `${data} === null`)
-	                    .assign(coerced, (0, codegen_1._) `""`);
-	                return;
-	            case "number":
-	                gen
-	                    .elseIf((0, codegen_1._) `${dataType} == "boolean" || ${data} === null
-              || (${dataType} == "string" && ${data} && ${data} == +${data})`)
-	                    .assign(coerced, (0, codegen_1._) `+${data}`);
-	                return;
-	            case "integer":
-	                gen
-	                    .elseIf((0, codegen_1._) `${dataType} === "boolean" || ${data} === null
-              || (${dataType} === "string" && ${data} && ${data} == +${data} && !(${data} % 1))`)
-	                    .assign(coerced, (0, codegen_1._) `+${data}`);
-	                return;
-	            case "boolean":
-	                gen
-	                    .elseIf((0, codegen_1._) `${data} === "false" || ${data} === 0 || ${data} === null`)
-	                    .assign(coerced, false)
-	                    .elseIf((0, codegen_1._) `${data} === "true" || ${data} === 1`)
-	                    .assign(coerced, true);
-	                return;
-	            case "null":
-	                gen.elseIf((0, codegen_1._) `${data} === "" || ${data} === 0 || ${data} === false`);
-	                gen.assign(coerced, null);
-	                return;
-	            case "array":
-	                gen
-	                    .elseIf((0, codegen_1._) `${dataType} === "string" || ${dataType} === "number"
-              || ${dataType} === "boolean" || ${data} === null`)
-	                    .assign(coerced, (0, codegen_1._) `[${data}]`);
-	        }
-	    }
-	}
-	function assignParentData({ gen, parentData, parentDataProperty }, expr) {
-	    // TODO use gen.property
-	    gen.if((0, codegen_1._) `${parentData} !== undefined`, () => gen.assign((0, codegen_1._) `${parentData}[${parentDataProperty}]`, expr));
-	}
-	function checkDataType(dataType, data, strictNums, correct = DataType.Correct) {
-	    const EQ = correct === DataType.Correct ? codegen_1.operators.EQ : codegen_1.operators.NEQ;
-	    let cond;
-	    switch (dataType) {
-	        case "null":
-	            return (0, codegen_1._) `${data} ${EQ} null`;
-	        case "array":
-	            cond = (0, codegen_1._) `Array.isArray(${data})`;
-	            break;
-	        case "object":
-	            cond = (0, codegen_1._) `${data} && typeof ${data} == "object" && !Array.isArray(${data})`;
-	            break;
-	        case "integer":
-	            cond = numCond((0, codegen_1._) `!(${data} % 1) && !isNaN(${data})`);
-	            break;
-	        case "number":
-	            cond = numCond();
-	            break;
-	        default:
-	            return (0, codegen_1._) `typeof ${data} ${EQ} ${dataType}`;
-	    }
-	    return correct === DataType.Correct ? cond : (0, codegen_1.not)(cond);
-	    function numCond(_cond = codegen_1.nil) {
-	        return (0, codegen_1.and)((0, codegen_1._) `typeof ${data} == "number"`, _cond, strictNums ? (0, codegen_1._) `isFinite(${data})` : codegen_1.nil);
-	    }
-	}
-	dataType.checkDataType = checkDataType;
-	function checkDataTypes(dataTypes, data, strictNums, correct) {
-	    if (dataTypes.length === 1) {
-	        return checkDataType(dataTypes[0], data, strictNums, correct);
-	    }
-	    let cond;
-	    const types = (0, util_1.toHash)(dataTypes);
-	    if (types.array && types.object) {
-	        const notObj = (0, codegen_1._) `typeof ${data} != "object"`;
-	        cond = types.null ? notObj : (0, codegen_1._) `!${data} || ${notObj}`;
-	        delete types.null;
-	        delete types.array;
-	        delete types.object;
-	    }
-	    else {
-	        cond = codegen_1.nil;
-	    }
-	    if (types.number)
-	        delete types.integer;
-	    for (const t in types)
-	        cond = (0, codegen_1.and)(cond, checkDataType(t, data, strictNums, correct));
-	    return cond;
-	}
-	dataType.checkDataTypes = checkDataTypes;
-	const typeError = {
-	    message: ({ schema }) => `must be ${schema}`,
-	    params: ({ schema, schemaValue }) => typeof schema == "string" ? (0, codegen_1._) `{type: ${schema}}` : (0, codegen_1._) `{type: ${schemaValue}}`,
-	};
-	function reportTypeError(it) {
-	    const cxt = getTypeErrorContext(it);
-	    (0, errors_1.reportError)(cxt, typeError);
-	}
-	dataType.reportTypeError = reportTypeError;
-	function getTypeErrorContext(it) {
-	    const { gen, data, schema } = it;
-	    const schemaCode = (0, util_1.schemaRefOrVal)(it, schema, "type");
-	    return {
-	        gen,
-	        keyword: "type",
-	        data,
-	        schema: schema.type,
-	        schemaCode,
-	        schemaValue: schemaCode,
-	        parentSchema: schema,
-	        params: {},
-	        it,
-	    };
-	}
-	
-	return dataType;
-}
-
-var defaults = {};
-
-var hasRequiredDefaults;
-
-function requireDefaults () {
-	if (hasRequiredDefaults) return defaults;
-	hasRequiredDefaults = 1;
-	Object.defineProperty(defaults, "__esModule", { value: true });
-	defaults.assignDefaults = void 0;
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	function assignDefaults(it, ty) {
-	    const { properties, items } = it.schema;
-	    if (ty === "object" && properties) {
-	        for (const key in properties) {
-	            assignDefault(it, key, properties[key].default);
-	        }
-	    }
-	    else if (ty === "array" && Array.isArray(items)) {
-	        items.forEach((sch, i) => assignDefault(it, i, sch.default));
-	    }
-	}
-	defaults.assignDefaults = assignDefaults;
-	function assignDefault(it, prop, defaultValue) {
-	    const { gen, compositeRule, data, opts } = it;
-	    if (defaultValue === undefined)
-	        return;
-	    const childData = (0, codegen_1._) `${data}${(0, codegen_1.getProperty)(prop)}`;
-	    if (compositeRule) {
-	        (0, util_1.checkStrictMode)(it, `default is ignored for: ${childData}`);
-	        return;
-	    }
-	    let condition = (0, codegen_1._) `${childData} === undefined`;
-	    if (opts.useDefaults === "empty") {
-	        condition = (0, codegen_1._) `${condition} || ${childData} === null || ${childData} === ""`;
-	    }
-	    // `${childData} === undefined` +
-	    // (opts.useDefaults === "empty" ? ` || ${childData} === null || ${childData} === ""` : "")
-	    gen.if(condition, (0, codegen_1._) `${childData} = ${(0, codegen_1.stringify)(defaultValue)}`);
-	}
-	
-	return defaults;
-}
-
-var keyword = {};
-
-var code = {};
-
-var hasRequiredCode;
-
-function requireCode () {
-	if (hasRequiredCode) return code;
-	hasRequiredCode = 1;
-	Object.defineProperty(code, "__esModule", { value: true });
-	code.validateUnion = code.validateArray = code.usePattern = code.callValidateCode = code.schemaProperties = code.allSchemaProperties = code.noPropertyInData = code.propertyInData = code.isOwnProperty = code.hasPropFunc = code.reportMissingProp = code.checkMissingProp = code.checkReportMissingProp = void 0;
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const names_1 = requireNames();
-	const util_2 = requireUtil$1();
-	function checkReportMissingProp(cxt, prop) {
-	    const { gen, data, it } = cxt;
-	    gen.if(noPropertyInData(gen, data, prop, it.opts.ownProperties), () => {
-	        cxt.setParams({ missingProperty: (0, codegen_1._) `${prop}` }, true);
-	        cxt.error();
-	    });
-	}
-	code.checkReportMissingProp = checkReportMissingProp;
-	function checkMissingProp({ gen, data, it: { opts } }, properties, missing) {
-	    return (0, codegen_1.or)(...properties.map((prop) => (0, codegen_1.and)(noPropertyInData(gen, data, prop, opts.ownProperties), (0, codegen_1._) `${missing} = ${prop}`)));
-	}
-	code.checkMissingProp = checkMissingProp;
-	function reportMissingProp(cxt, missing) {
-	    cxt.setParams({ missingProperty: missing }, true);
-	    cxt.error();
-	}
-	code.reportMissingProp = reportMissingProp;
-	function hasPropFunc(gen) {
-	    return gen.scopeValue("func", {
-	        // eslint-disable-next-line @typescript-eslint/unbound-method
-	        ref: Object.prototype.hasOwnProperty,
-	        code: (0, codegen_1._) `Object.prototype.hasOwnProperty`,
-	    });
-	}
-	code.hasPropFunc = hasPropFunc;
-	function isOwnProperty(gen, data, property) {
-	    return (0, codegen_1._) `${hasPropFunc(gen)}.call(${data}, ${property})`;
-	}
-	code.isOwnProperty = isOwnProperty;
-	function propertyInData(gen, data, property, ownProperties) {
-	    const cond = (0, codegen_1._) `${data}${(0, codegen_1.getProperty)(property)} !== undefined`;
-	    return ownProperties ? (0, codegen_1._) `${cond} && ${isOwnProperty(gen, data, property)}` : cond;
-	}
-	code.propertyInData = propertyInData;
-	function noPropertyInData(gen, data, property, ownProperties) {
-	    const cond = (0, codegen_1._) `${data}${(0, codegen_1.getProperty)(property)} === undefined`;
-	    return ownProperties ? (0, codegen_1.or)(cond, (0, codegen_1.not)(isOwnProperty(gen, data, property))) : cond;
-	}
-	code.noPropertyInData = noPropertyInData;
-	function allSchemaProperties(schemaMap) {
-	    return schemaMap ? Object.keys(schemaMap).filter((p) => p !== "__proto__") : [];
-	}
-	code.allSchemaProperties = allSchemaProperties;
-	function schemaProperties(it, schemaMap) {
-	    return allSchemaProperties(schemaMap).filter((p) => !(0, util_1.alwaysValidSchema)(it, schemaMap[p]));
-	}
-	code.schemaProperties = schemaProperties;
-	function callValidateCode({ schemaCode, data, it: { gen, topSchemaRef, schemaPath, errorPath }, it }, func, context, passSchema) {
-	    const dataAndSchema = passSchema ? (0, codegen_1._) `${schemaCode}, ${data}, ${topSchemaRef}${schemaPath}` : data;
-	    const valCxt = [
-	        [names_1.default.instancePath, (0, codegen_1.strConcat)(names_1.default.instancePath, errorPath)],
-	        [names_1.default.parentData, it.parentData],
-	        [names_1.default.parentDataProperty, it.parentDataProperty],
-	        [names_1.default.rootData, names_1.default.rootData],
-	    ];
-	    if (it.opts.dynamicRef)
-	        valCxt.push([names_1.default.dynamicAnchors, names_1.default.dynamicAnchors]);
-	    const args = (0, codegen_1._) `${dataAndSchema}, ${gen.object(...valCxt)}`;
-	    return context !== codegen_1.nil ? (0, codegen_1._) `${func}.call(${context}, ${args})` : (0, codegen_1._) `${func}(${args})`;
-	}
-	code.callValidateCode = callValidateCode;
-	const newRegExp = (0, codegen_1._) `new RegExp`;
-	function usePattern({ gen, it: { opts } }, pattern) {
-	    const u = opts.unicodeRegExp ? "u" : "";
-	    const { regExp } = opts.code;
-	    const rx = regExp(pattern, u);
-	    return gen.scopeValue("pattern", {
-	        key: rx.toString(),
-	        ref: rx,
-	        code: (0, codegen_1._) `${regExp.code === "new RegExp" ? newRegExp : (0, util_2.useFunc)(gen, regExp)}(${pattern}, ${u})`,
-	    });
-	}
-	code.usePattern = usePattern;
-	function validateArray(cxt) {
-	    const { gen, data, keyword, it } = cxt;
-	    const valid = gen.name("valid");
-	    if (it.allErrors) {
-	        const validArr = gen.let("valid", true);
-	        validateItems(() => gen.assign(validArr, false));
-	        return validArr;
-	    }
-	    gen.var(valid, true);
-	    validateItems(() => gen.break());
-	    return valid;
-	    function validateItems(notValid) {
-	        const len = gen.const("len", (0, codegen_1._) `${data}.length`);
-	        gen.forRange("i", 0, len, (i) => {
-	            cxt.subschema({
-	                keyword,
-	                dataProp: i,
-	                dataPropType: util_1.Type.Num,
-	            }, valid);
-	            gen.if((0, codegen_1.not)(valid), notValid);
-	        });
-	    }
-	}
-	code.validateArray = validateArray;
-	function validateUnion(cxt) {
-	    const { gen, schema, keyword, it } = cxt;
-	    /* istanbul ignore if */
-	    if (!Array.isArray(schema))
-	        throw new Error("ajv implementation error");
-	    const alwaysValid = schema.some((sch) => (0, util_1.alwaysValidSchema)(it, sch));
-	    if (alwaysValid && !it.opts.unevaluated)
-	        return;
-	    const valid = gen.let("valid", false);
-	    const schValid = gen.name("_valid");
-	    gen.block(() => schema.forEach((_sch, i) => {
-	        const schCxt = cxt.subschema({
-	            keyword,
-	            schemaProp: i,
-	            compositeRule: true,
-	        }, schValid);
-	        gen.assign(valid, (0, codegen_1._) `${valid} || ${schValid}`);
-	        const merged = cxt.mergeValidEvaluated(schCxt, schValid);
-	        // can short-circuit if `unevaluatedProperties/Items` not supported (opts.unevaluated !== true)
-	        // or if all properties and items were evaluated (it.props === true && it.items === true)
-	        if (!merged)
-	            gen.if((0, codegen_1.not)(valid));
-	    }));
-	    cxt.result(valid, () => cxt.reset(), () => cxt.error(true));
-	}
-	code.validateUnion = validateUnion;
-	
-	return code;
-}
-
-var hasRequiredKeyword;
-
-function requireKeyword () {
-	if (hasRequiredKeyword) return keyword;
-	hasRequiredKeyword = 1;
-	Object.defineProperty(keyword, "__esModule", { value: true });
-	keyword.validateKeywordUsage = keyword.validSchemaType = keyword.funcKeywordCode = keyword.macroKeywordCode = void 0;
-	const codegen_1 = requireCodegen();
-	const names_1 = requireNames();
-	const code_1 = requireCode();
-	const errors_1 = requireErrors();
-	function macroKeywordCode(cxt, def) {
-	    const { gen, keyword, schema, parentSchema, it } = cxt;
-	    const macroSchema = def.macro.call(it.self, schema, parentSchema, it);
-	    const schemaRef = useKeyword(gen, keyword, macroSchema);
-	    if (it.opts.validateSchema !== false)
-	        it.self.validateSchema(macroSchema, true);
-	    const valid = gen.name("valid");
-	    cxt.subschema({
-	        schema: macroSchema,
-	        schemaPath: codegen_1.nil,
-	        errSchemaPath: `${it.errSchemaPath}/${keyword}`,
-	        topSchemaRef: schemaRef,
-	        compositeRule: true,
-	    }, valid);
-	    cxt.pass(valid, () => cxt.error(true));
-	}
-	keyword.macroKeywordCode = macroKeywordCode;
-	function funcKeywordCode(cxt, def) {
-	    var _a;
-	    const { gen, keyword, schema, parentSchema, $data, it } = cxt;
-	    checkAsyncKeyword(it, def);
-	    const validate = !$data && def.compile ? def.compile.call(it.self, schema, parentSchema, it) : def.validate;
-	    const validateRef = useKeyword(gen, keyword, validate);
-	    const valid = gen.let("valid");
-	    cxt.block$data(valid, validateKeyword);
-	    cxt.ok((_a = def.valid) !== null && _a !== void 0 ? _a : valid);
-	    function validateKeyword() {
-	        if (def.errors === false) {
-	            assignValid();
-	            if (def.modifying)
-	                modifyData(cxt);
-	            reportErrs(() => cxt.error());
-	        }
-	        else {
-	            const ruleErrs = def.async ? validateAsync() : validateSync();
-	            if (def.modifying)
-	                modifyData(cxt);
-	            reportErrs(() => addErrs(cxt, ruleErrs));
-	        }
-	    }
-	    function validateAsync() {
-	        const ruleErrs = gen.let("ruleErrs", null);
-	        gen.try(() => assignValid((0, codegen_1._) `await `), (e) => gen.assign(valid, false).if((0, codegen_1._) `${e} instanceof ${it.ValidationError}`, () => gen.assign(ruleErrs, (0, codegen_1._) `${e}.errors`), () => gen.throw(e)));
-	        return ruleErrs;
-	    }
-	    function validateSync() {
-	        const validateErrs = (0, codegen_1._) `${validateRef}.errors`;
-	        gen.assign(validateErrs, null);
-	        assignValid(codegen_1.nil);
-	        return validateErrs;
-	    }
-	    function assignValid(_await = def.async ? (0, codegen_1._) `await ` : codegen_1.nil) {
-	        const passCxt = it.opts.passContext ? names_1.default.this : names_1.default.self;
-	        const passSchema = !(("compile" in def && !$data) || def.schema === false);
-	        gen.assign(valid, (0, codegen_1._) `${_await}${(0, code_1.callValidateCode)(cxt, validateRef, passCxt, passSchema)}`, def.modifying);
-	    }
-	    function reportErrs(errors) {
-	        var _a;
-	        gen.if((0, codegen_1.not)((_a = def.valid) !== null && _a !== void 0 ? _a : valid), errors);
-	    }
-	}
-	keyword.funcKeywordCode = funcKeywordCode;
-	function modifyData(cxt) {
-	    const { gen, data, it } = cxt;
-	    gen.if(it.parentData, () => gen.assign(data, (0, codegen_1._) `${it.parentData}[${it.parentDataProperty}]`));
-	}
-	function addErrs(cxt, errs) {
-	    const { gen } = cxt;
-	    gen.if((0, codegen_1._) `Array.isArray(${errs})`, () => {
-	        gen
-	            .assign(names_1.default.vErrors, (0, codegen_1._) `${names_1.default.vErrors} === null ? ${errs} : ${names_1.default.vErrors}.concat(${errs})`)
-	            .assign(names_1.default.errors, (0, codegen_1._) `${names_1.default.vErrors}.length`);
-	        (0, errors_1.extendErrors)(cxt);
-	    }, () => cxt.error());
-	}
-	function checkAsyncKeyword({ schemaEnv }, def) {
-	    if (def.async && !schemaEnv.$async)
-	        throw new Error("async keyword in sync schema");
-	}
-	function useKeyword(gen, keyword, result) {
-	    if (result === undefined)
-	        throw new Error(`keyword "${keyword}" failed to compile`);
-	    return gen.scopeValue("keyword", typeof result == "function" ? { ref: result } : { ref: result, code: (0, codegen_1.stringify)(result) });
-	}
-	function validSchemaType(schema, schemaType, allowUndefined = false) {
-	    // TODO add tests
-	    return (!schemaType.length ||
-	        schemaType.some((st) => st === "array"
-	            ? Array.isArray(schema)
-	            : st === "object"
-	                ? schema && typeof schema == "object" && !Array.isArray(schema)
-	                : typeof schema == st || (allowUndefined && typeof schema == "undefined")));
-	}
-	keyword.validSchemaType = validSchemaType;
-	function validateKeywordUsage({ schema, opts, self, errSchemaPath }, def, keyword) {
-	    /* istanbul ignore if */
-	    if (Array.isArray(def.keyword) ? !def.keyword.includes(keyword) : def.keyword !== keyword) {
-	        throw new Error("ajv implementation error");
-	    }
-	    const deps = def.dependencies;
-	    if (deps === null || deps === void 0 ? void 0 : deps.some((kwd) => !Object.prototype.hasOwnProperty.call(schema, kwd))) {
-	        throw new Error(`parent schema must have dependencies of ${keyword}: ${deps.join(",")}`);
-	    }
-	    if (def.validateSchema) {
-	        const valid = def.validateSchema(schema[keyword]);
-	        if (!valid) {
-	            const msg = `keyword "${keyword}" value is invalid at path "${errSchemaPath}": ` +
-	                self.errorsText(def.validateSchema.errors);
-	            if (opts.validateSchema === "log")
-	                self.logger.error(msg);
-	            else
-	                throw new Error(msg);
-	        }
-	    }
-	}
-	keyword.validateKeywordUsage = validateKeywordUsage;
-	
-	return keyword;
-}
-
-var subschema = {};
-
-var hasRequiredSubschema;
-
-function requireSubschema () {
-	if (hasRequiredSubschema) return subschema;
-	hasRequiredSubschema = 1;
-	Object.defineProperty(subschema, "__esModule", { value: true });
-	subschema.extendSubschemaMode = subschema.extendSubschemaData = subschema.getSubschema = void 0;
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	function getSubschema(it, { keyword, schemaProp, schema, schemaPath, errSchemaPath, topSchemaRef }) {
-	    if (keyword !== undefined && schema !== undefined) {
-	        throw new Error('both "keyword" and "schema" passed, only one allowed');
-	    }
-	    if (keyword !== undefined) {
-	        const sch = it.schema[keyword];
-	        return schemaProp === undefined
-	            ? {
-	                schema: sch,
-	                schemaPath: (0, codegen_1._) `${it.schemaPath}${(0, codegen_1.getProperty)(keyword)}`,
-	                errSchemaPath: `${it.errSchemaPath}/${keyword}`,
-	            }
-	            : {
-	                schema: sch[schemaProp],
-	                schemaPath: (0, codegen_1._) `${it.schemaPath}${(0, codegen_1.getProperty)(keyword)}${(0, codegen_1.getProperty)(schemaProp)}`,
-	                errSchemaPath: `${it.errSchemaPath}/${keyword}/${(0, util_1.escapeFragment)(schemaProp)}`,
-	            };
-	    }
-	    if (schema !== undefined) {
-	        if (schemaPath === undefined || errSchemaPath === undefined || topSchemaRef === undefined) {
-	            throw new Error('"schemaPath", "errSchemaPath" and "topSchemaRef" are required with "schema"');
-	        }
-	        return {
-	            schema,
-	            schemaPath,
-	            topSchemaRef,
-	            errSchemaPath,
-	        };
-	    }
-	    throw new Error('either "keyword" or "schema" must be passed');
-	}
-	subschema.getSubschema = getSubschema;
-	function extendSubschemaData(subschema, it, { dataProp, dataPropType: dpType, data, dataTypes, propertyName }) {
-	    if (data !== undefined && dataProp !== undefined) {
-	        throw new Error('both "data" and "dataProp" passed, only one allowed');
-	    }
-	    const { gen } = it;
-	    if (dataProp !== undefined) {
-	        const { errorPath, dataPathArr, opts } = it;
-	        const nextData = gen.let("data", (0, codegen_1._) `${it.data}${(0, codegen_1.getProperty)(dataProp)}`, true);
-	        dataContextProps(nextData);
-	        subschema.errorPath = (0, codegen_1.str) `${errorPath}${(0, util_1.getErrorPath)(dataProp, dpType, opts.jsPropertySyntax)}`;
-	        subschema.parentDataProperty = (0, codegen_1._) `${dataProp}`;
-	        subschema.dataPathArr = [...dataPathArr, subschema.parentDataProperty];
-	    }
-	    if (data !== undefined) {
-	        const nextData = data instanceof codegen_1.Name ? data : gen.let("data", data, true); // replaceable if used once?
-	        dataContextProps(nextData);
-	        if (propertyName !== undefined)
-	            subschema.propertyName = propertyName;
-	        // TODO something is possibly wrong here with not changing parentDataProperty and not appending dataPathArr
-	    }
-	    if (dataTypes)
-	        subschema.dataTypes = dataTypes;
-	    function dataContextProps(_nextData) {
-	        subschema.data = _nextData;
-	        subschema.dataLevel = it.dataLevel + 1;
-	        subschema.dataTypes = [];
-	        it.definedProperties = new Set();
-	        subschema.parentData = it.data;
-	        subschema.dataNames = [...it.dataNames, _nextData];
-	    }
-	}
-	subschema.extendSubschemaData = extendSubschemaData;
-	function extendSubschemaMode(subschema, { jtdDiscriminator, jtdMetadata, compositeRule, createErrors, allErrors }) {
-	    if (compositeRule !== undefined)
-	        subschema.compositeRule = compositeRule;
-	    if (createErrors !== undefined)
-	        subschema.createErrors = createErrors;
-	    if (allErrors !== undefined)
-	        subschema.allErrors = allErrors;
-	    subschema.jtdDiscriminator = jtdDiscriminator; // not inherited
-	    subschema.jtdMetadata = jtdMetadata; // not inherited
-	}
-	subschema.extendSubschemaMode = extendSubschemaMode;
-	
-	return subschema;
-}
-
-var resolve = {};
-
-var fastDeepEqual;
-var hasRequiredFastDeepEqual;
-
-function requireFastDeepEqual () {
-	if (hasRequiredFastDeepEqual) return fastDeepEqual;
-	hasRequiredFastDeepEqual = 1;
-
-	// do not edit .js files directly - edit src/index.jst
-
-
-
-	fastDeepEqual = function equal(a, b) {
-	  if (a === b) return true;
-
-	  if (a && b && typeof a == 'object' && typeof b == 'object') {
-	    if (a.constructor !== b.constructor) return false;
-
-	    var length, i, keys;
-	    if (Array.isArray(a)) {
-	      length = a.length;
-	      if (length != b.length) return false;
-	      for (i = length; i-- !== 0;)
-	        if (!equal(a[i], b[i])) return false;
-	      return true;
-	    }
-
-
-
-	    if (a.constructor === RegExp) return a.source === b.source && a.flags === b.flags;
-	    if (a.valueOf !== Object.prototype.valueOf) return a.valueOf() === b.valueOf();
-	    if (a.toString !== Object.prototype.toString) return a.toString() === b.toString();
-
-	    keys = Object.keys(a);
-	    length = keys.length;
-	    if (length !== Object.keys(b).length) return false;
-
-	    for (i = length; i-- !== 0;)
-	      if (!Object.prototype.hasOwnProperty.call(b, keys[i])) return false;
-
-	    for (i = length; i-- !== 0;) {
-	      var key = keys[i];
-
-	      if (!equal(a[key], b[key])) return false;
-	    }
-
-	    return true;
-	  }
-
-	  // true if both NaN, false otherwise
-	  return a!==a && b!==b;
-	};
-	return fastDeepEqual;
-}
-
-var jsonSchemaTraverse = {exports: {}};
-
-var hasRequiredJsonSchemaTraverse;
-
-function requireJsonSchemaTraverse () {
-	if (hasRequiredJsonSchemaTraverse) return jsonSchemaTraverse.exports;
-	hasRequiredJsonSchemaTraverse = 1;
-
-	var traverse = jsonSchemaTraverse.exports = function (schema, opts, cb) {
-	  // Legacy support for v0.3.1 and earlier.
-	  if (typeof opts == 'function') {
-	    cb = opts;
-	    opts = {};
-	  }
-
-	  cb = opts.cb || cb;
-	  var pre = (typeof cb == 'function') ? cb : cb.pre || function() {};
-	  var post = cb.post || function() {};
-
-	  _traverse(opts, pre, post, schema, '', schema);
-	};
-
-
-	traverse.keywords = {
-	  additionalItems: true,
-	  items: true,
-	  contains: true,
-	  additionalProperties: true,
-	  propertyNames: true,
-	  not: true,
-	  if: true,
-	  then: true,
-	  else: true
-	};
-
-	traverse.arrayKeywords = {
-	  items: true,
-	  allOf: true,
-	  anyOf: true,
-	  oneOf: true
-	};
-
-	traverse.propsKeywords = {
-	  $defs: true,
-	  definitions: true,
-	  properties: true,
-	  patternProperties: true,
-	  dependencies: true
-	};
-
-	traverse.skipKeywords = {
-	  default: true,
-	  enum: true,
-	  const: true,
-	  required: true,
-	  maximum: true,
-	  minimum: true,
-	  exclusiveMaximum: true,
-	  exclusiveMinimum: true,
-	  multipleOf: true,
-	  maxLength: true,
-	  minLength: true,
-	  pattern: true,
-	  format: true,
-	  maxItems: true,
-	  minItems: true,
-	  uniqueItems: true,
-	  maxProperties: true,
-	  minProperties: true
-	};
-
-
-	function _traverse(opts, pre, post, schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex) {
-	  if (schema && typeof schema == 'object' && !Array.isArray(schema)) {
-	    pre(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
-	    for (var key in schema) {
-	      var sch = schema[key];
-	      if (Array.isArray(sch)) {
-	        if (key in traverse.arrayKeywords) {
-	          for (var i=0; i<sch.length; i++)
-	            _traverse(opts, pre, post, sch[i], jsonPtr + '/' + key + '/' + i, rootSchema, jsonPtr, key, schema, i);
-	        }
-	      } else if (key in traverse.propsKeywords) {
-	        if (sch && typeof sch == 'object') {
-	          for (var prop in sch)
-	            _traverse(opts, pre, post, sch[prop], jsonPtr + '/' + key + '/' + escapeJsonPtr(prop), rootSchema, jsonPtr, key, schema, prop);
-	        }
-	      } else if (key in traverse.keywords || (opts.allKeys && !(key in traverse.skipKeywords))) {
-	        _traverse(opts, pre, post, sch, jsonPtr + '/' + key, rootSchema, jsonPtr, key, schema);
-	      }
-	    }
-	    post(schema, jsonPtr, rootSchema, parentJsonPtr, parentKeyword, parentSchema, keyIndex);
-	  }
-	}
-
-
-	function escapeJsonPtr(str) {
-	  return str.replace(/~/g, '~0').replace(/\//g, '~1');
-	}
-	return jsonSchemaTraverse.exports;
-}
-
-var hasRequiredResolve;
-
-function requireResolve () {
-	if (hasRequiredResolve) return resolve;
-	hasRequiredResolve = 1;
-	Object.defineProperty(resolve, "__esModule", { value: true });
-	resolve.getSchemaRefs = resolve.resolveUrl = resolve.normalizeId = resolve._getFullPath = resolve.getFullPath = resolve.inlineRef = void 0;
-	const util_1 = requireUtil$1();
-	const equal = requireFastDeepEqual();
-	const traverse = requireJsonSchemaTraverse();
-	// TODO refactor to use keyword definitions
-	const SIMPLE_INLINED = new Set([
-	    "type",
-	    "format",
-	    "pattern",
-	    "maxLength",
-	    "minLength",
-	    "maxProperties",
-	    "minProperties",
-	    "maxItems",
-	    "minItems",
-	    "maximum",
-	    "minimum",
-	    "uniqueItems",
-	    "multipleOf",
-	    "required",
-	    "enum",
-	    "const",
-	]);
-	function inlineRef(schema, limit = true) {
-	    if (typeof schema == "boolean")
-	        return true;
-	    if (limit === true)
-	        return !hasRef(schema);
-	    if (!limit)
-	        return false;
-	    return countKeys(schema) <= limit;
-	}
-	resolve.inlineRef = inlineRef;
-	const REF_KEYWORDS = new Set([
-	    "$ref",
-	    "$recursiveRef",
-	    "$recursiveAnchor",
-	    "$dynamicRef",
-	    "$dynamicAnchor",
-	]);
-	function hasRef(schema) {
-	    for (const key in schema) {
-	        if (REF_KEYWORDS.has(key))
-	            return true;
-	        const sch = schema[key];
-	        if (Array.isArray(sch) && sch.some(hasRef))
-	            return true;
-	        if (typeof sch == "object" && hasRef(sch))
-	            return true;
-	    }
-	    return false;
-	}
-	function countKeys(schema) {
-	    let count = 0;
-	    for (const key in schema) {
-	        if (key === "$ref")
-	            return Infinity;
-	        count++;
-	        if (SIMPLE_INLINED.has(key))
-	            continue;
-	        if (typeof schema[key] == "object") {
-	            (0, util_1.eachItem)(schema[key], (sch) => (count += countKeys(sch)));
-	        }
-	        if (count === Infinity)
-	            return Infinity;
-	    }
-	    return count;
-	}
-	function getFullPath(resolver, id = "", normalize) {
-	    if (normalize !== false)
-	        id = normalizeId(id);
-	    const p = resolver.parse(id);
-	    return _getFullPath(resolver, p);
-	}
-	resolve.getFullPath = getFullPath;
-	function _getFullPath(resolver, p) {
-	    const serialized = resolver.serialize(p);
-	    return serialized.split("#")[0] + "#";
-	}
-	resolve._getFullPath = _getFullPath;
-	const TRAILING_SLASH_HASH = /#\/?$/;
-	function normalizeId(id) {
-	    return id ? id.replace(TRAILING_SLASH_HASH, "") : "";
-	}
-	resolve.normalizeId = normalizeId;
-	function resolveUrl(resolver, baseId, id) {
-	    id = normalizeId(id);
-	    return resolver.resolve(baseId, id);
-	}
-	resolve.resolveUrl = resolveUrl;
-	const ANCHOR = /^[a-z_][-a-z0-9._]*$/i;
-	function getSchemaRefs(schema, baseId) {
-	    if (typeof schema == "boolean")
-	        return {};
-	    const { schemaId, uriResolver } = this.opts;
-	    const schId = normalizeId(schema[schemaId] || baseId);
-	    const baseIds = { "": schId };
-	    const pathPrefix = getFullPath(uriResolver, schId, false);
-	    const localRefs = {};
-	    const schemaRefs = new Set();
-	    traverse(schema, { allKeys: true }, (sch, jsonPtr, _, parentJsonPtr) => {
-	        if (parentJsonPtr === undefined)
-	            return;
-	        const fullPath = pathPrefix + jsonPtr;
-	        let innerBaseId = baseIds[parentJsonPtr];
-	        if (typeof sch[schemaId] == "string")
-	            innerBaseId = addRef.call(this, sch[schemaId]);
-	        addAnchor.call(this, sch.$anchor);
-	        addAnchor.call(this, sch.$dynamicAnchor);
-	        baseIds[jsonPtr] = innerBaseId;
-	        function addRef(ref) {
-	            // eslint-disable-next-line @typescript-eslint/unbound-method
-	            const _resolve = this.opts.uriResolver.resolve;
-	            ref = normalizeId(innerBaseId ? _resolve(innerBaseId, ref) : ref);
-	            if (schemaRefs.has(ref))
-	                throw ambiguos(ref);
-	            schemaRefs.add(ref);
-	            let schOrRef = this.refs[ref];
-	            if (typeof schOrRef == "string")
-	                schOrRef = this.refs[schOrRef];
-	            if (typeof schOrRef == "object") {
-	                checkAmbiguosRef(sch, schOrRef.schema, ref);
-	            }
-	            else if (ref !== normalizeId(fullPath)) {
-	                if (ref[0] === "#") {
-	                    checkAmbiguosRef(sch, localRefs[ref], ref);
-	                    localRefs[ref] = sch;
-	                }
-	                else {
-	                    this.refs[ref] = fullPath;
-	                }
-	            }
-	            return ref;
-	        }
-	        function addAnchor(anchor) {
-	            if (typeof anchor == "string") {
-	                if (!ANCHOR.test(anchor))
-	                    throw new Error(`invalid anchor "${anchor}"`);
-	                addRef.call(this, `#${anchor}`);
-	            }
-	        }
-	    });
-	    return localRefs;
-	    function checkAmbiguosRef(sch1, sch2, ref) {
-	        if (sch2 !== undefined && !equal(sch1, sch2))
-	            throw ambiguos(ref);
-	    }
-	    function ambiguos(ref) {
-	        return new Error(`reference "${ref}" resolves to more than one schema`);
-	    }
-	}
-	resolve.getSchemaRefs = getSchemaRefs;
-	
-	return resolve;
-}
-
-var hasRequiredValidate;
-
-function requireValidate () {
-	if (hasRequiredValidate) return validate;
-	hasRequiredValidate = 1;
-	Object.defineProperty(validate, "__esModule", { value: true });
-	validate.getData = validate.KeywordCxt = validate.validateFunctionCode = void 0;
-	const boolSchema_1 = requireBoolSchema();
-	const dataType_1 = requireDataType();
-	const applicability_1 = requireApplicability();
-	const dataType_2 = requireDataType();
-	const defaults_1 = requireDefaults();
-	const keyword_1 = requireKeyword();
-	const subschema_1 = requireSubschema();
-	const codegen_1 = requireCodegen();
-	const names_1 = requireNames();
-	const resolve_1 = requireResolve();
-	const util_1 = requireUtil$1();
-	const errors_1 = requireErrors();
-	// schema compilation - generates validation function, subschemaCode (below) is used for subschemas
-	function validateFunctionCode(it) {
-	    if (isSchemaObj(it)) {
-	        checkKeywords(it);
-	        if (schemaCxtHasRules(it)) {
-	            topSchemaObjCode(it);
-	            return;
-	        }
-	    }
-	    validateFunction(it, () => (0, boolSchema_1.topBoolOrEmptySchema)(it));
-	}
-	validate.validateFunctionCode = validateFunctionCode;
-	function validateFunction({ gen, validateName, schema, schemaEnv, opts }, body) {
-	    if (opts.code.es5) {
-	        gen.func(validateName, (0, codegen_1._) `${names_1.default.data}, ${names_1.default.valCxt}`, schemaEnv.$async, () => {
-	            gen.code((0, codegen_1._) `"use strict"; ${funcSourceUrl(schema, opts)}`);
-	            destructureValCxtES5(gen, opts);
-	            gen.code(body);
-	        });
-	    }
-	    else {
-	        gen.func(validateName, (0, codegen_1._) `${names_1.default.data}, ${destructureValCxt(opts)}`, schemaEnv.$async, () => gen.code(funcSourceUrl(schema, opts)).code(body));
-	    }
-	}
-	function destructureValCxt(opts) {
-	    return (0, codegen_1._) `{${names_1.default.instancePath}="", ${names_1.default.parentData}, ${names_1.default.parentDataProperty}, ${names_1.default.rootData}=${names_1.default.data}${opts.dynamicRef ? (0, codegen_1._) `, ${names_1.default.dynamicAnchors}={}` : codegen_1.nil}}={}`;
-	}
-	function destructureValCxtES5(gen, opts) {
-	    gen.if(names_1.default.valCxt, () => {
-	        gen.var(names_1.default.instancePath, (0, codegen_1._) `${names_1.default.valCxt}.${names_1.default.instancePath}`);
-	        gen.var(names_1.default.parentData, (0, codegen_1._) `${names_1.default.valCxt}.${names_1.default.parentData}`);
-	        gen.var(names_1.default.parentDataProperty, (0, codegen_1._) `${names_1.default.valCxt}.${names_1.default.parentDataProperty}`);
-	        gen.var(names_1.default.rootData, (0, codegen_1._) `${names_1.default.valCxt}.${names_1.default.rootData}`);
-	        if (opts.dynamicRef)
-	            gen.var(names_1.default.dynamicAnchors, (0, codegen_1._) `${names_1.default.valCxt}.${names_1.default.dynamicAnchors}`);
-	    }, () => {
-	        gen.var(names_1.default.instancePath, (0, codegen_1._) `""`);
-	        gen.var(names_1.default.parentData, (0, codegen_1._) `undefined`);
-	        gen.var(names_1.default.parentDataProperty, (0, codegen_1._) `undefined`);
-	        gen.var(names_1.default.rootData, names_1.default.data);
-	        if (opts.dynamicRef)
-	            gen.var(names_1.default.dynamicAnchors, (0, codegen_1._) `{}`);
-	    });
-	}
-	function topSchemaObjCode(it) {
-	    const { schema, opts, gen } = it;
-	    validateFunction(it, () => {
-	        if (opts.$comment && schema.$comment)
-	            commentKeyword(it);
-	        checkNoDefault(it);
-	        gen.let(names_1.default.vErrors, null);
-	        gen.let(names_1.default.errors, 0);
-	        if (opts.unevaluated)
-	            resetEvaluated(it);
-	        typeAndKeywords(it);
-	        returnResults(it);
-	    });
-	    return;
-	}
-	function resetEvaluated(it) {
-	    // TODO maybe some hook to execute it in the end to check whether props/items are Name, as in assignEvaluated
-	    const { gen, validateName } = it;
-	    it.evaluated = gen.const("evaluated", (0, codegen_1._) `${validateName}.evaluated`);
-	    gen.if((0, codegen_1._) `${it.evaluated}.dynamicProps`, () => gen.assign((0, codegen_1._) `${it.evaluated}.props`, (0, codegen_1._) `undefined`));
-	    gen.if((0, codegen_1._) `${it.evaluated}.dynamicItems`, () => gen.assign((0, codegen_1._) `${it.evaluated}.items`, (0, codegen_1._) `undefined`));
-	}
-	function funcSourceUrl(schema, opts) {
-	    const schId = typeof schema == "object" && schema[opts.schemaId];
-	    return schId && (opts.code.source || opts.code.process) ? (0, codegen_1._) `/*# sourceURL=${schId} */` : codegen_1.nil;
-	}
-	// schema compilation - this function is used recursively to generate code for sub-schemas
-	function subschemaCode(it, valid) {
-	    if (isSchemaObj(it)) {
-	        checkKeywords(it);
-	        if (schemaCxtHasRules(it)) {
-	            subSchemaObjCode(it, valid);
-	            return;
-	        }
-	    }
-	    (0, boolSchema_1.boolOrEmptySchema)(it, valid);
-	}
-	function schemaCxtHasRules({ schema, self }) {
-	    if (typeof schema == "boolean")
-	        return !schema;
-	    for (const key in schema)
-	        if (self.RULES.all[key])
-	            return true;
-	    return false;
-	}
-	function isSchemaObj(it) {
-	    return typeof it.schema != "boolean";
-	}
-	function subSchemaObjCode(it, valid) {
-	    const { schema, gen, opts } = it;
-	    if (opts.$comment && schema.$comment)
-	        commentKeyword(it);
-	    updateContext(it);
-	    checkAsyncSchema(it);
-	    const errsCount = gen.const("_errs", names_1.default.errors);
-	    typeAndKeywords(it, errsCount);
-	    // TODO var
-	    gen.var(valid, (0, codegen_1._) `${errsCount} === ${names_1.default.errors}`);
-	}
-	function checkKeywords(it) {
-	    (0, util_1.checkUnknownRules)(it);
-	    checkRefsAndKeywords(it);
-	}
-	function typeAndKeywords(it, errsCount) {
-	    if (it.opts.jtd)
-	        return schemaKeywords(it, [], false, errsCount);
-	    const types = (0, dataType_1.getSchemaTypes)(it.schema);
-	    const checkedTypes = (0, dataType_1.coerceAndCheckDataType)(it, types);
-	    schemaKeywords(it, types, !checkedTypes, errsCount);
-	}
-	function checkRefsAndKeywords(it) {
-	    const { schema, errSchemaPath, opts, self } = it;
-	    if (schema.$ref && opts.ignoreKeywordsWithRef && (0, util_1.schemaHasRulesButRef)(schema, self.RULES)) {
-	        self.logger.warn(`$ref: keywords ignored in schema at path "${errSchemaPath}"`);
-	    }
-	}
-	function checkNoDefault(it) {
-	    const { schema, opts } = it;
-	    if (schema.default !== undefined && opts.useDefaults && opts.strictSchema) {
-	        (0, util_1.checkStrictMode)(it, "default is ignored in the schema root");
-	    }
-	}
-	function updateContext(it) {
-	    const schId = it.schema[it.opts.schemaId];
-	    if (schId)
-	        it.baseId = (0, resolve_1.resolveUrl)(it.opts.uriResolver, it.baseId, schId);
-	}
-	function checkAsyncSchema(it) {
-	    if (it.schema.$async && !it.schemaEnv.$async)
-	        throw new Error("async schema in sync schema");
-	}
-	function commentKeyword({ gen, schemaEnv, schema, errSchemaPath, opts }) {
-	    const msg = schema.$comment;
-	    if (opts.$comment === true) {
-	        gen.code((0, codegen_1._) `${names_1.default.self}.logger.log(${msg})`);
-	    }
-	    else if (typeof opts.$comment == "function") {
-	        const schemaPath = (0, codegen_1.str) `${errSchemaPath}/$comment`;
-	        const rootName = gen.scopeValue("root", { ref: schemaEnv.root });
-	        gen.code((0, codegen_1._) `${names_1.default.self}.opts.$comment(${msg}, ${schemaPath}, ${rootName}.schema)`);
-	    }
-	}
-	function returnResults(it) {
-	    const { gen, schemaEnv, validateName, ValidationError, opts } = it;
-	    if (schemaEnv.$async) {
-	        // TODO assign unevaluated
-	        gen.if((0, codegen_1._) `${names_1.default.errors} === 0`, () => gen.return(names_1.default.data), () => gen.throw((0, codegen_1._) `new ${ValidationError}(${names_1.default.vErrors})`));
-	    }
-	    else {
-	        gen.assign((0, codegen_1._) `${validateName}.errors`, names_1.default.vErrors);
-	        if (opts.unevaluated)
-	            assignEvaluated(it);
-	        gen.return((0, codegen_1._) `${names_1.default.errors} === 0`);
-	    }
-	}
-	function assignEvaluated({ gen, evaluated, props, items }) {
-	    if (props instanceof codegen_1.Name)
-	        gen.assign((0, codegen_1._) `${evaluated}.props`, props);
-	    if (items instanceof codegen_1.Name)
-	        gen.assign((0, codegen_1._) `${evaluated}.items`, items);
-	}
-	function schemaKeywords(it, types, typeErrors, errsCount) {
-	    const { gen, schema, data, allErrors, opts, self } = it;
-	    const { RULES } = self;
-	    if (schema.$ref && (opts.ignoreKeywordsWithRef || !(0, util_1.schemaHasRulesButRef)(schema, RULES))) {
-	        gen.block(() => keywordCode(it, "$ref", RULES.all.$ref.definition)); // TODO typecast
-	        return;
-	    }
-	    if (!opts.jtd)
-	        checkStrictTypes(it, types);
-	    gen.block(() => {
-	        for (const group of RULES.rules)
-	            groupKeywords(group);
-	        groupKeywords(RULES.post);
-	    });
-	    function groupKeywords(group) {
-	        if (!(0, applicability_1.shouldUseGroup)(schema, group))
-	            return;
-	        if (group.type) {
-	            gen.if((0, dataType_2.checkDataType)(group.type, data, opts.strictNumbers));
-	            iterateKeywords(it, group);
-	            if (types.length === 1 && types[0] === group.type && typeErrors) {
-	                gen.else();
-	                (0, dataType_2.reportTypeError)(it);
-	            }
-	            gen.endIf();
-	        }
-	        else {
-	            iterateKeywords(it, group);
-	        }
-	        // TODO make it "ok" call?
-	        if (!allErrors)
-	            gen.if((0, codegen_1._) `${names_1.default.errors} === ${errsCount || 0}`);
-	    }
-	}
-	function iterateKeywords(it, group) {
-	    const { gen, schema, opts: { useDefaults }, } = it;
-	    if (useDefaults)
-	        (0, defaults_1.assignDefaults)(it, group.type);
-	    gen.block(() => {
-	        for (const rule of group.rules) {
-	            if ((0, applicability_1.shouldUseRule)(schema, rule)) {
-	                keywordCode(it, rule.keyword, rule.definition, group.type);
-	            }
-	        }
-	    });
-	}
-	function checkStrictTypes(it, types) {
-	    if (it.schemaEnv.meta || !it.opts.strictTypes)
-	        return;
-	    checkContextTypes(it, types);
-	    if (!it.opts.allowUnionTypes)
-	        checkMultipleTypes(it, types);
-	    checkKeywordTypes(it, it.dataTypes);
-	}
-	function checkContextTypes(it, types) {
-	    if (!types.length)
-	        return;
-	    if (!it.dataTypes.length) {
-	        it.dataTypes = types;
-	        return;
-	    }
-	    types.forEach((t) => {
-	        if (!includesType(it.dataTypes, t)) {
-	            strictTypesError(it, `type "${t}" not allowed by context "${it.dataTypes.join(",")}"`);
-	        }
-	    });
-	    narrowSchemaTypes(it, types);
-	}
-	function checkMultipleTypes(it, ts) {
-	    if (ts.length > 1 && !(ts.length === 2 && ts.includes("null"))) {
-	        strictTypesError(it, "use allowUnionTypes to allow union type keyword");
-	    }
-	}
-	function checkKeywordTypes(it, ts) {
-	    const rules = it.self.RULES.all;
-	    for (const keyword in rules) {
-	        const rule = rules[keyword];
-	        if (typeof rule == "object" && (0, applicability_1.shouldUseRule)(it.schema, rule)) {
-	            const { type } = rule.definition;
-	            if (type.length && !type.some((t) => hasApplicableType(ts, t))) {
-	                strictTypesError(it, `missing type "${type.join(",")}" for keyword "${keyword}"`);
-	            }
-	        }
-	    }
-	}
-	function hasApplicableType(schTs, kwdT) {
-	    return schTs.includes(kwdT) || (kwdT === "number" && schTs.includes("integer"));
-	}
-	function includesType(ts, t) {
-	    return ts.includes(t) || (t === "integer" && ts.includes("number"));
-	}
-	function narrowSchemaTypes(it, withTypes) {
-	    const ts = [];
-	    for (const t of it.dataTypes) {
-	        if (includesType(withTypes, t))
-	            ts.push(t);
-	        else if (withTypes.includes("integer") && t === "number")
-	            ts.push("integer");
-	    }
-	    it.dataTypes = ts;
-	}
-	function strictTypesError(it, msg) {
-	    const schemaPath = it.schemaEnv.baseId + it.errSchemaPath;
-	    msg += ` at "${schemaPath}" (strictTypes)`;
-	    (0, util_1.checkStrictMode)(it, msg, it.opts.strictTypes);
-	}
-	class KeywordCxt {
-	    constructor(it, def, keyword) {
-	        (0, keyword_1.validateKeywordUsage)(it, def, keyword);
-	        this.gen = it.gen;
-	        this.allErrors = it.allErrors;
-	        this.keyword = keyword;
-	        this.data = it.data;
-	        this.schema = it.schema[keyword];
-	        this.$data = def.$data && it.opts.$data && this.schema && this.schema.$data;
-	        this.schemaValue = (0, util_1.schemaRefOrVal)(it, this.schema, keyword, this.$data);
-	        this.schemaType = def.schemaType;
-	        this.parentSchema = it.schema;
-	        this.params = {};
-	        this.it = it;
-	        this.def = def;
-	        if (this.$data) {
-	            this.schemaCode = it.gen.const("vSchema", getData(this.$data, it));
-	        }
-	        else {
-	            this.schemaCode = this.schemaValue;
-	            if (!(0, keyword_1.validSchemaType)(this.schema, def.schemaType, def.allowUndefined)) {
-	                throw new Error(`${keyword} value must be ${JSON.stringify(def.schemaType)}`);
-	            }
-	        }
-	        if ("code" in def ? def.trackErrors : def.errors !== false) {
-	            this.errsCount = it.gen.const("_errs", names_1.default.errors);
-	        }
-	    }
-	    result(condition, successAction, failAction) {
-	        this.failResult((0, codegen_1.not)(condition), successAction, failAction);
-	    }
-	    failResult(condition, successAction, failAction) {
-	        this.gen.if(condition);
-	        if (failAction)
-	            failAction();
-	        else
-	            this.error();
-	        if (successAction) {
-	            this.gen.else();
-	            successAction();
-	            if (this.allErrors)
-	                this.gen.endIf();
-	        }
-	        else {
-	            if (this.allErrors)
-	                this.gen.endIf();
-	            else
-	                this.gen.else();
-	        }
-	    }
-	    pass(condition, failAction) {
-	        this.failResult((0, codegen_1.not)(condition), undefined, failAction);
-	    }
-	    fail(condition) {
-	        if (condition === undefined) {
-	            this.error();
-	            if (!this.allErrors)
-	                this.gen.if(false); // this branch will be removed by gen.optimize
-	            return;
-	        }
-	        this.gen.if(condition);
-	        this.error();
-	        if (this.allErrors)
-	            this.gen.endIf();
-	        else
-	            this.gen.else();
-	    }
-	    fail$data(condition) {
-	        if (!this.$data)
-	            return this.fail(condition);
-	        const { schemaCode } = this;
-	        this.fail((0, codegen_1._) `${schemaCode} !== undefined && (${(0, codegen_1.or)(this.invalid$data(), condition)})`);
-	    }
-	    error(append, errorParams, errorPaths) {
-	        if (errorParams) {
-	            this.setParams(errorParams);
-	            this._error(append, errorPaths);
-	            this.setParams({});
-	            return;
-	        }
-	        this._error(append, errorPaths);
-	    }
-	    _error(append, errorPaths) {
-	        (append ? errors_1.reportExtraError : errors_1.reportError)(this, this.def.error, errorPaths);
-	    }
-	    $dataError() {
-	        (0, errors_1.reportError)(this, this.def.$dataError || errors_1.keyword$DataError);
-	    }
-	    reset() {
-	        if (this.errsCount === undefined)
-	            throw new Error('add "trackErrors" to keyword definition');
-	        (0, errors_1.resetErrorsCount)(this.gen, this.errsCount);
-	    }
-	    ok(cond) {
-	        if (!this.allErrors)
-	            this.gen.if(cond);
-	    }
-	    setParams(obj, assign) {
-	        if (assign)
-	            Object.assign(this.params, obj);
-	        else
-	            this.params = obj;
-	    }
-	    block$data(valid, codeBlock, $dataValid = codegen_1.nil) {
-	        this.gen.block(() => {
-	            this.check$data(valid, $dataValid);
-	            codeBlock();
-	        });
-	    }
-	    check$data(valid = codegen_1.nil, $dataValid = codegen_1.nil) {
-	        if (!this.$data)
-	            return;
-	        const { gen, schemaCode, schemaType, def } = this;
-	        gen.if((0, codegen_1.or)((0, codegen_1._) `${schemaCode} === undefined`, $dataValid));
-	        if (valid !== codegen_1.nil)
-	            gen.assign(valid, true);
-	        if (schemaType.length || def.validateSchema) {
-	            gen.elseIf(this.invalid$data());
-	            this.$dataError();
-	            if (valid !== codegen_1.nil)
-	                gen.assign(valid, false);
-	        }
-	        gen.else();
-	    }
-	    invalid$data() {
-	        const { gen, schemaCode, schemaType, def, it } = this;
-	        return (0, codegen_1.or)(wrong$DataType(), invalid$DataSchema());
-	        function wrong$DataType() {
-	            if (schemaType.length) {
-	                /* istanbul ignore if */
-	                if (!(schemaCode instanceof codegen_1.Name))
-	                    throw new Error("ajv implementation error");
-	                const st = Array.isArray(schemaType) ? schemaType : [schemaType];
-	                return (0, codegen_1._) `${(0, dataType_2.checkDataTypes)(st, schemaCode, it.opts.strictNumbers, dataType_2.DataType.Wrong)}`;
-	            }
-	            return codegen_1.nil;
-	        }
-	        function invalid$DataSchema() {
-	            if (def.validateSchema) {
-	                const validateSchemaRef = gen.scopeValue("validate$data", { ref: def.validateSchema }); // TODO value.code for standalone
-	                return (0, codegen_1._) `!${validateSchemaRef}(${schemaCode})`;
-	            }
-	            return codegen_1.nil;
-	        }
-	    }
-	    subschema(appl, valid) {
-	        const subschema = (0, subschema_1.getSubschema)(this.it, appl);
-	        (0, subschema_1.extendSubschemaData)(subschema, this.it, appl);
-	        (0, subschema_1.extendSubschemaMode)(subschema, appl);
-	        const nextContext = { ...this.it, ...subschema, items: undefined, props: undefined };
-	        subschemaCode(nextContext, valid);
-	        return nextContext;
-	    }
-	    mergeEvaluated(schemaCxt, toName) {
-	        const { it, gen } = this;
-	        if (!it.opts.unevaluated)
-	            return;
-	        if (it.props !== true && schemaCxt.props !== undefined) {
-	            it.props = util_1.mergeEvaluated.props(gen, schemaCxt.props, it.props, toName);
-	        }
-	        if (it.items !== true && schemaCxt.items !== undefined) {
-	            it.items = util_1.mergeEvaluated.items(gen, schemaCxt.items, it.items, toName);
-	        }
-	    }
-	    mergeValidEvaluated(schemaCxt, valid) {
-	        const { it, gen } = this;
-	        if (it.opts.unevaluated && (it.props !== true || it.items !== true)) {
-	            gen.if(valid, () => this.mergeEvaluated(schemaCxt, codegen_1.Name));
-	            return true;
-	        }
-	    }
-	}
-	validate.KeywordCxt = KeywordCxt;
-	function keywordCode(it, keyword, def, ruleType) {
-	    const cxt = new KeywordCxt(it, def, keyword);
-	    if ("code" in def) {
-	        def.code(cxt, ruleType);
-	    }
-	    else if (cxt.$data && def.validate) {
-	        (0, keyword_1.funcKeywordCode)(cxt, def);
-	    }
-	    else if ("macro" in def) {
-	        (0, keyword_1.macroKeywordCode)(cxt, def);
-	    }
-	    else if (def.compile || def.validate) {
-	        (0, keyword_1.funcKeywordCode)(cxt, def);
-	    }
-	}
-	const JSON_POINTER = /^\/(?:[^~]|~0|~1)*$/;
-	const RELATIVE_JSON_POINTER = /^([0-9]+)(#|\/(?:[^~]|~0|~1)*)?$/;
-	function getData($data, { dataLevel, dataNames, dataPathArr }) {
-	    let jsonPointer;
-	    let data;
-	    if ($data === "")
-	        return names_1.default.rootData;
-	    if ($data[0] === "/") {
-	        if (!JSON_POINTER.test($data))
-	            throw new Error(`Invalid JSON-pointer: ${$data}`);
-	        jsonPointer = $data;
-	        data = names_1.default.rootData;
-	    }
-	    else {
-	        const matches = RELATIVE_JSON_POINTER.exec($data);
-	        if (!matches)
-	            throw new Error(`Invalid JSON-pointer: ${$data}`);
-	        const up = +matches[1];
-	        jsonPointer = matches[2];
-	        if (jsonPointer === "#") {
-	            if (up >= dataLevel)
-	                throw new Error(errorMsg("property/index", up));
-	            return dataPathArr[dataLevel - up];
-	        }
-	        if (up > dataLevel)
-	            throw new Error(errorMsg("data", up));
-	        data = dataNames[dataLevel - up];
-	        if (!jsonPointer)
-	            return data;
-	    }
-	    let expr = data;
-	    const segments = jsonPointer.split("/");
-	    for (const segment of segments) {
-	        if (segment) {
-	            data = (0, codegen_1._) `${data}${(0, codegen_1.getProperty)((0, util_1.unescapeJsonPointer)(segment))}`;
-	            expr = (0, codegen_1._) `${expr} && ${data}`;
-	        }
-	    }
-	    return expr;
-	    function errorMsg(pointerType, up) {
-	        return `Cannot access ${pointerType} ${up} levels up, current level is ${dataLevel}`;
-	    }
-	}
-	validate.getData = getData;
-	
-	return validate;
-}
-
-var validation_error = {};
-
-var hasRequiredValidation_error;
-
-function requireValidation_error () {
-	if (hasRequiredValidation_error) return validation_error;
-	hasRequiredValidation_error = 1;
-	Object.defineProperty(validation_error, "__esModule", { value: true });
-	class ValidationError extends Error {
-	    constructor(errors) {
-	        super("validation failed");
-	        this.errors = errors;
-	        this.ajv = this.validation = true;
-	    }
-	}
-	validation_error.default = ValidationError;
-	
-	return validation_error;
-}
-
-var ref_error = {};
-
-var hasRequiredRef_error;
-
-function requireRef_error () {
-	if (hasRequiredRef_error) return ref_error;
-	hasRequiredRef_error = 1;
-	Object.defineProperty(ref_error, "__esModule", { value: true });
-	const resolve_1 = requireResolve();
-	class MissingRefError extends Error {
-	    constructor(resolver, baseId, ref, msg) {
-	        super(msg || `can't resolve reference ${ref} from id ${baseId}`);
-	        this.missingRef = (0, resolve_1.resolveUrl)(resolver, baseId, ref);
-	        this.missingSchema = (0, resolve_1.normalizeId)((0, resolve_1.getFullPath)(resolver, this.missingRef));
-	    }
-	}
-	ref_error.default = MissingRefError;
-	
-	return ref_error;
-}
-
-var compile = {};
-
-var hasRequiredCompile;
-
-function requireCompile () {
-	if (hasRequiredCompile) return compile;
-	hasRequiredCompile = 1;
-	Object.defineProperty(compile, "__esModule", { value: true });
-	compile.resolveSchema = compile.getCompilingSchema = compile.resolveRef = compile.compileSchema = compile.SchemaEnv = void 0;
-	const codegen_1 = requireCodegen();
-	const validation_error_1 = requireValidation_error();
-	const names_1 = requireNames();
-	const resolve_1 = requireResolve();
-	const util_1 = requireUtil$1();
-	const validate_1 = requireValidate();
-	class SchemaEnv {
-	    constructor(env) {
-	        var _a;
-	        this.refs = {};
-	        this.dynamicAnchors = {};
-	        let schema;
-	        if (typeof env.schema == "object")
-	            schema = env.schema;
-	        this.schema = env.schema;
-	        this.schemaId = env.schemaId;
-	        this.root = env.root || this;
-	        this.baseId = (_a = env.baseId) !== null && _a !== void 0 ? _a : (0, resolve_1.normalizeId)(schema === null || schema === void 0 ? void 0 : schema[env.schemaId || "$id"]);
-	        this.schemaPath = env.schemaPath;
-	        this.localRefs = env.localRefs;
-	        this.meta = env.meta;
-	        this.$async = schema === null || schema === void 0 ? void 0 : schema.$async;
-	        this.refs = {};
-	    }
-	}
-	compile.SchemaEnv = SchemaEnv;
-	// let codeSize = 0
-	// let nodeCount = 0
-	// Compiles schema in SchemaEnv
-	function compileSchema(sch) {
-	    // TODO refactor - remove compilations
-	    const _sch = getCompilingSchema.call(this, sch);
-	    if (_sch)
-	        return _sch;
-	    const rootId = (0, resolve_1.getFullPath)(this.opts.uriResolver, sch.root.baseId); // TODO if getFullPath removed 1 tests fails
-	    const { es5, lines } = this.opts.code;
-	    const { ownProperties } = this.opts;
-	    const gen = new codegen_1.CodeGen(this.scope, { es5, lines, ownProperties });
-	    let _ValidationError;
-	    if (sch.$async) {
-	        _ValidationError = gen.scopeValue("Error", {
-	            ref: validation_error_1.default,
-	            code: (0, codegen_1._) `require("ajv/dist/runtime/validation_error").default`,
-	        });
-	    }
-	    const validateName = gen.scopeName("validate");
-	    sch.validateName = validateName;
-	    const schemaCxt = {
-	        gen,
-	        allErrors: this.opts.allErrors,
-	        data: names_1.default.data,
-	        parentData: names_1.default.parentData,
-	        parentDataProperty: names_1.default.parentDataProperty,
-	        dataNames: [names_1.default.data],
-	        dataPathArr: [codegen_1.nil], // TODO can its length be used as dataLevel if nil is removed?
-	        dataLevel: 0,
-	        dataTypes: [],
-	        definedProperties: new Set(),
-	        topSchemaRef: gen.scopeValue("schema", this.opts.code.source === true
-	            ? { ref: sch.schema, code: (0, codegen_1.stringify)(sch.schema) }
-	            : { ref: sch.schema }),
-	        validateName,
-	        ValidationError: _ValidationError,
-	        schema: sch.schema,
-	        schemaEnv: sch,
-	        rootId,
-	        baseId: sch.baseId || rootId,
-	        schemaPath: codegen_1.nil,
-	        errSchemaPath: sch.schemaPath || (this.opts.jtd ? "" : "#"),
-	        errorPath: (0, codegen_1._) `""`,
-	        opts: this.opts,
-	        self: this,
-	    };
-	    let sourceCode;
-	    try {
-	        this._compilations.add(sch);
-	        (0, validate_1.validateFunctionCode)(schemaCxt);
-	        gen.optimize(this.opts.code.optimize);
-	        // gen.optimize(1)
-	        const validateCode = gen.toString();
-	        sourceCode = `${gen.scopeRefs(names_1.default.scope)}return ${validateCode}`;
-	        // console.log((codeSize += sourceCode.length), (nodeCount += gen.nodeCount))
-	        if (this.opts.code.process)
-	            sourceCode = this.opts.code.process(sourceCode, sch);
-	        // console.log("\n\n\n *** \n", sourceCode)
-	        const makeValidate = new Function(`${names_1.default.self}`, `${names_1.default.scope}`, sourceCode);
-	        const validate = makeValidate(this, this.scope.get());
-	        this.scope.value(validateName, { ref: validate });
-	        validate.errors = null;
-	        validate.schema = sch.schema;
-	        validate.schemaEnv = sch;
-	        if (sch.$async)
-	            validate.$async = true;
-	        if (this.opts.code.source === true) {
-	            validate.source = { validateName, validateCode, scopeValues: gen._values };
-	        }
-	        if (this.opts.unevaluated) {
-	            const { props, items } = schemaCxt;
-	            validate.evaluated = {
-	                props: props instanceof codegen_1.Name ? undefined : props,
-	                items: items instanceof codegen_1.Name ? undefined : items,
-	                dynamicProps: props instanceof codegen_1.Name,
-	                dynamicItems: items instanceof codegen_1.Name,
-	            };
-	            if (validate.source)
-	                validate.source.evaluated = (0, codegen_1.stringify)(validate.evaluated);
-	        }
-	        sch.validate = validate;
-	        return sch;
-	    }
-	    catch (e) {
-	        delete sch.validate;
-	        delete sch.validateName;
-	        if (sourceCode)
-	            this.logger.error("Error compiling schema, function code:", sourceCode);
-	        // console.log("\n\n\n *** \n", sourceCode, this.opts)
-	        throw e;
-	    }
-	    finally {
-	        this._compilations.delete(sch);
-	    }
-	}
-	compile.compileSchema = compileSchema;
-	function resolveRef(root, baseId, ref) {
-	    var _a;
-	    ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, ref);
-	    const schOrFunc = root.refs[ref];
-	    if (schOrFunc)
-	        return schOrFunc;
-	    let _sch = resolve.call(this, root, ref);
-	    if (_sch === undefined) {
-	        const schema = (_a = root.localRefs) === null || _a === void 0 ? void 0 : _a[ref]; // TODO maybe localRefs should hold SchemaEnv
-	        const { schemaId } = this.opts;
-	        if (schema)
-	            _sch = new SchemaEnv({ schema, schemaId, root, baseId });
-	    }
-	    if (_sch === undefined)
-	        return;
-	    return (root.refs[ref] = inlineOrCompile.call(this, _sch));
-	}
-	compile.resolveRef = resolveRef;
-	function inlineOrCompile(sch) {
-	    if ((0, resolve_1.inlineRef)(sch.schema, this.opts.inlineRefs))
-	        return sch.schema;
-	    return sch.validate ? sch : compileSchema.call(this, sch);
-	}
-	// Index of schema compilation in the currently compiled list
-	function getCompilingSchema(schEnv) {
-	    for (const sch of this._compilations) {
-	        if (sameSchemaEnv(sch, schEnv))
-	            return sch;
-	    }
-	}
-	compile.getCompilingSchema = getCompilingSchema;
-	function sameSchemaEnv(s1, s2) {
-	    return s1.schema === s2.schema && s1.root === s2.root && s1.baseId === s2.baseId;
-	}
-	// resolve and compile the references ($ref)
-	// TODO returns AnySchemaObject (if the schema can be inlined) or validation function
-	function resolve(root, // information about the root schema for the current schema
-	ref // reference to resolve
-	) {
-	    let sch;
-	    while (typeof (sch = this.refs[ref]) == "string")
-	        ref = sch;
-	    return sch || this.schemas[ref] || resolveSchema.call(this, root, ref);
-	}
-	// Resolve schema, its root and baseId
-	function resolveSchema(root, // root object with properties schema, refs TODO below SchemaEnv is assigned to it
-	ref // reference to resolve
-	) {
-	    const p = this.opts.uriResolver.parse(ref);
-	    const refPath = (0, resolve_1._getFullPath)(this.opts.uriResolver, p);
-	    let baseId = (0, resolve_1.getFullPath)(this.opts.uriResolver, root.baseId, undefined);
-	    // TODO `Object.keys(root.schema).length > 0` should not be needed - but removing breaks 2 tests
-	    if (Object.keys(root.schema).length > 0 && refPath === baseId) {
-	        return getJsonPointer.call(this, p, root);
-	    }
-	    const id = (0, resolve_1.normalizeId)(refPath);
-	    const schOrRef = this.refs[id] || this.schemas[id];
-	    if (typeof schOrRef == "string") {
-	        const sch = resolveSchema.call(this, root, schOrRef);
-	        if (typeof (sch === null || sch === void 0 ? void 0 : sch.schema) !== "object")
-	            return;
-	        return getJsonPointer.call(this, p, sch);
-	    }
-	    if (typeof (schOrRef === null || schOrRef === void 0 ? void 0 : schOrRef.schema) !== "object")
-	        return;
-	    if (!schOrRef.validate)
-	        compileSchema.call(this, schOrRef);
-	    if (id === (0, resolve_1.normalizeId)(ref)) {
-	        const { schema } = schOrRef;
-	        const { schemaId } = this.opts;
-	        const schId = schema[schemaId];
-	        if (schId)
-	            baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
-	        return new SchemaEnv({ schema, schemaId, root, baseId });
-	    }
-	    return getJsonPointer.call(this, p, schOrRef);
-	}
-	compile.resolveSchema = resolveSchema;
-	const PREVENT_SCOPE_CHANGE = new Set([
-	    "properties",
-	    "patternProperties",
-	    "enum",
-	    "dependencies",
-	    "definitions",
-	]);
-	function getJsonPointer(parsedRef, { baseId, schema, root }) {
-	    var _a;
-	    if (((_a = parsedRef.fragment) === null || _a === void 0 ? void 0 : _a[0]) !== "/")
-	        return;
-	    for (const part of parsedRef.fragment.slice(1).split("/")) {
-	        if (typeof schema === "boolean")
-	            return;
-	        const partSchema = schema[(0, util_1.unescapeFragment)(part)];
-	        if (partSchema === undefined)
-	            return;
-	        schema = partSchema;
-	        // TODO PREVENT_SCOPE_CHANGE could be defined in keyword def?
-	        const schId = typeof schema === "object" && schema[this.opts.schemaId];
-	        if (!PREVENT_SCOPE_CHANGE.has(part) && schId) {
-	            baseId = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schId);
-	        }
-	    }
-	    let env;
-	    if (typeof schema != "boolean" && schema.$ref && !(0, util_1.schemaHasRulesButRef)(schema, this.RULES)) {
-	        const $ref = (0, resolve_1.resolveUrl)(this.opts.uriResolver, baseId, schema.$ref);
-	        env = resolveSchema.call(this, root, $ref);
-	    }
-	    // even though resolution failed we need to return SchemaEnv to throw exception
-	    // so that compileAsync loads missing schema.
-	    const { schemaId } = this.opts;
-	    env = env || new SchemaEnv({ schema, schemaId, root, baseId });
-	    if (env.schema !== env.root.schema)
-	        return env;
-	    return undefined;
-	}
-	
-	return compile;
-}
-
-const $id$1 = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#";
-const description = "Meta-schema for $data reference (JSON AnySchema extension proposal)";
-const type$1 = "object";
-const required$1 = ["$data"];
-const properties$2 = {"$data":{"type":"string","anyOf":[{"format":"relative-json-pointer"},{"format":"json-pointer"}]}};
-const additionalProperties$1 = false;
-const require$$9 = {
-  $id: $id$1,
-  description,
-  type: type$1,
-  required: required$1,
-  properties: properties$2,
-  additionalProperties: additionalProperties$1,
-};
-
-var uri = {};
-
-var fastUri = {exports: {}};
-
-var utils$1;
-var hasRequiredUtils$1;
-
-function requireUtils$1 () {
-	if (hasRequiredUtils$1) return utils$1;
-	hasRequiredUtils$1 = 1;
-
-	/** @type {(value: string) => boolean} */
-	const isUUID = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu);
-
-	/** @type {(value: string) => boolean} */
-	const isIPv4 = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
-
-	/**
-	 * @param {Array<string>} input
-	 * @returns {string}
-	 */
-	function stringArrayToHexStripped (input) {
-	  let acc = '';
-	  let code = 0;
-	  let i = 0;
-
-	  for (i = 0; i < input.length; i++) {
-	    code = input[i].charCodeAt(0);
-	    if (code === 48) {
-	      continue
-	    }
-	    if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102))) {
-	      return ''
-	    }
-	    acc += input[i];
-	    break
-	  }
-
-	  for (i += 1; i < input.length; i++) {
-	    code = input[i].charCodeAt(0);
-	    if (!((code >= 48 && code <= 57) || (code >= 65 && code <= 70) || (code >= 97 && code <= 102))) {
-	      return ''
-	    }
-	    acc += input[i];
-	  }
-	  return acc
-	}
-
-	/**
-	 * @typedef {Object} GetIPV6Result
-	 * @property {boolean} error - Indicates if there was an error parsing the IPv6 address.
-	 * @property {string} address - The parsed IPv6 address.
-	 * @property {string} [zone] - The zone identifier, if present.
-	 */
-
-	/**
-	 * @param {string} value
-	 * @returns {boolean}
-	 */
-	const nonSimpleDomain = RegExp.prototype.test.bind(/[^!"$&'()*+,\-.;=_`a-z{}~]/u);
-
-	/**
-	 * @param {Array<string>} buffer
-	 * @returns {boolean}
-	 */
-	function consumeIsZone (buffer) {
-	  buffer.length = 0;
-	  return true
-	}
-
-	/**
-	 * @param {Array<string>} buffer
-	 * @param {Array<string>} address
-	 * @param {GetIPV6Result} output
-	 * @returns {boolean}
-	 */
-	function consumeHextets (buffer, address, output) {
-	  if (buffer.length) {
-	    const hex = stringArrayToHexStripped(buffer);
-	    if (hex !== '') {
-	      address.push(hex);
-	    } else {
-	      output.error = true;
-	      return false
-	    }
-	    buffer.length = 0;
-	  }
-	  return true
-	}
-
-	/**
-	 * @param {string} input
-	 * @returns {GetIPV6Result}
-	 */
-	function getIPV6 (input) {
-	  let tokenCount = 0;
-	  const output = { error: false, address: '', zone: '' };
-	  /** @type {Array<string>} */
-	  const address = [];
-	  /** @type {Array<string>} */
-	  const buffer = [];
-	  let endipv6Encountered = false;
-	  let endIpv6 = false;
-
-	  let consume = consumeHextets;
-
-	  for (let i = 0; i < input.length; i++) {
-	    const cursor = input[i];
-	    if (cursor === '[' || cursor === ']') { continue }
-	    if (cursor === ':') {
-	      if (endipv6Encountered === true) {
-	        endIpv6 = true;
-	      }
-	      if (!consume(buffer, address, output)) { break }
-	      if (++tokenCount > 7) {
-	        // not valid
-	        output.error = true;
-	        break
-	      }
-	      if (i > 0 && input[i - 1] === ':') {
-	        endipv6Encountered = true;
-	      }
-	      address.push(':');
-	      continue
-	    } else if (cursor === '%') {
-	      if (!consume(buffer, address, output)) { break }
-	      // switch to zone detection
-	      consume = consumeIsZone;
-	    } else {
-	      buffer.push(cursor);
-	      continue
-	    }
-	  }
-	  if (buffer.length) {
-	    if (consume === consumeIsZone) {
-	      output.zone = buffer.join('');
-	    } else if (endIpv6) {
-	      address.push(buffer.join(''));
-	    } else {
-	      address.push(stringArrayToHexStripped(buffer));
-	    }
-	  }
-	  output.address = address.join('');
-	  return output
-	}
-
-	/**
-	 * @typedef {Object} NormalizeIPv6Result
-	 * @property {string} host - The normalized host.
-	 * @property {string} [escapedHost] - The escaped host.
-	 * @property {boolean} isIPV6 - Indicates if the host is an IPv6 address.
-	 */
-
-	/**
-	 * @param {string} host
-	 * @returns {NormalizeIPv6Result}
-	 */
-	function normalizeIPv6 (host) {
-	  if (findToken(host, ':') < 2) { return { host, isIPV6: false } }
-	  const ipv6 = getIPV6(host);
-
-	  if (!ipv6.error) {
-	    let newHost = ipv6.address;
-	    let escapedHost = ipv6.address;
-	    if (ipv6.zone) {
-	      newHost += '%' + ipv6.zone;
-	      escapedHost += '%25' + ipv6.zone;
-	    }
-	    return { host: newHost, isIPV6: true, escapedHost }
-	  } else {
-	    return { host, isIPV6: false }
-	  }
-	}
-
-	/**
-	 * @param {string} str
-	 * @param {string} token
-	 * @returns {number}
-	 */
-	function findToken (str, token) {
-	  let ind = 0;
-	  for (let i = 0; i < str.length; i++) {
-	    if (str[i] === token) ind++;
-	  }
-	  return ind
-	}
-
-	/**
-	 * @param {string} path
-	 * @returns {string}
-	 *
-	 * @see https://datatracker.ietf.org/doc/html/rfc3986#section-5.2.4
-	 */
-	function removeDotSegments (path) {
-	  let input = path;
-	  const output = [];
-	  let nextSlash = -1;
-	  let len = 0;
-
-	  // eslint-disable-next-line no-cond-assign
-	  while (len = input.length) {
-	    if (len === 1) {
-	      if (input === '.') {
-	        break
-	      } else if (input === '/') {
-	        output.push('/');
-	        break
-	      } else {
-	        output.push(input);
-	        break
-	      }
-	    } else if (len === 2) {
-	      if (input[0] === '.') {
-	        if (input[1] === '.') {
-	          break
-	        } else if (input[1] === '/') {
-	          input = input.slice(2);
-	          continue
-	        }
-	      } else if (input[0] === '/') {
-	        if (input[1] === '.' || input[1] === '/') {
-	          output.push('/');
-	          break
-	        }
-	      }
-	    } else if (len === 3) {
-	      if (input === '/..') {
-	        if (output.length !== 0) {
-	          output.pop();
-	        }
-	        output.push('/');
-	        break
-	      }
-	    }
-	    if (input[0] === '.') {
-	      if (input[1] === '.') {
-	        if (input[2] === '/') {
-	          input = input.slice(3);
-	          continue
-	        }
-	      } else if (input[1] === '/') {
-	        input = input.slice(2);
-	        continue
-	      }
-	    } else if (input[0] === '/') {
-	      if (input[1] === '.') {
-	        if (input[2] === '/') {
-	          input = input.slice(2);
-	          continue
-	        } else if (input[2] === '.') {
-	          if (input[3] === '/') {
-	            input = input.slice(3);
-	            if (output.length !== 0) {
-	              output.pop();
-	            }
-	            continue
-	          }
-	        }
-	      }
-	    }
-
-	    // Rule 2E: Move normal path segment to output
-	    if ((nextSlash = input.indexOf('/', 1)) === -1) {
-	      output.push(input);
-	      break
-	    } else {
-	      output.push(input.slice(0, nextSlash));
-	      input = input.slice(nextSlash);
-	    }
-	  }
-
-	  return output.join('')
-	}
-
-	/**
-	 * @param {import('../types/index').URIComponent} component
-	 * @param {boolean} esc
-	 * @returns {import('../types/index').URIComponent}
-	 */
-	function normalizeComponentEncoding (component, esc) {
-	  const func = esc !== true ? escape : unescape;
-	  if (component.scheme !== undefined) {
-	    component.scheme = func(component.scheme);
-	  }
-	  if (component.userinfo !== undefined) {
-	    component.userinfo = func(component.userinfo);
-	  }
-	  if (component.host !== undefined) {
-	    component.host = func(component.host);
-	  }
-	  if (component.path !== undefined) {
-	    component.path = func(component.path);
-	  }
-	  if (component.query !== undefined) {
-	    component.query = func(component.query);
-	  }
-	  if (component.fragment !== undefined) {
-	    component.fragment = func(component.fragment);
-	  }
-	  return component
-	}
-
-	/**
-	 * @param {import('../types/index').URIComponent} component
-	 * @returns {string|undefined}
-	 */
-	function recomposeAuthority (component) {
-	  const uriTokens = [];
-
-	  if (component.userinfo !== undefined) {
-	    uriTokens.push(component.userinfo);
-	    uriTokens.push('@');
-	  }
-
-	  if (component.host !== undefined) {
-	    let host = unescape(component.host);
-	    if (!isIPv4(host)) {
-	      const ipV6res = normalizeIPv6(host);
-	      if (ipV6res.isIPV6 === true) {
-	        host = `[${ipV6res.escapedHost}]`;
-	      } else {
-	        host = component.host;
-	      }
-	    }
-	    uriTokens.push(host);
-	  }
-
-	  if (typeof component.port === 'number' || typeof component.port === 'string') {
-	    uriTokens.push(':');
-	    uriTokens.push(String(component.port));
-	  }
-
-	  return uriTokens.length ? uriTokens.join('') : undefined
-	}
-	utils$1 = {
-	  nonSimpleDomain,
-	  recomposeAuthority,
-	  normalizeComponentEncoding,
-	  removeDotSegments,
-	  isIPv4,
-	  isUUID,
-	  normalizeIPv6,
-	  stringArrayToHexStripped
-	};
-	return utils$1;
-}
-
-var schemes;
-var hasRequiredSchemes;
-
-function requireSchemes () {
-	if (hasRequiredSchemes) return schemes;
-	hasRequiredSchemes = 1;
-
-	const { isUUID } = requireUtils$1();
-	const URN_REG = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu;
-
-	const supportedSchemeNames = /** @type {const} */ (['http', 'https', 'ws',
-	  'wss', 'urn', 'urn:uuid']);
-
-	/** @typedef {supportedSchemeNames[number]} SchemeName */
-
-	/**
-	 * @param {string} name
-	 * @returns {name is SchemeName}
-	 */
-	function isValidSchemeName (name) {
-	  return supportedSchemeNames.indexOf(/** @type {*} */ (name)) !== -1
-	}
-
-	/**
-	 * @callback SchemeFn
-	 * @param {import('../types/index').URIComponent} component
-	 * @param {import('../types/index').Options} options
-	 * @returns {import('../types/index').URIComponent}
-	 */
-
-	/**
-	 * @typedef {Object} SchemeHandler
-	 * @property {SchemeName} scheme - The scheme name.
-	 * @property {boolean} [domainHost] - Indicates if the scheme supports domain hosts.
-	 * @property {SchemeFn} parse - Function to parse the URI component for this scheme.
-	 * @property {SchemeFn} serialize - Function to serialize the URI component for this scheme.
-	 * @property {boolean} [skipNormalize] - Indicates if normalization should be skipped for this scheme.
-	 * @property {boolean} [absolutePath] - Indicates if the scheme uses absolute paths.
-	 * @property {boolean} [unicodeSupport] - Indicates if the scheme supports Unicode.
-	 */
-
-	/**
-	 * @param {import('../types/index').URIComponent} wsComponent
-	 * @returns {boolean}
-	 */
-	function wsIsSecure (wsComponent) {
-	  if (wsComponent.secure === true) {
-	    return true
-	  } else if (wsComponent.secure === false) {
-	    return false
-	  } else if (wsComponent.scheme) {
-	    return (
-	      wsComponent.scheme.length === 3 &&
-	      (wsComponent.scheme[0] === 'w' || wsComponent.scheme[0] === 'W') &&
-	      (wsComponent.scheme[1] === 's' || wsComponent.scheme[1] === 'S') &&
-	      (wsComponent.scheme[2] === 's' || wsComponent.scheme[2] === 'S')
-	    )
-	  } else {
-	    return false
-	  }
-	}
-
-	/** @type {SchemeFn} */
-	function httpParse (component) {
-	  if (!component.host) {
-	    component.error = component.error || 'HTTP URIs must have a host.';
-	  }
-
-	  return component
-	}
-
-	/** @type {SchemeFn} */
-	function httpSerialize (component) {
-	  const secure = String(component.scheme).toLowerCase() === 'https';
-
-	  // normalize the default port
-	  if (component.port === (secure ? 443 : 80) || component.port === '') {
-	    component.port = undefined;
-	  }
-
-	  // normalize the empty path
-	  if (!component.path) {
-	    component.path = '/';
-	  }
-
-	  // NOTE: We do not parse query strings for HTTP URIs
-	  // as WWW Form Url Encoded query strings are part of the HTML4+ spec,
-	  // and not the HTTP spec.
-
-	  return component
-	}
-
-	/** @type {SchemeFn} */
-	function wsParse (wsComponent) {
-	// indicate if the secure flag is set
-	  wsComponent.secure = wsIsSecure(wsComponent);
-
-	  // construct resouce name
-	  wsComponent.resourceName = (wsComponent.path || '/') + (wsComponent.query ? '?' + wsComponent.query : '');
-	  wsComponent.path = undefined;
-	  wsComponent.query = undefined;
-
-	  return wsComponent
-	}
-
-	/** @type {SchemeFn} */
-	function wsSerialize (wsComponent) {
-	// normalize the default port
-	  if (wsComponent.port === (wsIsSecure(wsComponent) ? 443 : 80) || wsComponent.port === '') {
-	    wsComponent.port = undefined;
-	  }
-
-	  // ensure scheme matches secure flag
-	  if (typeof wsComponent.secure === 'boolean') {
-	    wsComponent.scheme = (wsComponent.secure ? 'wss' : 'ws');
-	    wsComponent.secure = undefined;
-	  }
-
-	  // reconstruct path from resource name
-	  if (wsComponent.resourceName) {
-	    const [path, query] = wsComponent.resourceName.split('?');
-	    wsComponent.path = (path && path !== '/' ? path : undefined);
-	    wsComponent.query = query;
-	    wsComponent.resourceName = undefined;
-	  }
-
-	  // forbid fragment component
-	  wsComponent.fragment = undefined;
-
-	  return wsComponent
-	}
-
-	/** @type {SchemeFn} */
-	function urnParse (urnComponent, options) {
-	  if (!urnComponent.path) {
-	    urnComponent.error = 'URN can not be parsed';
-	    return urnComponent
-	  }
-	  const matches = urnComponent.path.match(URN_REG);
-	  if (matches) {
-	    const scheme = options.scheme || urnComponent.scheme || 'urn';
-	    urnComponent.nid = matches[1].toLowerCase();
-	    urnComponent.nss = matches[2];
-	    const urnScheme = `${scheme}:${options.nid || urnComponent.nid}`;
-	    const schemeHandler = getSchemeHandler(urnScheme);
-	    urnComponent.path = undefined;
-
-	    if (schemeHandler) {
-	      urnComponent = schemeHandler.parse(urnComponent, options);
-	    }
-	  } else {
-	    urnComponent.error = urnComponent.error || 'URN can not be parsed.';
-	  }
-
-	  return urnComponent
-	}
-
-	/** @type {SchemeFn} */
-	function urnSerialize (urnComponent, options) {
-	  if (urnComponent.nid === undefined) {
-	    throw new Error('URN without nid cannot be serialized')
-	  }
-	  const scheme = options.scheme || urnComponent.scheme || 'urn';
-	  const nid = urnComponent.nid.toLowerCase();
-	  const urnScheme = `${scheme}:${options.nid || nid}`;
-	  const schemeHandler = getSchemeHandler(urnScheme);
-
-	  if (schemeHandler) {
-	    urnComponent = schemeHandler.serialize(urnComponent, options);
-	  }
-
-	  const uriComponent = urnComponent;
-	  const nss = urnComponent.nss;
-	  uriComponent.path = `${nid || options.nid}:${nss}`;
-
-	  options.skipEscape = true;
-	  return uriComponent
-	}
-
-	/** @type {SchemeFn} */
-	function urnuuidParse (urnComponent, options) {
-	  const uuidComponent = urnComponent;
-	  uuidComponent.uuid = uuidComponent.nss;
-	  uuidComponent.nss = undefined;
-
-	  if (!options.tolerant && (!uuidComponent.uuid || !isUUID(uuidComponent.uuid))) {
-	    uuidComponent.error = uuidComponent.error || 'UUID is not valid.';
-	  }
-
-	  return uuidComponent
-	}
-
-	/** @type {SchemeFn} */
-	function urnuuidSerialize (uuidComponent) {
-	  const urnComponent = uuidComponent;
-	  // normalize UUID
-	  urnComponent.nss = (uuidComponent.uuid || '').toLowerCase();
-	  return urnComponent
-	}
-
-	const http = /** @type {SchemeHandler} */ ({
-	  scheme: 'http',
-	  domainHost: true,
-	  parse: httpParse,
-	  serialize: httpSerialize
-	});
-
-	const https = /** @type {SchemeHandler} */ ({
-	  scheme: 'https',
-	  domainHost: http.domainHost,
-	  parse: httpParse,
-	  serialize: httpSerialize
-	});
-
-	const ws = /** @type {SchemeHandler} */ ({
-	  scheme: 'ws',
-	  domainHost: true,
-	  parse: wsParse,
-	  serialize: wsSerialize
-	});
-
-	const wss = /** @type {SchemeHandler} */ ({
-	  scheme: 'wss',
-	  domainHost: ws.domainHost,
-	  parse: ws.parse,
-	  serialize: ws.serialize
-	});
-
-	const urn = /** @type {SchemeHandler} */ ({
-	  scheme: 'urn',
-	  parse: urnParse,
-	  serialize: urnSerialize,
-	  skipNormalize: true
-	});
-
-	const urnuuid = /** @type {SchemeHandler} */ ({
-	  scheme: 'urn:uuid',
-	  parse: urnuuidParse,
-	  serialize: urnuuidSerialize,
-	  skipNormalize: true
-	});
-
-	const SCHEMES = /** @type {Record<SchemeName, SchemeHandler>} */ ({
-	  http,
-	  https,
-	  ws,
-	  wss,
-	  urn,
-	  'urn:uuid': urnuuid
-	});
-
-	Object.setPrototypeOf(SCHEMES, null);
-
-	/**
-	 * @param {string|undefined} scheme
-	 * @returns {SchemeHandler|undefined}
-	 */
-	function getSchemeHandler (scheme) {
-	  return (
-	    scheme && (
-	      SCHEMES[/** @type {SchemeName} */ (scheme)] ||
-	      SCHEMES[/** @type {SchemeName} */(scheme.toLowerCase())])
-	  ) ||
-	    undefined
-	}
-
-	schemes = {
-	  wsIsSecure,
-	  SCHEMES,
-	  isValidSchemeName,
-	  getSchemeHandler,
-	};
-	return schemes;
-}
-
-var hasRequiredFastUri;
-
-function requireFastUri () {
-	if (hasRequiredFastUri) return fastUri.exports;
-	hasRequiredFastUri = 1;
-
-	const { normalizeIPv6, removeDotSegments, recomposeAuthority, normalizeComponentEncoding, isIPv4, nonSimpleDomain } = requireUtils$1();
-	const { SCHEMES, getSchemeHandler } = requireSchemes();
-
-	/**
-	 * @template {import('./types/index').URIComponent|string} T
-	 * @param {T} uri
-	 * @param {import('./types/index').Options} [options]
-	 * @returns {T}
-	 */
-	function normalize (uri, options) {
-	  if (typeof uri === 'string') {
-	    uri = /** @type {T} */ (serialize(parse(uri, options), options));
-	  } else if (typeof uri === 'object') {
-	    uri = /** @type {T} */ (parse(serialize(uri, options), options));
-	  }
-	  return uri
-	}
-
-	/**
-	 * @param {string} baseURI
-	 * @param {string} relativeURI
-	 * @param {import('./types/index').Options} [options]
-	 * @returns {string}
-	 */
-	function resolve (baseURI, relativeURI, options) {
-	  const schemelessOptions = options ? Object.assign({ scheme: 'null' }, options) : { scheme: 'null' };
-	  const resolved = resolveComponent(parse(baseURI, schemelessOptions), parse(relativeURI, schemelessOptions), schemelessOptions, true);
-	  schemelessOptions.skipEscape = true;
-	  return serialize(resolved, schemelessOptions)
-	}
-
-	/**
-	 * @param {import ('./types/index').URIComponent} base
-	 * @param {import ('./types/index').URIComponent} relative
-	 * @param {import('./types/index').Options} [options]
-	 * @param {boolean} [skipNormalization=false]
-	 * @returns {import ('./types/index').URIComponent}
-	 */
-	function resolveComponent (base, relative, options, skipNormalization) {
-	  /** @type {import('./types/index').URIComponent} */
-	  const target = {};
-	  if (!skipNormalization) {
-	    base = parse(serialize(base, options), options); // normalize base component
-	    relative = parse(serialize(relative, options), options); // normalize relative component
-	  }
-	  options = options || {};
-
-	  if (!options.tolerant && relative.scheme) {
-	    target.scheme = relative.scheme;
-	    // target.authority = relative.authority;
-	    target.userinfo = relative.userinfo;
-	    target.host = relative.host;
-	    target.port = relative.port;
-	    target.path = removeDotSegments(relative.path || '');
-	    target.query = relative.query;
-	  } else {
-	    if (relative.userinfo !== undefined || relative.host !== undefined || relative.port !== undefined) {
-	      // target.authority = relative.authority;
-	      target.userinfo = relative.userinfo;
-	      target.host = relative.host;
-	      target.port = relative.port;
-	      target.path = removeDotSegments(relative.path || '');
-	      target.query = relative.query;
-	    } else {
-	      if (!relative.path) {
-	        target.path = base.path;
-	        if (relative.query !== undefined) {
-	          target.query = relative.query;
-	        } else {
-	          target.query = base.query;
-	        }
-	      } else {
-	        if (relative.path[0] === '/') {
-	          target.path = removeDotSegments(relative.path);
-	        } else {
-	          if ((base.userinfo !== undefined || base.host !== undefined || base.port !== undefined) && !base.path) {
-	            target.path = '/' + relative.path;
-	          } else if (!base.path) {
-	            target.path = relative.path;
-	          } else {
-	            target.path = base.path.slice(0, base.path.lastIndexOf('/') + 1) + relative.path;
-	          }
-	          target.path = removeDotSegments(target.path);
-	        }
-	        target.query = relative.query;
-	      }
-	      // target.authority = base.authority;
-	      target.userinfo = base.userinfo;
-	      target.host = base.host;
-	      target.port = base.port;
-	    }
-	    target.scheme = base.scheme;
-	  }
-
-	  target.fragment = relative.fragment;
-
-	  return target
-	}
-
-	/**
-	 * @param {import ('./types/index').URIComponent|string} uriA
-	 * @param {import ('./types/index').URIComponent|string} uriB
-	 * @param {import ('./types/index').Options} options
-	 * @returns {boolean}
-	 */
-	function equal (uriA, uriB, options) {
-	  if (typeof uriA === 'string') {
-	    uriA = unescape(uriA);
-	    uriA = serialize(normalizeComponentEncoding(parse(uriA, options), true), { ...options, skipEscape: true });
-	  } else if (typeof uriA === 'object') {
-	    uriA = serialize(normalizeComponentEncoding(uriA, true), { ...options, skipEscape: true });
-	  }
-
-	  if (typeof uriB === 'string') {
-	    uriB = unescape(uriB);
-	    uriB = serialize(normalizeComponentEncoding(parse(uriB, options), true), { ...options, skipEscape: true });
-	  } else if (typeof uriB === 'object') {
-	    uriB = serialize(normalizeComponentEncoding(uriB, true), { ...options, skipEscape: true });
-	  }
-
-	  return uriA.toLowerCase() === uriB.toLowerCase()
-	}
-
-	/**
-	 * @param {Readonly<import('./types/index').URIComponent>} cmpts
-	 * @param {import('./types/index').Options} [opts]
-	 * @returns {string}
-	 */
-	function serialize (cmpts, opts) {
-	  const component = {
-	    host: cmpts.host,
-	    scheme: cmpts.scheme,
-	    userinfo: cmpts.userinfo,
-	    port: cmpts.port,
-	    path: cmpts.path,
-	    query: cmpts.query,
-	    nid: cmpts.nid,
-	    nss: cmpts.nss,
-	    uuid: cmpts.uuid,
-	    fragment: cmpts.fragment,
-	    reference: cmpts.reference,
-	    resourceName: cmpts.resourceName,
-	    secure: cmpts.secure,
-	    error: ''
-	  };
-	  const options = Object.assign({}, opts);
-	  const uriTokens = [];
-
-	  // find scheme handler
-	  const schemeHandler = getSchemeHandler(options.scheme || component.scheme);
-
-	  // perform scheme specific serialization
-	  if (schemeHandler && schemeHandler.serialize) schemeHandler.serialize(component, options);
-
-	  if (component.path !== undefined) {
-	    if (!options.skipEscape) {
-	      component.path = escape(component.path);
-
-	      if (component.scheme !== undefined) {
-	        component.path = component.path.split('%3A').join(':');
-	      }
-	    } else {
-	      component.path = unescape(component.path);
-	    }
-	  }
-
-	  if (options.reference !== 'suffix' && component.scheme) {
-	    uriTokens.push(component.scheme, ':');
-	  }
-
-	  const authority = recomposeAuthority(component);
-	  if (authority !== undefined) {
-	    if (options.reference !== 'suffix') {
-	      uriTokens.push('//');
-	    }
-
-	    uriTokens.push(authority);
-
-	    if (component.path && component.path[0] !== '/') {
-	      uriTokens.push('/');
-	    }
-	  }
-	  if (component.path !== undefined) {
-	    let s = component.path;
-
-	    if (!options.absolutePath && (!schemeHandler || !schemeHandler.absolutePath)) {
-	      s = removeDotSegments(s);
-	    }
-
-	    if (
-	      authority === undefined &&
-	      s[0] === '/' &&
-	      s[1] === '/'
-	    ) {
-	      // don't allow the path to start with "//"
-	      s = '/%2F' + s.slice(2);
-	    }
-
-	    uriTokens.push(s);
-	  }
-
-	  if (component.query !== undefined) {
-	    uriTokens.push('?', component.query);
-	  }
-
-	  if (component.fragment !== undefined) {
-	    uriTokens.push('#', component.fragment);
-	  }
-	  return uriTokens.join('')
-	}
-
-	const URI_PARSE = /^(?:([^#/:?]+):)?(?:\/\/((?:([^#/?@]*)@)?(\[[^#/?\]]+\]|[^#/:?]*)(?::(\d*))?))?([^#?]*)(?:\?([^#]*))?(?:#((?:.|[\n\r])*))?/u;
-
-	/**
-	 * @param {string} uri
-	 * @param {import('./types/index').Options} [opts]
-	 * @returns
-	 */
-	function parse (uri, opts) {
-	  const options = Object.assign({}, opts);
-	  /** @type {import('./types/index').URIComponent} */
-	  const parsed = {
-	    scheme: undefined,
-	    userinfo: undefined,
-	    host: '',
-	    port: undefined,
-	    path: '',
-	    query: undefined,
-	    fragment: undefined
-	  };
-
-	  let isIP = false;
-	  if (options.reference === 'suffix') {
-	    if (options.scheme) {
-	      uri = options.scheme + ':' + uri;
-	    } else {
-	      uri = '//' + uri;
-	    }
-	  }
-
-	  const matches = uri.match(URI_PARSE);
-
-	  if (matches) {
-	    // store each component
-	    parsed.scheme = matches[1];
-	    parsed.userinfo = matches[3];
-	    parsed.host = matches[4];
-	    parsed.port = parseInt(matches[5], 10);
-	    parsed.path = matches[6] || '';
-	    parsed.query = matches[7];
-	    parsed.fragment = matches[8];
-
-	    // fix port number
-	    if (isNaN(parsed.port)) {
-	      parsed.port = matches[5];
-	    }
-	    if (parsed.host) {
-	      const ipv4result = isIPv4(parsed.host);
-	      if (ipv4result === false) {
-	        const ipv6result = normalizeIPv6(parsed.host);
-	        parsed.host = ipv6result.host.toLowerCase();
-	        isIP = ipv6result.isIPV6;
-	      } else {
-	        isIP = true;
-	      }
-	    }
-	    if (parsed.scheme === undefined && parsed.userinfo === undefined && parsed.host === undefined && parsed.port === undefined && parsed.query === undefined && !parsed.path) {
-	      parsed.reference = 'same-document';
-	    } else if (parsed.scheme === undefined) {
-	      parsed.reference = 'relative';
-	    } else if (parsed.fragment === undefined) {
-	      parsed.reference = 'absolute';
-	    } else {
-	      parsed.reference = 'uri';
-	    }
-
-	    // check for reference errors
-	    if (options.reference && options.reference !== 'suffix' && options.reference !== parsed.reference) {
-	      parsed.error = parsed.error || 'URI is not a ' + options.reference + ' reference.';
-	    }
-
-	    // find scheme handler
-	    const schemeHandler = getSchemeHandler(options.scheme || parsed.scheme);
-
-	    // check if scheme can't handle IRIs
-	    if (!options.unicodeSupport && (!schemeHandler || !schemeHandler.unicodeSupport)) {
-	      // if host component is a domain name
-	      if (parsed.host && (options.domainHost || (schemeHandler && schemeHandler.domainHost)) && isIP === false && nonSimpleDomain(parsed.host)) {
-	        // convert Unicode IDN -> ASCII IDN
-	        try {
-	          parsed.host = URL.domainToASCII(parsed.host.toLowerCase());
-	        } catch (e) {
-	          parsed.error = parsed.error || "Host's domain name can not be converted to ASCII: " + e;
-	        }
-	      }
-	      // convert IRI -> URI
-	    }
-
-	    if (!schemeHandler || (schemeHandler && !schemeHandler.skipNormalize)) {
-	      if (uri.indexOf('%') !== -1) {
-	        if (parsed.scheme !== undefined) {
-	          parsed.scheme = unescape(parsed.scheme);
-	        }
-	        if (parsed.host !== undefined) {
-	          parsed.host = unescape(parsed.host);
-	        }
-	      }
-	      if (parsed.path) {
-	        parsed.path = escape(unescape(parsed.path));
-	      }
-	      if (parsed.fragment) {
-	        parsed.fragment = encodeURI(decodeURIComponent(parsed.fragment));
-	      }
-	    }
-
-	    // perform scheme specific parsing
-	    if (schemeHandler && schemeHandler.parse) {
-	      schemeHandler.parse(parsed, options);
-	    }
-	  } else {
-	    parsed.error = parsed.error || 'URI can not be parsed.';
-	  }
-	  return parsed
-	}
-
-	const fastUri$1 = {
-	  SCHEMES,
-	  normalize,
-	  resolve,
-	  resolveComponent,
-	  equal,
-	  serialize,
-	  parse
-	};
-
-	fastUri.exports = fastUri$1;
-	fastUri.exports.default = fastUri$1;
-	fastUri.exports.fastUri = fastUri$1;
-	return fastUri.exports;
-}
-
-var hasRequiredUri;
-
-function requireUri () {
-	if (hasRequiredUri) return uri;
-	hasRequiredUri = 1;
-	Object.defineProperty(uri, "__esModule", { value: true });
-	const uri$1 = requireFastUri();
-	uri$1.code = 'require("ajv/dist/runtime/uri").default';
-	uri.default = uri$1;
-	
-	return uri;
-}
-
-var hasRequiredCore$1;
-
-function requireCore$1 () {
-	if (hasRequiredCore$1) return core$1;
-	hasRequiredCore$1 = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.CodeGen = exports$1.Name = exports$1.nil = exports$1.stringify = exports$1.str = exports$1._ = exports$1.KeywordCxt = void 0;
-		var validate_1 = requireValidate();
-		Object.defineProperty(exports$1, "KeywordCxt", { enumerable: true, get: function () { return validate_1.KeywordCxt; } });
-		var codegen_1 = requireCodegen();
-		Object.defineProperty(exports$1, "_", { enumerable: true, get: function () { return codegen_1._; } });
-		Object.defineProperty(exports$1, "str", { enumerable: true, get: function () { return codegen_1.str; } });
-		Object.defineProperty(exports$1, "stringify", { enumerable: true, get: function () { return codegen_1.stringify; } });
-		Object.defineProperty(exports$1, "nil", { enumerable: true, get: function () { return codegen_1.nil; } });
-		Object.defineProperty(exports$1, "Name", { enumerable: true, get: function () { return codegen_1.Name; } });
-		Object.defineProperty(exports$1, "CodeGen", { enumerable: true, get: function () { return codegen_1.CodeGen; } });
-		const validation_error_1 = requireValidation_error();
-		const ref_error_1 = requireRef_error();
-		const rules_1 = requireRules();
-		const compile_1 = requireCompile();
-		const codegen_2 = requireCodegen();
-		const resolve_1 = requireResolve();
-		const dataType_1 = requireDataType();
-		const util_1 = requireUtil$1();
-		const $dataRefSchema = require$$9;
-		const uri_1 = requireUri();
-		const defaultRegExp = (str, flags) => new RegExp(str, flags);
-		defaultRegExp.code = "new RegExp";
-		const META_IGNORE_OPTIONS = ["removeAdditional", "useDefaults", "coerceTypes"];
-		const EXT_SCOPE_NAMES = new Set([
-		    "validate",
-		    "serialize",
-		    "parse",
-		    "wrapper",
-		    "root",
-		    "schema",
-		    "keyword",
-		    "pattern",
-		    "formats",
-		    "validate$data",
-		    "func",
-		    "obj",
-		    "Error",
-		]);
-		const removedOptions = {
-		    errorDataPath: "",
-		    format: "`validateFormats: false` can be used instead.",
-		    nullable: '"nullable" keyword is supported by default.',
-		    jsonPointers: "Deprecated jsPropertySyntax can be used instead.",
-		    extendRefs: "Deprecated ignoreKeywordsWithRef can be used instead.",
-		    missingRefs: "Pass empty schema with $id that should be ignored to ajv.addSchema.",
-		    processCode: "Use option `code: {process: (code, schemaEnv: object) => string}`",
-		    sourceCode: "Use option `code: {source: true}`",
-		    strictDefaults: "It is default now, see option `strict`.",
-		    strictKeywords: "It is default now, see option `strict`.",
-		    uniqueItems: '"uniqueItems" keyword is always validated.',
-		    unknownFormats: "Disable strict mode or pass `true` to `ajv.addFormat` (or `formats` option).",
-		    cache: "Map is used as cache, schema object as key.",
-		    serialize: "Map is used as cache, schema object as key.",
-		    ajvErrors: "It is default now.",
-		};
-		const deprecatedOptions = {
-		    ignoreKeywordsWithRef: "",
-		    jsPropertySyntax: "",
-		    unicode: '"minLength"/"maxLength" account for unicode characters by default.',
-		};
-		const MAX_EXPRESSION = 200;
-		// eslint-disable-next-line complexity
-		function requiredOptions(o) {
-		    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l, _m, _o, _p, _q, _r, _s, _t, _u, _v, _w, _x, _y, _z, _0;
-		    const s = o.strict;
-		    const _optz = (_a = o.code) === null || _a === void 0 ? void 0 : _a.optimize;
-		    const optimize = _optz === true || _optz === undefined ? 1 : _optz || 0;
-		    const regExp = (_c = (_b = o.code) === null || _b === void 0 ? void 0 : _b.regExp) !== null && _c !== void 0 ? _c : defaultRegExp;
-		    const uriResolver = (_d = o.uriResolver) !== null && _d !== void 0 ? _d : uri_1.default;
-		    return {
-		        strictSchema: (_f = (_e = o.strictSchema) !== null && _e !== void 0 ? _e : s) !== null && _f !== void 0 ? _f : true,
-		        strictNumbers: (_h = (_g = o.strictNumbers) !== null && _g !== void 0 ? _g : s) !== null && _h !== void 0 ? _h : true,
-		        strictTypes: (_k = (_j = o.strictTypes) !== null && _j !== void 0 ? _j : s) !== null && _k !== void 0 ? _k : "log",
-		        strictTuples: (_m = (_l = o.strictTuples) !== null && _l !== void 0 ? _l : s) !== null && _m !== void 0 ? _m : "log",
-		        strictRequired: (_p = (_o = o.strictRequired) !== null && _o !== void 0 ? _o : s) !== null && _p !== void 0 ? _p : false,
-		        code: o.code ? { ...o.code, optimize, regExp } : { optimize, regExp },
-		        loopRequired: (_q = o.loopRequired) !== null && _q !== void 0 ? _q : MAX_EXPRESSION,
-		        loopEnum: (_r = o.loopEnum) !== null && _r !== void 0 ? _r : MAX_EXPRESSION,
-		        meta: (_s = o.meta) !== null && _s !== void 0 ? _s : true,
-		        messages: (_t = o.messages) !== null && _t !== void 0 ? _t : true,
-		        inlineRefs: (_u = o.inlineRefs) !== null && _u !== void 0 ? _u : true,
-		        schemaId: (_v = o.schemaId) !== null && _v !== void 0 ? _v : "$id",
-		        addUsedSchema: (_w = o.addUsedSchema) !== null && _w !== void 0 ? _w : true,
-		        validateSchema: (_x = o.validateSchema) !== null && _x !== void 0 ? _x : true,
-		        validateFormats: (_y = o.validateFormats) !== null && _y !== void 0 ? _y : true,
-		        unicodeRegExp: (_z = o.unicodeRegExp) !== null && _z !== void 0 ? _z : true,
-		        int32range: (_0 = o.int32range) !== null && _0 !== void 0 ? _0 : true,
-		        uriResolver: uriResolver,
-		    };
-		}
-		class Ajv {
-		    constructor(opts = {}) {
-		        this.schemas = {};
-		        this.refs = {};
-		        this.formats = {};
-		        this._compilations = new Set();
-		        this._loading = {};
-		        this._cache = new Map();
-		        opts = this.opts = { ...opts, ...requiredOptions(opts) };
-		        const { es5, lines } = this.opts.code;
-		        this.scope = new codegen_2.ValueScope({ scope: {}, prefixes: EXT_SCOPE_NAMES, es5, lines });
-		        this.logger = getLogger(opts.logger);
-		        const formatOpt = opts.validateFormats;
-		        opts.validateFormats = false;
-		        this.RULES = (0, rules_1.getRules)();
-		        checkOptions.call(this, removedOptions, opts, "NOT SUPPORTED");
-		        checkOptions.call(this, deprecatedOptions, opts, "DEPRECATED", "warn");
-		        this._metaOpts = getMetaSchemaOptions.call(this);
-		        if (opts.formats)
-		            addInitialFormats.call(this);
-		        this._addVocabularies();
-		        this._addDefaultMetaSchema();
-		        if (opts.keywords)
-		            addInitialKeywords.call(this, opts.keywords);
-		        if (typeof opts.meta == "object")
-		            this.addMetaSchema(opts.meta);
-		        addInitialSchemas.call(this);
-		        opts.validateFormats = formatOpt;
-		    }
-		    _addVocabularies() {
-		        this.addKeyword("$async");
-		    }
-		    _addDefaultMetaSchema() {
-		        const { $data, meta, schemaId } = this.opts;
-		        let _dataRefSchema = $dataRefSchema;
-		        if (schemaId === "id") {
-		            _dataRefSchema = { ...$dataRefSchema };
-		            _dataRefSchema.id = _dataRefSchema.$id;
-		            delete _dataRefSchema.$id;
-		        }
-		        if (meta && $data)
-		            this.addMetaSchema(_dataRefSchema, _dataRefSchema[schemaId], false);
-		    }
-		    defaultMeta() {
-		        const { meta, schemaId } = this.opts;
-		        return (this.opts.defaultMeta = typeof meta == "object" ? meta[schemaId] || meta : undefined);
-		    }
-		    validate(schemaKeyRef, // key, ref or schema object
-		    // eslint-disable-next-line @typescript-eslint/no-redundant-type-constituents
-		    data // to be validated
-		    ) {
-		        let v;
-		        if (typeof schemaKeyRef == "string") {
-		            v = this.getSchema(schemaKeyRef);
-		            if (!v)
-		                throw new Error(`no schema with key or ref "${schemaKeyRef}"`);
-		        }
-		        else {
-		            v = this.compile(schemaKeyRef);
-		        }
-		        const valid = v(data);
-		        if (!("$async" in v))
-		            this.errors = v.errors;
-		        return valid;
-		    }
-		    compile(schema, _meta) {
-		        const sch = this._addSchema(schema, _meta);
-		        return (sch.validate || this._compileSchemaEnv(sch));
-		    }
-		    compileAsync(schema, meta) {
-		        if (typeof this.opts.loadSchema != "function") {
-		            throw new Error("options.loadSchema should be a function");
-		        }
-		        const { loadSchema } = this.opts;
-		        return runCompileAsync.call(this, schema, meta);
-		        async function runCompileAsync(_schema, _meta) {
-		            await loadMetaSchema.call(this, _schema.$schema);
-		            const sch = this._addSchema(_schema, _meta);
-		            return sch.validate || _compileAsync.call(this, sch);
-		        }
-		        async function loadMetaSchema($ref) {
-		            if ($ref && !this.getSchema($ref)) {
-		                await runCompileAsync.call(this, { $ref }, true);
-		            }
-		        }
-		        async function _compileAsync(sch) {
-		            try {
-		                return this._compileSchemaEnv(sch);
-		            }
-		            catch (e) {
-		                if (!(e instanceof ref_error_1.default))
-		                    throw e;
-		                checkLoaded.call(this, e);
-		                await loadMissingSchema.call(this, e.missingSchema);
-		                return _compileAsync.call(this, sch);
-		            }
-		        }
-		        function checkLoaded({ missingSchema: ref, missingRef }) {
-		            if (this.refs[ref]) {
-		                throw new Error(`AnySchema ${ref} is loaded but ${missingRef} cannot be resolved`);
-		            }
-		        }
-		        async function loadMissingSchema(ref) {
-		            const _schema = await _loadSchema.call(this, ref);
-		            if (!this.refs[ref])
-		                await loadMetaSchema.call(this, _schema.$schema);
-		            if (!this.refs[ref])
-		                this.addSchema(_schema, ref, meta);
-		        }
-		        async function _loadSchema(ref) {
-		            const p = this._loading[ref];
-		            if (p)
-		                return p;
-		            try {
-		                return await (this._loading[ref] = loadSchema(ref));
-		            }
-		            finally {
-		                delete this._loading[ref];
-		            }
-		        }
-		    }
-		    // Adds schema to the instance
-		    addSchema(schema, // If array is passed, `key` will be ignored
-		    key, // Optional schema key. Can be passed to `validate` method instead of schema object or id/ref. One schema per instance can have empty `id` and `key`.
-		    _meta, // true if schema is a meta-schema. Used internally, addMetaSchema should be used instead.
-		    _validateSchema = this.opts.validateSchema // false to skip schema validation. Used internally, option validateSchema should be used instead.
-		    ) {
-		        if (Array.isArray(schema)) {
-		            for (const sch of schema)
-		                this.addSchema(sch, undefined, _meta, _validateSchema);
-		            return this;
-		        }
-		        let id;
-		        if (typeof schema === "object") {
-		            const { schemaId } = this.opts;
-		            id = schema[schemaId];
-		            if (id !== undefined && typeof id != "string") {
-		                throw new Error(`schema ${schemaId} must be string`);
-		            }
-		        }
-		        key = (0, resolve_1.normalizeId)(key || id);
-		        this._checkUnique(key);
-		        this.schemas[key] = this._addSchema(schema, _meta, key, _validateSchema, true);
-		        return this;
-		    }
-		    // Add schema that will be used to validate other schemas
-		    // options in META_IGNORE_OPTIONS are alway set to false
-		    addMetaSchema(schema, key, // schema key
-		    _validateSchema = this.opts.validateSchema // false to skip schema validation, can be used to override validateSchema option for meta-schema
-		    ) {
-		        this.addSchema(schema, key, true, _validateSchema);
-		        return this;
-		    }
-		    //  Validate schema against its meta-schema
-		    validateSchema(schema, throwOrLogError) {
-		        if (typeof schema == "boolean")
-		            return true;
-		        let $schema;
-		        $schema = schema.$schema;
-		        if ($schema !== undefined && typeof $schema != "string") {
-		            throw new Error("$schema must be a string");
-		        }
-		        $schema = $schema || this.opts.defaultMeta || this.defaultMeta();
-		        if (!$schema) {
-		            this.logger.warn("meta-schema not available");
-		            this.errors = null;
-		            return true;
-		        }
-		        const valid = this.validate($schema, schema);
-		        if (!valid && throwOrLogError) {
-		            const message = "schema is invalid: " + this.errorsText();
-		            if (this.opts.validateSchema === "log")
-		                this.logger.error(message);
-		            else
-		                throw new Error(message);
-		        }
-		        return valid;
-		    }
-		    // Get compiled schema by `key` or `ref`.
-		    // (`key` that was passed to `addSchema` or full schema reference - `schema.$id` or resolved id)
-		    getSchema(keyRef) {
-		        let sch;
-		        while (typeof (sch = getSchEnv.call(this, keyRef)) == "string")
-		            keyRef = sch;
-		        if (sch === undefined) {
-		            const { schemaId } = this.opts;
-		            const root = new compile_1.SchemaEnv({ schema: {}, schemaId });
-		            sch = compile_1.resolveSchema.call(this, root, keyRef);
-		            if (!sch)
-		                return;
-		            this.refs[keyRef] = sch;
-		        }
-		        return (sch.validate || this._compileSchemaEnv(sch));
-		    }
-		    // Remove cached schema(s).
-		    // If no parameter is passed all schemas but meta-schemas are removed.
-		    // If RegExp is passed all schemas with key/id matching pattern but meta-schemas are removed.
-		    // Even if schema is referenced by other schemas it still can be removed as other schemas have local references.
-		    removeSchema(schemaKeyRef) {
-		        if (schemaKeyRef instanceof RegExp) {
-		            this._removeAllSchemas(this.schemas, schemaKeyRef);
-		            this._removeAllSchemas(this.refs, schemaKeyRef);
-		            return this;
-		        }
-		        switch (typeof schemaKeyRef) {
-		            case "undefined":
-		                this._removeAllSchemas(this.schemas);
-		                this._removeAllSchemas(this.refs);
-		                this._cache.clear();
-		                return this;
-		            case "string": {
-		                const sch = getSchEnv.call(this, schemaKeyRef);
-		                if (typeof sch == "object")
-		                    this._cache.delete(sch.schema);
-		                delete this.schemas[schemaKeyRef];
-		                delete this.refs[schemaKeyRef];
-		                return this;
-		            }
-		            case "object": {
-		                const cacheKey = schemaKeyRef;
-		                this._cache.delete(cacheKey);
-		                let id = schemaKeyRef[this.opts.schemaId];
-		                if (id) {
-		                    id = (0, resolve_1.normalizeId)(id);
-		                    delete this.schemas[id];
-		                    delete this.refs[id];
-		                }
-		                return this;
-		            }
-		            default:
-		                throw new Error("ajv.removeSchema: invalid parameter");
-		        }
-		    }
-		    // add "vocabulary" - a collection of keywords
-		    addVocabulary(definitions) {
-		        for (const def of definitions)
-		            this.addKeyword(def);
-		        return this;
-		    }
-		    addKeyword(kwdOrDef, def // deprecated
-		    ) {
-		        let keyword;
-		        if (typeof kwdOrDef == "string") {
-		            keyword = kwdOrDef;
-		            if (typeof def == "object") {
-		                this.logger.warn("these parameters are deprecated, see docs for addKeyword");
-		                def.keyword = keyword;
-		            }
-		        }
-		        else if (typeof kwdOrDef == "object" && def === undefined) {
-		            def = kwdOrDef;
-		            keyword = def.keyword;
-		            if (Array.isArray(keyword) && !keyword.length) {
-		                throw new Error("addKeywords: keyword must be string or non-empty array");
-		            }
-		        }
-		        else {
-		            throw new Error("invalid addKeywords parameters");
-		        }
-		        checkKeyword.call(this, keyword, def);
-		        if (!def) {
-		            (0, util_1.eachItem)(keyword, (kwd) => addRule.call(this, kwd));
-		            return this;
-		        }
-		        keywordMetaschema.call(this, def);
-		        const definition = {
-		            ...def,
-		            type: (0, dataType_1.getJSONTypes)(def.type),
-		            schemaType: (0, dataType_1.getJSONTypes)(def.schemaType),
-		        };
-		        (0, util_1.eachItem)(keyword, definition.type.length === 0
-		            ? (k) => addRule.call(this, k, definition)
-		            : (k) => definition.type.forEach((t) => addRule.call(this, k, definition, t)));
-		        return this;
-		    }
-		    getKeyword(keyword) {
-		        const rule = this.RULES.all[keyword];
-		        return typeof rule == "object" ? rule.definition : !!rule;
-		    }
-		    // Remove keyword
-		    removeKeyword(keyword) {
-		        // TODO return type should be Ajv
-		        const { RULES } = this;
-		        delete RULES.keywords[keyword];
-		        delete RULES.all[keyword];
-		        for (const group of RULES.rules) {
-		            const i = group.rules.findIndex((rule) => rule.keyword === keyword);
-		            if (i >= 0)
-		                group.rules.splice(i, 1);
-		        }
-		        return this;
-		    }
-		    // Add format
-		    addFormat(name, format) {
-		        if (typeof format == "string")
-		            format = new RegExp(format);
-		        this.formats[name] = format;
-		        return this;
-		    }
-		    errorsText(errors = this.errors, // optional array of validation errors
-		    { separator = ", ", dataVar = "data" } = {} // optional options with properties `separator` and `dataVar`
-		    ) {
-		        if (!errors || errors.length === 0)
-		            return "No errors";
-		        return errors
-		            .map((e) => `${dataVar}${e.instancePath} ${e.message}`)
-		            .reduce((text, msg) => text + separator + msg);
-		    }
-		    $dataMetaSchema(metaSchema, keywordsJsonPointers) {
-		        const rules = this.RULES.all;
-		        metaSchema = JSON.parse(JSON.stringify(metaSchema));
-		        for (const jsonPointer of keywordsJsonPointers) {
-		            const segments = jsonPointer.split("/").slice(1); // first segment is an empty string
-		            let keywords = metaSchema;
-		            for (const seg of segments)
-		                keywords = keywords[seg];
-		            for (const key in rules) {
-		                const rule = rules[key];
-		                if (typeof rule != "object")
-		                    continue;
-		                const { $data } = rule.definition;
-		                const schema = keywords[key];
-		                if ($data && schema)
-		                    keywords[key] = schemaOrData(schema);
-		            }
-		        }
-		        return metaSchema;
-		    }
-		    _removeAllSchemas(schemas, regex) {
-		        for (const keyRef in schemas) {
-		            const sch = schemas[keyRef];
-		            if (!regex || regex.test(keyRef)) {
-		                if (typeof sch == "string") {
-		                    delete schemas[keyRef];
-		                }
-		                else if (sch && !sch.meta) {
-		                    this._cache.delete(sch.schema);
-		                    delete schemas[keyRef];
-		                }
-		            }
-		        }
-		    }
-		    _addSchema(schema, meta, baseId, validateSchema = this.opts.validateSchema, addSchema = this.opts.addUsedSchema) {
-		        let id;
-		        const { schemaId } = this.opts;
-		        if (typeof schema == "object") {
-		            id = schema[schemaId];
-		        }
-		        else {
-		            if (this.opts.jtd)
-		                throw new Error("schema must be object");
-		            else if (typeof schema != "boolean")
-		                throw new Error("schema must be object or boolean");
-		        }
-		        let sch = this._cache.get(schema);
-		        if (sch !== undefined)
-		            return sch;
-		        baseId = (0, resolve_1.normalizeId)(id || baseId);
-		        const localRefs = resolve_1.getSchemaRefs.call(this, schema, baseId);
-		        sch = new compile_1.SchemaEnv({ schema, schemaId, meta, baseId, localRefs });
-		        this._cache.set(sch.schema, sch);
-		        if (addSchema && !baseId.startsWith("#")) {
-		            // TODO atm it is allowed to overwrite schemas without id (instead of not adding them)
-		            if (baseId)
-		                this._checkUnique(baseId);
-		            this.refs[baseId] = sch;
-		        }
-		        if (validateSchema)
-		            this.validateSchema(schema, true);
-		        return sch;
-		    }
-		    _checkUnique(id) {
-		        if (this.schemas[id] || this.refs[id]) {
-		            throw new Error(`schema with key or id "${id}" already exists`);
-		        }
-		    }
-		    _compileSchemaEnv(sch) {
-		        if (sch.meta)
-		            this._compileMetaSchema(sch);
-		        else
-		            compile_1.compileSchema.call(this, sch);
-		        /* istanbul ignore if */
-		        if (!sch.validate)
-		            throw new Error("ajv implementation error");
-		        return sch.validate;
-		    }
-		    _compileMetaSchema(sch) {
-		        const currentOpts = this.opts;
-		        this.opts = this._metaOpts;
-		        try {
-		            compile_1.compileSchema.call(this, sch);
-		        }
-		        finally {
-		            this.opts = currentOpts;
-		        }
-		    }
-		}
-		Ajv.ValidationError = validation_error_1.default;
-		Ajv.MissingRefError = ref_error_1.default;
-		exports$1.default = Ajv;
-		function checkOptions(checkOpts, options, msg, log = "error") {
-		    for (const key in checkOpts) {
-		        const opt = key;
-		        if (opt in options)
-		            this.logger[log](`${msg}: option ${key}. ${checkOpts[opt]}`);
-		    }
-		}
-		function getSchEnv(keyRef) {
-		    keyRef = (0, resolve_1.normalizeId)(keyRef); // TODO tests fail without this line
-		    return this.schemas[keyRef] || this.refs[keyRef];
-		}
-		function addInitialSchemas() {
-		    const optsSchemas = this.opts.schemas;
-		    if (!optsSchemas)
-		        return;
-		    if (Array.isArray(optsSchemas))
-		        this.addSchema(optsSchemas);
-		    else
-		        for (const key in optsSchemas)
-		            this.addSchema(optsSchemas[key], key);
-		}
-		function addInitialFormats() {
-		    for (const name in this.opts.formats) {
-		        const format = this.opts.formats[name];
-		        if (format)
-		            this.addFormat(name, format);
-		    }
-		}
-		function addInitialKeywords(defs) {
-		    if (Array.isArray(defs)) {
-		        this.addVocabulary(defs);
-		        return;
-		    }
-		    this.logger.warn("keywords option as map is deprecated, pass array");
-		    for (const keyword in defs) {
-		        const def = defs[keyword];
-		        if (!def.keyword)
-		            def.keyword = keyword;
-		        this.addKeyword(def);
-		    }
-		}
-		function getMetaSchemaOptions() {
-		    const metaOpts = { ...this.opts };
-		    for (const opt of META_IGNORE_OPTIONS)
-		        delete metaOpts[opt];
-		    return metaOpts;
-		}
-		const noLogs = { log() { }, warn() { }, error() { } };
-		function getLogger(logger) {
-		    if (logger === false)
-		        return noLogs;
-		    if (logger === undefined)
-		        return console;
-		    if (logger.log && logger.warn && logger.error)
-		        return logger;
-		    throw new Error("logger must implement log, warn and error methods");
-		}
-		const KEYWORD_NAME = /^[a-z_$][a-z0-9_$:-]*$/i;
-		function checkKeyword(keyword, def) {
-		    const { RULES } = this;
-		    (0, util_1.eachItem)(keyword, (kwd) => {
-		        if (RULES.keywords[kwd])
-		            throw new Error(`Keyword ${kwd} is already defined`);
-		        if (!KEYWORD_NAME.test(kwd))
-		            throw new Error(`Keyword ${kwd} has invalid name`);
-		    });
-		    if (!def)
-		        return;
-		    if (def.$data && !("code" in def || "validate" in def)) {
-		        throw new Error('$data keyword must have "code" or "validate" function');
-		    }
-		}
-		function addRule(keyword, definition, dataType) {
-		    var _a;
-		    const post = definition === null || definition === void 0 ? void 0 : definition.post;
-		    if (dataType && post)
-		        throw new Error('keyword with "post" flag cannot have "type"');
-		    const { RULES } = this;
-		    let ruleGroup = post ? RULES.post : RULES.rules.find(({ type: t }) => t === dataType);
-		    if (!ruleGroup) {
-		        ruleGroup = { type: dataType, rules: [] };
-		        RULES.rules.push(ruleGroup);
-		    }
-		    RULES.keywords[keyword] = true;
-		    if (!definition)
-		        return;
-		    const rule = {
-		        keyword,
-		        definition: {
-		            ...definition,
-		            type: (0, dataType_1.getJSONTypes)(definition.type),
-		            schemaType: (0, dataType_1.getJSONTypes)(definition.schemaType),
-		        },
-		    };
-		    if (definition.before)
-		        addBeforeRule.call(this, ruleGroup, rule, definition.before);
-		    else
-		        ruleGroup.rules.push(rule);
-		    RULES.all[keyword] = rule;
-		    (_a = definition.implements) === null || _a === void 0 ? void 0 : _a.forEach((kwd) => this.addKeyword(kwd));
-		}
-		function addBeforeRule(ruleGroup, rule, before) {
-		    const i = ruleGroup.rules.findIndex((_rule) => _rule.keyword === before);
-		    if (i >= 0) {
-		        ruleGroup.rules.splice(i, 0, rule);
-		    }
-		    else {
-		        ruleGroup.rules.push(rule);
-		        this.logger.warn(`rule ${before} is not defined`);
-		    }
-		}
-		function keywordMetaschema(def) {
-		    let { metaSchema } = def;
-		    if (metaSchema === undefined)
-		        return;
-		    if (def.$data && this.opts.$data)
-		        metaSchema = schemaOrData(metaSchema);
-		    def.validateSchema = this.compile(metaSchema, true);
-		}
-		const $dataRef = {
-		    $ref: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#",
-		};
-		function schemaOrData(schema) {
-		    return { anyOf: [schema, $dataRef] };
-		}
-		
-	} (core$1));
-	return core$1;
-}
-
-var draft7 = {};
-
-var core = {};
-
-var id = {};
-
-var hasRequiredId;
-
-function requireId () {
-	if (hasRequiredId) return id;
-	hasRequiredId = 1;
-	Object.defineProperty(id, "__esModule", { value: true });
-	const def = {
-	    keyword: "id",
-	    code() {
-	        throw new Error('NOT SUPPORTED: keyword "id", use "$id" for schema ID');
-	    },
-	};
-	id.default = def;
-	
-	return id;
-}
-
-var ref = {};
-
-var hasRequiredRef;
-
-function requireRef () {
-	if (hasRequiredRef) return ref;
-	hasRequiredRef = 1;
-	Object.defineProperty(ref, "__esModule", { value: true });
-	ref.callRef = ref.getValidate = void 0;
-	const ref_error_1 = requireRef_error();
-	const code_1 = requireCode();
-	const codegen_1 = requireCodegen();
-	const names_1 = requireNames();
-	const compile_1 = requireCompile();
-	const util_1 = requireUtil$1();
-	const def = {
-	    keyword: "$ref",
-	    schemaType: "string",
-	    code(cxt) {
-	        const { gen, schema: $ref, it } = cxt;
-	        const { baseId, schemaEnv: env, validateName, opts, self } = it;
-	        const { root } = env;
-	        if (($ref === "#" || $ref === "#/") && baseId === root.baseId)
-	            return callRootRef();
-	        const schOrEnv = compile_1.resolveRef.call(self, root, baseId, $ref);
-	        if (schOrEnv === undefined)
-	            throw new ref_error_1.default(it.opts.uriResolver, baseId, $ref);
-	        if (schOrEnv instanceof compile_1.SchemaEnv)
-	            return callValidate(schOrEnv);
-	        return inlineRefSchema(schOrEnv);
-	        function callRootRef() {
-	            if (env === root)
-	                return callRef(cxt, validateName, env, env.$async);
-	            const rootName = gen.scopeValue("root", { ref: root });
-	            return callRef(cxt, (0, codegen_1._) `${rootName}.validate`, root, root.$async);
-	        }
-	        function callValidate(sch) {
-	            const v = getValidate(cxt, sch);
-	            callRef(cxt, v, sch, sch.$async);
-	        }
-	        function inlineRefSchema(sch) {
-	            const schName = gen.scopeValue("schema", opts.code.source === true ? { ref: sch, code: (0, codegen_1.stringify)(sch) } : { ref: sch });
-	            const valid = gen.name("valid");
-	            const schCxt = cxt.subschema({
-	                schema: sch,
-	                dataTypes: [],
-	                schemaPath: codegen_1.nil,
-	                topSchemaRef: schName,
-	                errSchemaPath: $ref,
-	            }, valid);
-	            cxt.mergeEvaluated(schCxt);
-	            cxt.ok(valid);
-	        }
-	    },
-	};
-	function getValidate(cxt, sch) {
-	    const { gen } = cxt;
-	    return sch.validate
-	        ? gen.scopeValue("validate", { ref: sch.validate })
-	        : (0, codegen_1._) `${gen.scopeValue("wrapper", { ref: sch })}.validate`;
-	}
-	ref.getValidate = getValidate;
-	function callRef(cxt, v, sch, $async) {
-	    const { gen, it } = cxt;
-	    const { allErrors, schemaEnv: env, opts } = it;
-	    const passCxt = opts.passContext ? names_1.default.this : codegen_1.nil;
-	    if ($async)
-	        callAsyncRef();
-	    else
-	        callSyncRef();
-	    function callAsyncRef() {
-	        if (!env.$async)
-	            throw new Error("async schema referenced by sync schema");
-	        const valid = gen.let("valid");
-	        gen.try(() => {
-	            gen.code((0, codegen_1._) `await ${(0, code_1.callValidateCode)(cxt, v, passCxt)}`);
-	            addEvaluatedFrom(v); // TODO will not work with async, it has to be returned with the result
-	            if (!allErrors)
-	                gen.assign(valid, true);
-	        }, (e) => {
-	            gen.if((0, codegen_1._) `!(${e} instanceof ${it.ValidationError})`, () => gen.throw(e));
-	            addErrorsFrom(e);
-	            if (!allErrors)
-	                gen.assign(valid, false);
-	        });
-	        cxt.ok(valid);
-	    }
-	    function callSyncRef() {
-	        cxt.result((0, code_1.callValidateCode)(cxt, v, passCxt), () => addEvaluatedFrom(v), () => addErrorsFrom(v));
-	    }
-	    function addErrorsFrom(source) {
-	        const errs = (0, codegen_1._) `${source}.errors`;
-	        gen.assign(names_1.default.vErrors, (0, codegen_1._) `${names_1.default.vErrors} === null ? ${errs} : ${names_1.default.vErrors}.concat(${errs})`); // TODO tagged
-	        gen.assign(names_1.default.errors, (0, codegen_1._) `${names_1.default.vErrors}.length`);
-	    }
-	    function addEvaluatedFrom(source) {
-	        var _a;
-	        if (!it.opts.unevaluated)
-	            return;
-	        const schEvaluated = (_a = sch === null || sch === void 0 ? void 0 : sch.validate) === null || _a === void 0 ? void 0 : _a.evaluated;
-	        // TODO refactor
-	        if (it.props !== true) {
-	            if (schEvaluated && !schEvaluated.dynamicProps) {
-	                if (schEvaluated.props !== undefined) {
-	                    it.props = util_1.mergeEvaluated.props(gen, schEvaluated.props, it.props);
-	                }
-	            }
-	            else {
-	                const props = gen.var("props", (0, codegen_1._) `${source}.evaluated.props`);
-	                it.props = util_1.mergeEvaluated.props(gen, props, it.props, codegen_1.Name);
-	            }
-	        }
-	        if (it.items !== true) {
-	            if (schEvaluated && !schEvaluated.dynamicItems) {
-	                if (schEvaluated.items !== undefined) {
-	                    it.items = util_1.mergeEvaluated.items(gen, schEvaluated.items, it.items);
-	                }
-	            }
-	            else {
-	                const items = gen.var("items", (0, codegen_1._) `${source}.evaluated.items`);
-	                it.items = util_1.mergeEvaluated.items(gen, items, it.items, codegen_1.Name);
-	            }
-	        }
-	    }
-	}
-	ref.callRef = callRef;
-	ref.default = def;
-	
-	return ref;
-}
-
-var hasRequiredCore;
-
-function requireCore () {
-	if (hasRequiredCore) return core;
-	hasRequiredCore = 1;
-	Object.defineProperty(core, "__esModule", { value: true });
-	const id_1 = requireId();
-	const ref_1 = requireRef();
-	const core$1 = [
-	    "$schema",
-	    "$id",
-	    "$defs",
-	    "$vocabulary",
-	    { keyword: "$comment" },
-	    "definitions",
-	    id_1.default,
-	    ref_1.default,
-	];
-	core.default = core$1;
-	
-	return core;
-}
-
-var validation = {};
-
-var limitNumber = {};
-
-var hasRequiredLimitNumber;
-
-function requireLimitNumber () {
-	if (hasRequiredLimitNumber) return limitNumber;
-	hasRequiredLimitNumber = 1;
-	Object.defineProperty(limitNumber, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const ops = codegen_1.operators;
-	const KWDs = {
-	    maximum: { okStr: "<=", ok: ops.LTE, fail: ops.GT },
-	    minimum: { okStr: ">=", ok: ops.GTE, fail: ops.LT },
-	    exclusiveMaximum: { okStr: "<", ok: ops.LT, fail: ops.GTE },
-	    exclusiveMinimum: { okStr: ">", ok: ops.GT, fail: ops.LTE },
-	};
-	const error = {
-	    message: ({ keyword, schemaCode }) => (0, codegen_1.str) `must be ${KWDs[keyword].okStr} ${schemaCode}`,
-	    params: ({ keyword, schemaCode }) => (0, codegen_1._) `{comparison: ${KWDs[keyword].okStr}, limit: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: Object.keys(KWDs),
-	    type: "number",
-	    schemaType: "number",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { keyword, data, schemaCode } = cxt;
-	        cxt.fail$data((0, codegen_1._) `${data} ${KWDs[keyword].fail} ${schemaCode} || isNaN(${data})`);
-	    },
-	};
-	limitNumber.default = def;
-	
-	return limitNumber;
-}
-
-var multipleOf = {};
-
-var hasRequiredMultipleOf;
-
-function requireMultipleOf () {
-	if (hasRequiredMultipleOf) return multipleOf;
-	hasRequiredMultipleOf = 1;
-	Object.defineProperty(multipleOf, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const error = {
-	    message: ({ schemaCode }) => (0, codegen_1.str) `must be multiple of ${schemaCode}`,
-	    params: ({ schemaCode }) => (0, codegen_1._) `{multipleOf: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: "multipleOf",
-	    type: "number",
-	    schemaType: "number",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { gen, data, schemaCode, it } = cxt;
-	        // const bdt = bad$DataType(schemaCode, <string>def.schemaType, $data)
-	        const prec = it.opts.multipleOfPrecision;
-	        const res = gen.let("res");
-	        const invalid = prec
-	            ? (0, codegen_1._) `Math.abs(Math.round(${res}) - ${res}) > 1e-${prec}`
-	            : (0, codegen_1._) `${res} !== parseInt(${res})`;
-	        cxt.fail$data((0, codegen_1._) `(${schemaCode} === 0 || (${res} = ${data}/${schemaCode}, ${invalid}))`);
-	    },
-	};
-	multipleOf.default = def;
-	
-	return multipleOf;
-}
-
-var limitLength = {};
-
-var ucs2length = {};
-
-var hasRequiredUcs2length;
-
-function requireUcs2length () {
-	if (hasRequiredUcs2length) return ucs2length;
-	hasRequiredUcs2length = 1;
-	Object.defineProperty(ucs2length, "__esModule", { value: true });
-	// https://mathiasbynens.be/notes/javascript-encoding
-	// https://github.com/bestiejs/punycode.js - punycode.ucs2.decode
-	function ucs2length$1(str) {
-	    const len = str.length;
-	    let length = 0;
-	    let pos = 0;
-	    let value;
-	    while (pos < len) {
-	        length++;
-	        value = str.charCodeAt(pos++);
-	        if (value >= 0xd800 && value <= 0xdbff && pos < len) {
-	            // high surrogate, and there is a next character
-	            value = str.charCodeAt(pos);
-	            if ((value & 0xfc00) === 0xdc00)
-	                pos++; // low surrogate
-	        }
-	    }
-	    return length;
-	}
-	ucs2length.default = ucs2length$1;
-	ucs2length$1.code = 'require("ajv/dist/runtime/ucs2length").default';
-	
-	return ucs2length;
-}
-
-var hasRequiredLimitLength;
-
-function requireLimitLength () {
-	if (hasRequiredLimitLength) return limitLength;
-	hasRequiredLimitLength = 1;
-	Object.defineProperty(limitLength, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const ucs2length_1 = requireUcs2length();
-	const error = {
-	    message({ keyword, schemaCode }) {
-	        const comp = keyword === "maxLength" ? "more" : "fewer";
-	        return (0, codegen_1.str) `must NOT have ${comp} than ${schemaCode} characters`;
-	    },
-	    params: ({ schemaCode }) => (0, codegen_1._) `{limit: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: ["maxLength", "minLength"],
-	    type: "string",
-	    schemaType: "number",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { keyword, data, schemaCode, it } = cxt;
-	        const op = keyword === "maxLength" ? codegen_1.operators.GT : codegen_1.operators.LT;
-	        const len = it.opts.unicode === false ? (0, codegen_1._) `${data}.length` : (0, codegen_1._) `${(0, util_1.useFunc)(cxt.gen, ucs2length_1.default)}(${data})`;
-	        cxt.fail$data((0, codegen_1._) `${len} ${op} ${schemaCode}`);
-	    },
-	};
-	limitLength.default = def;
-	
-	return limitLength;
-}
-
-var pattern$1 = {};
-
-var hasRequiredPattern;
-
-function requirePattern () {
-	if (hasRequiredPattern) return pattern$1;
-	hasRequiredPattern = 1;
-	Object.defineProperty(pattern$1, "__esModule", { value: true });
-	const code_1 = requireCode();
-	const codegen_1 = requireCodegen();
-	const error = {
-	    message: ({ schemaCode }) => (0, codegen_1.str) `must match pattern "${schemaCode}"`,
-	    params: ({ schemaCode }) => (0, codegen_1._) `{pattern: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: "pattern",
-	    type: "string",
-	    schemaType: "string",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { data, $data, schema, schemaCode, it } = cxt;
-	        // TODO regexp should be wrapped in try/catchs
-	        const u = it.opts.unicodeRegExp ? "u" : "";
-	        const regExp = $data ? (0, codegen_1._) `(new RegExp(${schemaCode}, ${u}))` : (0, code_1.usePattern)(cxt, schema);
-	        cxt.fail$data((0, codegen_1._) `!${regExp}.test(${data})`);
-	    },
-	};
-	pattern$1.default = def;
-	
-	return pattern$1;
-}
-
-var limitProperties = {};
-
-var hasRequiredLimitProperties;
-
-function requireLimitProperties () {
-	if (hasRequiredLimitProperties) return limitProperties;
-	hasRequiredLimitProperties = 1;
-	Object.defineProperty(limitProperties, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const error = {
-	    message({ keyword, schemaCode }) {
-	        const comp = keyword === "maxProperties" ? "more" : "fewer";
-	        return (0, codegen_1.str) `must NOT have ${comp} than ${schemaCode} properties`;
-	    },
-	    params: ({ schemaCode }) => (0, codegen_1._) `{limit: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: ["maxProperties", "minProperties"],
-	    type: "object",
-	    schemaType: "number",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { keyword, data, schemaCode } = cxt;
-	        const op = keyword === "maxProperties" ? codegen_1.operators.GT : codegen_1.operators.LT;
-	        cxt.fail$data((0, codegen_1._) `Object.keys(${data}).length ${op} ${schemaCode}`);
-	    },
-	};
-	limitProperties.default = def;
-	
-	return limitProperties;
-}
-
-var required = {};
-
-var hasRequiredRequired;
-
-function requireRequired () {
-	if (hasRequiredRequired) return required;
-	hasRequiredRequired = 1;
-	Object.defineProperty(required, "__esModule", { value: true });
-	const code_1 = requireCode();
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: ({ params: { missingProperty } }) => (0, codegen_1.str) `must have required property '${missingProperty}'`,
-	    params: ({ params: { missingProperty } }) => (0, codegen_1._) `{missingProperty: ${missingProperty}}`,
-	};
-	const def = {
-	    keyword: "required",
-	    type: "object",
-	    schemaType: "array",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { gen, schema, schemaCode, data, $data, it } = cxt;
-	        const { opts } = it;
-	        if (!$data && schema.length === 0)
-	            return;
-	        const useLoop = schema.length >= opts.loopRequired;
-	        if (it.allErrors)
-	            allErrorsMode();
-	        else
-	            exitOnErrorMode();
-	        if (opts.strictRequired) {
-	            const props = cxt.parentSchema.properties;
-	            const { definedProperties } = cxt.it;
-	            for (const requiredKey of schema) {
-	                if ((props === null || props === void 0 ? void 0 : props[requiredKey]) === undefined && !definedProperties.has(requiredKey)) {
-	                    const schemaPath = it.schemaEnv.baseId + it.errSchemaPath;
-	                    const msg = `required property "${requiredKey}" is not defined at "${schemaPath}" (strictRequired)`;
-	                    (0, util_1.checkStrictMode)(it, msg, it.opts.strictRequired);
-	                }
-	            }
-	        }
-	        function allErrorsMode() {
-	            if (useLoop || $data) {
-	                cxt.block$data(codegen_1.nil, loopAllRequired);
-	            }
-	            else {
-	                for (const prop of schema) {
-	                    (0, code_1.checkReportMissingProp)(cxt, prop);
-	                }
-	            }
-	        }
-	        function exitOnErrorMode() {
-	            const missing = gen.let("missing");
-	            if (useLoop || $data) {
-	                const valid = gen.let("valid", true);
-	                cxt.block$data(valid, () => loopUntilMissing(missing, valid));
-	                cxt.ok(valid);
-	            }
-	            else {
-	                gen.if((0, code_1.checkMissingProp)(cxt, schema, missing));
-	                (0, code_1.reportMissingProp)(cxt, missing);
-	                gen.else();
-	            }
-	        }
-	        function loopAllRequired() {
-	            gen.forOf("prop", schemaCode, (prop) => {
-	                cxt.setParams({ missingProperty: prop });
-	                gen.if((0, code_1.noPropertyInData)(gen, data, prop, opts.ownProperties), () => cxt.error());
-	            });
-	        }
-	        function loopUntilMissing(missing, valid) {
-	            cxt.setParams({ missingProperty: missing });
-	            gen.forOf(missing, schemaCode, () => {
-	                gen.assign(valid, (0, code_1.propertyInData)(gen, data, missing, opts.ownProperties));
-	                gen.if((0, codegen_1.not)(valid), () => {
-	                    cxt.error();
-	                    gen.break();
-	                });
-	            }, codegen_1.nil);
-	        }
-	    },
-	};
-	required.default = def;
-	
-	return required;
-}
-
-var limitItems = {};
-
-var hasRequiredLimitItems;
-
-function requireLimitItems () {
-	if (hasRequiredLimitItems) return limitItems;
-	hasRequiredLimitItems = 1;
-	Object.defineProperty(limitItems, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const error = {
-	    message({ keyword, schemaCode }) {
-	        const comp = keyword === "maxItems" ? "more" : "fewer";
-	        return (0, codegen_1.str) `must NOT have ${comp} than ${schemaCode} items`;
-	    },
-	    params: ({ schemaCode }) => (0, codegen_1._) `{limit: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: ["maxItems", "minItems"],
-	    type: "array",
-	    schemaType: "number",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { keyword, data, schemaCode } = cxt;
-	        const op = keyword === "maxItems" ? codegen_1.operators.GT : codegen_1.operators.LT;
-	        cxt.fail$data((0, codegen_1._) `${data}.length ${op} ${schemaCode}`);
-	    },
-	};
-	limitItems.default = def;
-	
-	return limitItems;
-}
-
-var uniqueItems = {};
-
-var equal = {};
-
-var hasRequiredEqual;
-
-function requireEqual () {
-	if (hasRequiredEqual) return equal;
-	hasRequiredEqual = 1;
-	Object.defineProperty(equal, "__esModule", { value: true });
-	// https://github.com/ajv-validator/ajv/issues/889
-	const equal$1 = requireFastDeepEqual();
-	equal$1.code = 'require("ajv/dist/runtime/equal").default';
-	equal.default = equal$1;
-	
-	return equal;
-}
-
-var hasRequiredUniqueItems;
-
-function requireUniqueItems () {
-	if (hasRequiredUniqueItems) return uniqueItems;
-	hasRequiredUniqueItems = 1;
-	Object.defineProperty(uniqueItems, "__esModule", { value: true });
-	const dataType_1 = requireDataType();
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const equal_1 = requireEqual();
-	const error = {
-	    message: ({ params: { i, j } }) => (0, codegen_1.str) `must NOT have duplicate items (items ## ${j} and ${i} are identical)`,
-	    params: ({ params: { i, j } }) => (0, codegen_1._) `{i: ${i}, j: ${j}}`,
-	};
-	const def = {
-	    keyword: "uniqueItems",
-	    type: "array",
-	    schemaType: "boolean",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { gen, data, $data, schema, parentSchema, schemaCode, it } = cxt;
-	        if (!$data && !schema)
-	            return;
-	        const valid = gen.let("valid");
-	        const itemTypes = parentSchema.items ? (0, dataType_1.getSchemaTypes)(parentSchema.items) : [];
-	        cxt.block$data(valid, validateUniqueItems, (0, codegen_1._) `${schemaCode} === false`);
-	        cxt.ok(valid);
-	        function validateUniqueItems() {
-	            const i = gen.let("i", (0, codegen_1._) `${data}.length`);
-	            const j = gen.let("j");
-	            cxt.setParams({ i, j });
-	            gen.assign(valid, true);
-	            gen.if((0, codegen_1._) `${i} > 1`, () => (canOptimize() ? loopN : loopN2)(i, j));
-	        }
-	        function canOptimize() {
-	            return itemTypes.length > 0 && !itemTypes.some((t) => t === "object" || t === "array");
-	        }
-	        function loopN(i, j) {
-	            const item = gen.name("item");
-	            const wrongType = (0, dataType_1.checkDataTypes)(itemTypes, item, it.opts.strictNumbers, dataType_1.DataType.Wrong);
-	            const indices = gen.const("indices", (0, codegen_1._) `{}`);
-	            gen.for((0, codegen_1._) `;${i}--;`, () => {
-	                gen.let(item, (0, codegen_1._) `${data}[${i}]`);
-	                gen.if(wrongType, (0, codegen_1._) `continue`);
-	                if (itemTypes.length > 1)
-	                    gen.if((0, codegen_1._) `typeof ${item} == "string"`, (0, codegen_1._) `${item} += "_"`);
-	                gen
-	                    .if((0, codegen_1._) `typeof ${indices}[${item}] == "number"`, () => {
-	                    gen.assign(j, (0, codegen_1._) `${indices}[${item}]`);
-	                    cxt.error();
-	                    gen.assign(valid, false).break();
-	                })
-	                    .code((0, codegen_1._) `${indices}[${item}] = ${i}`);
-	            });
-	        }
-	        function loopN2(i, j) {
-	            const eql = (0, util_1.useFunc)(gen, equal_1.default);
-	            const outer = gen.name("outer");
-	            gen.label(outer).for((0, codegen_1._) `;${i}--;`, () => gen.for((0, codegen_1._) `${j} = ${i}; ${j}--;`, () => gen.if((0, codegen_1._) `${eql}(${data}[${i}], ${data}[${j}])`, () => {
-	                cxt.error();
-	                gen.assign(valid, false).break(outer);
-	            })));
-	        }
-	    },
-	};
-	uniqueItems.default = def;
-	
-	return uniqueItems;
-}
-
-var _const = {};
-
-var hasRequired_const;
-
-function require_const () {
-	if (hasRequired_const) return _const;
-	hasRequired_const = 1;
-	Object.defineProperty(_const, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const equal_1 = requireEqual();
-	const error = {
-	    message: "must be equal to constant",
-	    params: ({ schemaCode }) => (0, codegen_1._) `{allowedValue: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: "const",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { gen, data, $data, schemaCode, schema } = cxt;
-	        if ($data || (schema && typeof schema == "object")) {
-	            cxt.fail$data((0, codegen_1._) `!${(0, util_1.useFunc)(gen, equal_1.default)}(${data}, ${schemaCode})`);
-	        }
-	        else {
-	            cxt.fail((0, codegen_1._) `${schema} !== ${data}`);
-	        }
-	    },
-	};
-	_const.default = def;
-	
-	return _const;
-}
-
-var _enum = {};
-
-var hasRequired_enum;
-
-function require_enum () {
-	if (hasRequired_enum) return _enum;
-	hasRequired_enum = 1;
-	Object.defineProperty(_enum, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const equal_1 = requireEqual();
-	const error = {
-	    message: "must be equal to one of the allowed values",
-	    params: ({ schemaCode }) => (0, codegen_1._) `{allowedValues: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: "enum",
-	    schemaType: "array",
-	    $data: true,
-	    error,
-	    code(cxt) {
-	        const { gen, data, $data, schema, schemaCode, it } = cxt;
-	        if (!$data && schema.length === 0)
-	            throw new Error("enum must have non-empty array");
-	        const useLoop = schema.length >= it.opts.loopEnum;
-	        let eql;
-	        const getEql = () => (eql !== null && eql !== void 0 ? eql : (eql = (0, util_1.useFunc)(gen, equal_1.default)));
-	        let valid;
-	        if (useLoop || $data) {
-	            valid = gen.let("valid");
-	            cxt.block$data(valid, loopEnum);
-	        }
-	        else {
-	            /* istanbul ignore if */
-	            if (!Array.isArray(schema))
-	                throw new Error("ajv implementation error");
-	            const vSchema = gen.const("vSchema", schemaCode);
-	            valid = (0, codegen_1.or)(...schema.map((_x, i) => equalCode(vSchema, i)));
-	        }
-	        cxt.pass(valid);
-	        function loopEnum() {
-	            gen.assign(valid, false);
-	            gen.forOf("v", schemaCode, (v) => gen.if((0, codegen_1._) `${getEql()}(${data}, ${v})`, () => gen.assign(valid, true).break()));
-	        }
-	        function equalCode(vSchema, i) {
-	            const sch = schema[i];
-	            return typeof sch === "object" && sch !== null
-	                ? (0, codegen_1._) `${getEql()}(${data}, ${vSchema}[${i}])`
-	                : (0, codegen_1._) `${data} === ${sch}`;
-	        }
-	    },
-	};
-	_enum.default = def;
-	
-	return _enum;
-}
-
-var hasRequiredValidation;
-
-function requireValidation () {
-	if (hasRequiredValidation) return validation;
-	hasRequiredValidation = 1;
-	Object.defineProperty(validation, "__esModule", { value: true });
-	const limitNumber_1 = requireLimitNumber();
-	const multipleOf_1 = requireMultipleOf();
-	const limitLength_1 = requireLimitLength();
-	const pattern_1 = requirePattern();
-	const limitProperties_1 = requireLimitProperties();
-	const required_1 = requireRequired();
-	const limitItems_1 = requireLimitItems();
-	const uniqueItems_1 = requireUniqueItems();
-	const const_1 = require_const();
-	const enum_1 = require_enum();
-	const validation$1 = [
-	    // number
-	    limitNumber_1.default,
-	    multipleOf_1.default,
-	    // string
-	    limitLength_1.default,
-	    pattern_1.default,
-	    // object
-	    limitProperties_1.default,
-	    required_1.default,
-	    // array
-	    limitItems_1.default,
-	    uniqueItems_1.default,
-	    // any
-	    { keyword: "type", schemaType: ["string", "array"] },
-	    { keyword: "nullable", schemaType: "boolean" },
-	    const_1.default,
-	    enum_1.default,
-	];
-	validation.default = validation$1;
-	
-	return validation;
-}
-
-var applicator = {};
-
-var additionalItems = {};
-
-var hasRequiredAdditionalItems;
-
-function requireAdditionalItems () {
-	if (hasRequiredAdditionalItems) return additionalItems;
-	hasRequiredAdditionalItems = 1;
-	Object.defineProperty(additionalItems, "__esModule", { value: true });
-	additionalItems.validateAdditionalItems = void 0;
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: ({ params: { len } }) => (0, codegen_1.str) `must NOT have more than ${len} items`,
-	    params: ({ params: { len } }) => (0, codegen_1._) `{limit: ${len}}`,
-	};
-	const def = {
-	    keyword: "additionalItems",
-	    type: "array",
-	    schemaType: ["boolean", "object"],
-	    before: "uniqueItems",
-	    error,
-	    code(cxt) {
-	        const { parentSchema, it } = cxt;
-	        const { items } = parentSchema;
-	        if (!Array.isArray(items)) {
-	            (0, util_1.checkStrictMode)(it, '"additionalItems" is ignored when "items" is not an array of schemas');
-	            return;
-	        }
-	        validateAdditionalItems(cxt, items);
-	    },
-	};
-	function validateAdditionalItems(cxt, items) {
-	    const { gen, schema, data, keyword, it } = cxt;
-	    it.items = true;
-	    const len = gen.const("len", (0, codegen_1._) `${data}.length`);
-	    if (schema === false) {
-	        cxt.setParams({ len: items.length });
-	        cxt.pass((0, codegen_1._) `${len} <= ${items.length}`);
-	    }
-	    else if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
-	        const valid = gen.var("valid", (0, codegen_1._) `${len} <= ${items.length}`); // TODO var
-	        gen.if((0, codegen_1.not)(valid), () => validateItems(valid));
-	        cxt.ok(valid);
-	    }
-	    function validateItems(valid) {
-	        gen.forRange("i", items.length, len, (i) => {
-	            cxt.subschema({ keyword, dataProp: i, dataPropType: util_1.Type.Num }, valid);
-	            if (!it.allErrors)
-	                gen.if((0, codegen_1.not)(valid), () => gen.break());
-	        });
-	    }
-	}
-	additionalItems.validateAdditionalItems = validateAdditionalItems;
-	additionalItems.default = def;
-	
-	return additionalItems;
-}
-
-var prefixItems = {};
-
-var items = {};
-
-var hasRequiredItems;
-
-function requireItems () {
-	if (hasRequiredItems) return items;
-	hasRequiredItems = 1;
-	Object.defineProperty(items, "__esModule", { value: true });
-	items.validateTuple = void 0;
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const code_1 = requireCode();
-	const def = {
-	    keyword: "items",
-	    type: "array",
-	    schemaType: ["object", "array", "boolean"],
-	    before: "uniqueItems",
-	    code(cxt) {
-	        const { schema, it } = cxt;
-	        if (Array.isArray(schema))
-	            return validateTuple(cxt, "additionalItems", schema);
-	        it.items = true;
-	        if ((0, util_1.alwaysValidSchema)(it, schema))
-	            return;
-	        cxt.ok((0, code_1.validateArray)(cxt));
-	    },
-	};
-	function validateTuple(cxt, extraItems, schArr = cxt.schema) {
-	    const { gen, parentSchema, data, keyword, it } = cxt;
-	    checkStrictTuple(parentSchema);
-	    if (it.opts.unevaluated && schArr.length && it.items !== true) {
-	        it.items = util_1.mergeEvaluated.items(gen, schArr.length, it.items);
-	    }
-	    const valid = gen.name("valid");
-	    const len = gen.const("len", (0, codegen_1._) `${data}.length`);
-	    schArr.forEach((sch, i) => {
-	        if ((0, util_1.alwaysValidSchema)(it, sch))
-	            return;
-	        gen.if((0, codegen_1._) `${len} > ${i}`, () => cxt.subschema({
-	            keyword,
-	            schemaProp: i,
-	            dataProp: i,
-	        }, valid));
-	        cxt.ok(valid);
-	    });
-	    function checkStrictTuple(sch) {
-	        const { opts, errSchemaPath } = it;
-	        const l = schArr.length;
-	        const fullTuple = l === sch.minItems && (l === sch.maxItems || sch[extraItems] === false);
-	        if (opts.strictTuples && !fullTuple) {
-	            const msg = `"${keyword}" is ${l}-tuple, but minItems or maxItems/${extraItems} are not specified or different at path "${errSchemaPath}"`;
-	            (0, util_1.checkStrictMode)(it, msg, opts.strictTuples);
-	        }
-	    }
-	}
-	items.validateTuple = validateTuple;
-	items.default = def;
-	
-	return items;
-}
-
-var hasRequiredPrefixItems;
-
-function requirePrefixItems () {
-	if (hasRequiredPrefixItems) return prefixItems;
-	hasRequiredPrefixItems = 1;
-	Object.defineProperty(prefixItems, "__esModule", { value: true });
-	const items_1 = requireItems();
-	const def = {
-	    keyword: "prefixItems",
-	    type: "array",
-	    schemaType: ["array"],
-	    before: "uniqueItems",
-	    code: (cxt) => (0, items_1.validateTuple)(cxt, "items"),
-	};
-	prefixItems.default = def;
-	
-	return prefixItems;
-}
-
-var items2020 = {};
-
-var hasRequiredItems2020;
-
-function requireItems2020 () {
-	if (hasRequiredItems2020) return items2020;
-	hasRequiredItems2020 = 1;
-	Object.defineProperty(items2020, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const code_1 = requireCode();
-	const additionalItems_1 = requireAdditionalItems();
-	const error = {
-	    message: ({ params: { len } }) => (0, codegen_1.str) `must NOT have more than ${len} items`,
-	    params: ({ params: { len } }) => (0, codegen_1._) `{limit: ${len}}`,
-	};
-	const def = {
-	    keyword: "items",
-	    type: "array",
-	    schemaType: ["object", "boolean"],
-	    before: "uniqueItems",
-	    error,
-	    code(cxt) {
-	        const { schema, parentSchema, it } = cxt;
-	        const { prefixItems } = parentSchema;
-	        it.items = true;
-	        if ((0, util_1.alwaysValidSchema)(it, schema))
-	            return;
-	        if (prefixItems)
-	            (0, additionalItems_1.validateAdditionalItems)(cxt, prefixItems);
-	        else
-	            cxt.ok((0, code_1.validateArray)(cxt));
-	    },
-	};
-	items2020.default = def;
-	
-	return items2020;
-}
-
-var contains = {};
-
-var hasRequiredContains;
-
-function requireContains () {
-	if (hasRequiredContains) return contains;
-	hasRequiredContains = 1;
-	Object.defineProperty(contains, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: ({ params: { min, max } }) => max === undefined
-	        ? (0, codegen_1.str) `must contain at least ${min} valid item(s)`
-	        : (0, codegen_1.str) `must contain at least ${min} and no more than ${max} valid item(s)`,
-	    params: ({ params: { min, max } }) => max === undefined ? (0, codegen_1._) `{minContains: ${min}}` : (0, codegen_1._) `{minContains: ${min}, maxContains: ${max}}`,
-	};
-	const def = {
-	    keyword: "contains",
-	    type: "array",
-	    schemaType: ["object", "boolean"],
-	    before: "uniqueItems",
-	    trackErrors: true,
-	    error,
-	    code(cxt) {
-	        const { gen, schema, parentSchema, data, it } = cxt;
-	        let min;
-	        let max;
-	        const { minContains, maxContains } = parentSchema;
-	        if (it.opts.next) {
-	            min = minContains === undefined ? 1 : minContains;
-	            max = maxContains;
-	        }
-	        else {
-	            min = 1;
-	        }
-	        const len = gen.const("len", (0, codegen_1._) `${data}.length`);
-	        cxt.setParams({ min, max });
-	        if (max === undefined && min === 0) {
-	            (0, util_1.checkStrictMode)(it, `"minContains" == 0 without "maxContains": "contains" keyword ignored`);
-	            return;
-	        }
-	        if (max !== undefined && min > max) {
-	            (0, util_1.checkStrictMode)(it, `"minContains" > "maxContains" is always invalid`);
-	            cxt.fail();
-	            return;
-	        }
-	        if ((0, util_1.alwaysValidSchema)(it, schema)) {
-	            let cond = (0, codegen_1._) `${len} >= ${min}`;
-	            if (max !== undefined)
-	                cond = (0, codegen_1._) `${cond} && ${len} <= ${max}`;
-	            cxt.pass(cond);
-	            return;
-	        }
-	        it.items = true;
-	        const valid = gen.name("valid");
-	        if (max === undefined && min === 1) {
-	            validateItems(valid, () => gen.if(valid, () => gen.break()));
-	        }
-	        else if (min === 0) {
-	            gen.let(valid, true);
-	            if (max !== undefined)
-	                gen.if((0, codegen_1._) `${data}.length > 0`, validateItemsWithCount);
-	        }
-	        else {
-	            gen.let(valid, false);
-	            validateItemsWithCount();
-	        }
-	        cxt.result(valid, () => cxt.reset());
-	        function validateItemsWithCount() {
-	            const schValid = gen.name("_valid");
-	            const count = gen.let("count", 0);
-	            validateItems(schValid, () => gen.if(schValid, () => checkLimits(count)));
-	        }
-	        function validateItems(_valid, block) {
-	            gen.forRange("i", 0, len, (i) => {
-	                cxt.subschema({
-	                    keyword: "contains",
-	                    dataProp: i,
-	                    dataPropType: util_1.Type.Num,
-	                    compositeRule: true,
-	                }, _valid);
-	                block();
-	            });
-	        }
-	        function checkLimits(count) {
-	            gen.code((0, codegen_1._) `${count}++`);
-	            if (max === undefined) {
-	                gen.if((0, codegen_1._) `${count} >= ${min}`, () => gen.assign(valid, true).break());
-	            }
-	            else {
-	                gen.if((0, codegen_1._) `${count} > ${max}`, () => gen.assign(valid, false).break());
-	                if (min === 1)
-	                    gen.assign(valid, true);
-	                else
-	                    gen.if((0, codegen_1._) `${count} >= ${min}`, () => gen.assign(valid, true));
-	            }
-	        }
-	    },
-	};
-	contains.default = def;
-	
-	return contains;
-}
-
-var dependencies = {};
-
-var hasRequiredDependencies;
-
-function requireDependencies () {
-	if (hasRequiredDependencies) return dependencies;
-	hasRequiredDependencies = 1;
-	(function (exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.validateSchemaDeps = exports$1.validatePropertyDeps = exports$1.error = void 0;
-		const codegen_1 = requireCodegen();
-		const util_1 = requireUtil$1();
-		const code_1 = requireCode();
-		exports$1.error = {
-		    message: ({ params: { property, depsCount, deps } }) => {
-		        const property_ies = depsCount === 1 ? "property" : "properties";
-		        return (0, codegen_1.str) `must have ${property_ies} ${deps} when property ${property} is present`;
-		    },
-		    params: ({ params: { property, depsCount, deps, missingProperty } }) => (0, codegen_1._) `{property: ${property},
-    missingProperty: ${missingProperty},
-    depsCount: ${depsCount},
-    deps: ${deps}}`, // TODO change to reference
-		};
-		const def = {
-		    keyword: "dependencies",
-		    type: "object",
-		    schemaType: "object",
-		    error: exports$1.error,
-		    code(cxt) {
-		        const [propDeps, schDeps] = splitDependencies(cxt);
-		        validatePropertyDeps(cxt, propDeps);
-		        validateSchemaDeps(cxt, schDeps);
-		    },
-		};
-		function splitDependencies({ schema }) {
-		    const propertyDeps = {};
-		    const schemaDeps = {};
-		    for (const key in schema) {
-		        if (key === "__proto__")
-		            continue;
-		        const deps = Array.isArray(schema[key]) ? propertyDeps : schemaDeps;
-		        deps[key] = schema[key];
-		    }
-		    return [propertyDeps, schemaDeps];
-		}
-		function validatePropertyDeps(cxt, propertyDeps = cxt.schema) {
-		    const { gen, data, it } = cxt;
-		    if (Object.keys(propertyDeps).length === 0)
-		        return;
-		    const missing = gen.let("missing");
-		    for (const prop in propertyDeps) {
-		        const deps = propertyDeps[prop];
-		        if (deps.length === 0)
-		            continue;
-		        const hasProperty = (0, code_1.propertyInData)(gen, data, prop, it.opts.ownProperties);
-		        cxt.setParams({
-		            property: prop,
-		            depsCount: deps.length,
-		            deps: deps.join(", "),
-		        });
-		        if (it.allErrors) {
-		            gen.if(hasProperty, () => {
-		                for (const depProp of deps) {
-		                    (0, code_1.checkReportMissingProp)(cxt, depProp);
-		                }
-		            });
-		        }
-		        else {
-		            gen.if((0, codegen_1._) `${hasProperty} && (${(0, code_1.checkMissingProp)(cxt, deps, missing)})`);
-		            (0, code_1.reportMissingProp)(cxt, missing);
-		            gen.else();
-		        }
-		    }
-		}
-		exports$1.validatePropertyDeps = validatePropertyDeps;
-		function validateSchemaDeps(cxt, schemaDeps = cxt.schema) {
-		    const { gen, data, keyword, it } = cxt;
-		    const valid = gen.name("valid");
-		    for (const prop in schemaDeps) {
-		        if ((0, util_1.alwaysValidSchema)(it, schemaDeps[prop]))
-		            continue;
-		        gen.if((0, code_1.propertyInData)(gen, data, prop, it.opts.ownProperties), () => {
-		            const schCxt = cxt.subschema({ keyword, schemaProp: prop }, valid);
-		            cxt.mergeValidEvaluated(schCxt, valid);
-		        }, () => gen.var(valid, true) // TODO var
-		        );
-		        cxt.ok(valid);
-		    }
-		}
-		exports$1.validateSchemaDeps = validateSchemaDeps;
-		exports$1.default = def;
-		
-	} (dependencies));
-	return dependencies;
-}
-
-var propertyNames = {};
-
-var hasRequiredPropertyNames;
-
-function requirePropertyNames () {
-	if (hasRequiredPropertyNames) return propertyNames;
-	hasRequiredPropertyNames = 1;
-	Object.defineProperty(propertyNames, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: "property name must be valid",
-	    params: ({ params }) => (0, codegen_1._) `{propertyName: ${params.propertyName}}`,
-	};
-	const def = {
-	    keyword: "propertyNames",
-	    type: "object",
-	    schemaType: ["object", "boolean"],
-	    error,
-	    code(cxt) {
-	        const { gen, schema, data, it } = cxt;
-	        if ((0, util_1.alwaysValidSchema)(it, schema))
-	            return;
-	        const valid = gen.name("valid");
-	        gen.forIn("key", data, (key) => {
-	            cxt.setParams({ propertyName: key });
-	            cxt.subschema({
-	                keyword: "propertyNames",
-	                data: key,
-	                dataTypes: ["string"],
-	                propertyName: key,
-	                compositeRule: true,
-	            }, valid);
-	            gen.if((0, codegen_1.not)(valid), () => {
-	                cxt.error(true);
-	                if (!it.allErrors)
-	                    gen.break();
-	            });
-	        });
-	        cxt.ok(valid);
-	    },
-	};
-	propertyNames.default = def;
-	
-	return propertyNames;
-}
-
-var additionalProperties = {};
-
-var hasRequiredAdditionalProperties;
-
-function requireAdditionalProperties () {
-	if (hasRequiredAdditionalProperties) return additionalProperties;
-	hasRequiredAdditionalProperties = 1;
-	Object.defineProperty(additionalProperties, "__esModule", { value: true });
-	const code_1 = requireCode();
-	const codegen_1 = requireCodegen();
-	const names_1 = requireNames();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: "must NOT have additional properties",
-	    params: ({ params }) => (0, codegen_1._) `{additionalProperty: ${params.additionalProperty}}`,
-	};
-	const def = {
-	    keyword: "additionalProperties",
-	    type: ["object"],
-	    schemaType: ["boolean", "object"],
-	    allowUndefined: true,
-	    trackErrors: true,
-	    error,
-	    code(cxt) {
-	        const { gen, schema, parentSchema, data, errsCount, it } = cxt;
-	        /* istanbul ignore if */
-	        if (!errsCount)
-	            throw new Error("ajv implementation error");
-	        const { allErrors, opts } = it;
-	        it.props = true;
-	        if (opts.removeAdditional !== "all" && (0, util_1.alwaysValidSchema)(it, schema))
-	            return;
-	        const props = (0, code_1.allSchemaProperties)(parentSchema.properties);
-	        const patProps = (0, code_1.allSchemaProperties)(parentSchema.patternProperties);
-	        checkAdditionalProperties();
-	        cxt.ok((0, codegen_1._) `${errsCount} === ${names_1.default.errors}`);
-	        function checkAdditionalProperties() {
-	            gen.forIn("key", data, (key) => {
-	                if (!props.length && !patProps.length)
-	                    additionalPropertyCode(key);
-	                else
-	                    gen.if(isAdditional(key), () => additionalPropertyCode(key));
-	            });
-	        }
-	        function isAdditional(key) {
-	            let definedProp;
-	            if (props.length > 8) {
-	                // TODO maybe an option instead of hard-coded 8?
-	                const propsSchema = (0, util_1.schemaRefOrVal)(it, parentSchema.properties, "properties");
-	                definedProp = (0, code_1.isOwnProperty)(gen, propsSchema, key);
-	            }
-	            else if (props.length) {
-	                definedProp = (0, codegen_1.or)(...props.map((p) => (0, codegen_1._) `${key} === ${p}`));
-	            }
-	            else {
-	                definedProp = codegen_1.nil;
-	            }
-	            if (patProps.length) {
-	                definedProp = (0, codegen_1.or)(definedProp, ...patProps.map((p) => (0, codegen_1._) `${(0, code_1.usePattern)(cxt, p)}.test(${key})`));
-	            }
-	            return (0, codegen_1.not)(definedProp);
-	        }
-	        function deleteAdditional(key) {
-	            gen.code((0, codegen_1._) `delete ${data}[${key}]`);
-	        }
-	        function additionalPropertyCode(key) {
-	            if (opts.removeAdditional === "all" || (opts.removeAdditional && schema === false)) {
-	                deleteAdditional(key);
-	                return;
-	            }
-	            if (schema === false) {
-	                cxt.setParams({ additionalProperty: key });
-	                cxt.error();
-	                if (!allErrors)
-	                    gen.break();
-	                return;
-	            }
-	            if (typeof schema == "object" && !(0, util_1.alwaysValidSchema)(it, schema)) {
-	                const valid = gen.name("valid");
-	                if (opts.removeAdditional === "failing") {
-	                    applyAdditionalSchema(key, valid, false);
-	                    gen.if((0, codegen_1.not)(valid), () => {
-	                        cxt.reset();
-	                        deleteAdditional(key);
-	                    });
-	                }
-	                else {
-	                    applyAdditionalSchema(key, valid);
-	                    if (!allErrors)
-	                        gen.if((0, codegen_1.not)(valid), () => gen.break());
-	                }
-	            }
-	        }
-	        function applyAdditionalSchema(key, valid, errors) {
-	            const subschema = {
-	                keyword: "additionalProperties",
-	                dataProp: key,
-	                dataPropType: util_1.Type.Str,
-	            };
-	            if (errors === false) {
-	                Object.assign(subschema, {
-	                    compositeRule: true,
-	                    createErrors: false,
-	                    allErrors: false,
-	                });
-	            }
-	            cxt.subschema(subschema, valid);
-	        }
-	    },
-	};
-	additionalProperties.default = def;
-	
-	return additionalProperties;
-}
-
-var properties$1 = {};
-
-var hasRequiredProperties;
-
-function requireProperties () {
-	if (hasRequiredProperties) return properties$1;
-	hasRequiredProperties = 1;
-	Object.defineProperty(properties$1, "__esModule", { value: true });
-	const validate_1 = requireValidate();
-	const code_1 = requireCode();
-	const util_1 = requireUtil$1();
-	const additionalProperties_1 = requireAdditionalProperties();
-	const def = {
-	    keyword: "properties",
-	    type: "object",
-	    schemaType: "object",
-	    code(cxt) {
-	        const { gen, schema, parentSchema, data, it } = cxt;
-	        if (it.opts.removeAdditional === "all" && parentSchema.additionalProperties === undefined) {
-	            additionalProperties_1.default.code(new validate_1.KeywordCxt(it, additionalProperties_1.default, "additionalProperties"));
-	        }
-	        const allProps = (0, code_1.allSchemaProperties)(schema);
-	        for (const prop of allProps) {
-	            it.definedProperties.add(prop);
-	        }
-	        if (it.opts.unevaluated && allProps.length && it.props !== true) {
-	            it.props = util_1.mergeEvaluated.props(gen, (0, util_1.toHash)(allProps), it.props);
-	        }
-	        const properties = allProps.filter((p) => !(0, util_1.alwaysValidSchema)(it, schema[p]));
-	        if (properties.length === 0)
-	            return;
-	        const valid = gen.name("valid");
-	        for (const prop of properties) {
-	            if (hasDefault(prop)) {
-	                applyPropertySchema(prop);
-	            }
-	            else {
-	                gen.if((0, code_1.propertyInData)(gen, data, prop, it.opts.ownProperties));
-	                applyPropertySchema(prop);
-	                if (!it.allErrors)
-	                    gen.else().var(valid, true);
-	                gen.endIf();
-	            }
-	            cxt.it.definedProperties.add(prop);
-	            cxt.ok(valid);
-	        }
-	        function hasDefault(prop) {
-	            return it.opts.useDefaults && !it.compositeRule && schema[prop].default !== undefined;
-	        }
-	        function applyPropertySchema(prop) {
-	            cxt.subschema({
-	                keyword: "properties",
-	                schemaProp: prop,
-	                dataProp: prop,
-	            }, valid);
-	        }
-	    },
-	};
-	properties$1.default = def;
-	
-	return properties$1;
-}
-
-var patternProperties = {};
-
-var hasRequiredPatternProperties;
-
-function requirePatternProperties () {
-	if (hasRequiredPatternProperties) return patternProperties;
-	hasRequiredPatternProperties = 1;
-	Object.defineProperty(patternProperties, "__esModule", { value: true });
-	const code_1 = requireCode();
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const util_2 = requireUtil$1();
-	const def = {
-	    keyword: "patternProperties",
-	    type: "object",
-	    schemaType: "object",
-	    code(cxt) {
-	        const { gen, schema, data, parentSchema, it } = cxt;
-	        const { opts } = it;
-	        const patterns = (0, code_1.allSchemaProperties)(schema);
-	        const alwaysValidPatterns = patterns.filter((p) => (0, util_1.alwaysValidSchema)(it, schema[p]));
-	        if (patterns.length === 0 ||
-	            (alwaysValidPatterns.length === patterns.length &&
-	                (!it.opts.unevaluated || it.props === true))) {
-	            return;
-	        }
-	        const checkProperties = opts.strictSchema && !opts.allowMatchingProperties && parentSchema.properties;
-	        const valid = gen.name("valid");
-	        if (it.props !== true && !(it.props instanceof codegen_1.Name)) {
-	            it.props = (0, util_2.evaluatedPropsToName)(gen, it.props);
-	        }
-	        const { props } = it;
-	        validatePatternProperties();
-	        function validatePatternProperties() {
-	            for (const pat of patterns) {
-	                if (checkProperties)
-	                    checkMatchingProperties(pat);
-	                if (it.allErrors) {
-	                    validateProperties(pat);
-	                }
-	                else {
-	                    gen.var(valid, true); // TODO var
-	                    validateProperties(pat);
-	                    gen.if(valid);
-	                }
-	            }
-	        }
-	        function checkMatchingProperties(pat) {
-	            for (const prop in checkProperties) {
-	                if (new RegExp(pat).test(prop)) {
-	                    (0, util_1.checkStrictMode)(it, `property ${prop} matches pattern ${pat} (use allowMatchingProperties)`);
-	                }
-	            }
-	        }
-	        function validateProperties(pat) {
-	            gen.forIn("key", data, (key) => {
-	                gen.if((0, codegen_1._) `${(0, code_1.usePattern)(cxt, pat)}.test(${key})`, () => {
-	                    const alwaysValid = alwaysValidPatterns.includes(pat);
-	                    if (!alwaysValid) {
-	                        cxt.subschema({
-	                            keyword: "patternProperties",
-	                            schemaProp: pat,
-	                            dataProp: key,
-	                            dataPropType: util_2.Type.Str,
-	                        }, valid);
-	                    }
-	                    if (it.opts.unevaluated && props !== true) {
-	                        gen.assign((0, codegen_1._) `${props}[${key}]`, true);
-	                    }
-	                    else if (!alwaysValid && !it.allErrors) {
-	                        // can short-circuit if `unevaluatedProperties` is not supported (opts.next === false)
-	                        // or if all properties were evaluated (props === true)
-	                        gen.if((0, codegen_1.not)(valid), () => gen.break());
-	                    }
-	                });
-	            });
-	        }
-	    },
-	};
-	patternProperties.default = def;
-	
-	return patternProperties;
-}
-
-var not = {};
-
-var hasRequiredNot;
-
-function requireNot () {
-	if (hasRequiredNot) return not;
-	hasRequiredNot = 1;
-	Object.defineProperty(not, "__esModule", { value: true });
-	const util_1 = requireUtil$1();
-	const def = {
-	    keyword: "not",
-	    schemaType: ["object", "boolean"],
-	    trackErrors: true,
-	    code(cxt) {
-	        const { gen, schema, it } = cxt;
-	        if ((0, util_1.alwaysValidSchema)(it, schema)) {
-	            cxt.fail();
-	            return;
-	        }
-	        const valid = gen.name("valid");
-	        cxt.subschema({
-	            keyword: "not",
-	            compositeRule: true,
-	            createErrors: false,
-	            allErrors: false,
-	        }, valid);
-	        cxt.failResult(valid, () => cxt.reset(), () => cxt.error());
-	    },
-	    error: { message: "must NOT be valid" },
-	};
-	not.default = def;
-	
-	return not;
-}
-
-var anyOf = {};
-
-var hasRequiredAnyOf;
-
-function requireAnyOf () {
-	if (hasRequiredAnyOf) return anyOf;
-	hasRequiredAnyOf = 1;
-	Object.defineProperty(anyOf, "__esModule", { value: true });
-	const code_1 = requireCode();
-	const def = {
-	    keyword: "anyOf",
-	    schemaType: "array",
-	    trackErrors: true,
-	    code: code_1.validateUnion,
-	    error: { message: "must match a schema in anyOf" },
-	};
-	anyOf.default = def;
-	
-	return anyOf;
-}
-
-var oneOf = {};
-
-var hasRequiredOneOf;
-
-function requireOneOf () {
-	if (hasRequiredOneOf) return oneOf;
-	hasRequiredOneOf = 1;
-	Object.defineProperty(oneOf, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: "must match exactly one schema in oneOf",
-	    params: ({ params }) => (0, codegen_1._) `{passingSchemas: ${params.passing}}`,
-	};
-	const def = {
-	    keyword: "oneOf",
-	    schemaType: "array",
-	    trackErrors: true,
-	    error,
-	    code(cxt) {
-	        const { gen, schema, parentSchema, it } = cxt;
-	        /* istanbul ignore if */
-	        if (!Array.isArray(schema))
-	            throw new Error("ajv implementation error");
-	        if (it.opts.discriminator && parentSchema.discriminator)
-	            return;
-	        const schArr = schema;
-	        const valid = gen.let("valid", false);
-	        const passing = gen.let("passing", null);
-	        const schValid = gen.name("_valid");
-	        cxt.setParams({ passing });
-	        // TODO possibly fail straight away (with warning or exception) if there are two empty always valid schemas
-	        gen.block(validateOneOf);
-	        cxt.result(valid, () => cxt.reset(), () => cxt.error(true));
-	        function validateOneOf() {
-	            schArr.forEach((sch, i) => {
-	                let schCxt;
-	                if ((0, util_1.alwaysValidSchema)(it, sch)) {
-	                    gen.var(schValid, true);
-	                }
-	                else {
-	                    schCxt = cxt.subschema({
-	                        keyword: "oneOf",
-	                        schemaProp: i,
-	                        compositeRule: true,
-	                    }, schValid);
-	                }
-	                if (i > 0) {
-	                    gen
-	                        .if((0, codegen_1._) `${schValid} && ${valid}`)
-	                        .assign(valid, false)
-	                        .assign(passing, (0, codegen_1._) `[${passing}, ${i}]`)
-	                        .else();
-	                }
-	                gen.if(schValid, () => {
-	                    gen.assign(valid, true);
-	                    gen.assign(passing, i);
-	                    if (schCxt)
-	                        cxt.mergeEvaluated(schCxt, codegen_1.Name);
-	                });
-	            });
-	        }
-	    },
-	};
-	oneOf.default = def;
-	
-	return oneOf;
-}
-
-var allOf = {};
-
-var hasRequiredAllOf;
-
-function requireAllOf () {
-	if (hasRequiredAllOf) return allOf;
-	hasRequiredAllOf = 1;
-	Object.defineProperty(allOf, "__esModule", { value: true });
-	const util_1 = requireUtil$1();
-	const def = {
-	    keyword: "allOf",
-	    schemaType: "array",
-	    code(cxt) {
-	        const { gen, schema, it } = cxt;
-	        /* istanbul ignore if */
-	        if (!Array.isArray(schema))
-	            throw new Error("ajv implementation error");
-	        const valid = gen.name("valid");
-	        schema.forEach((sch, i) => {
-	            if ((0, util_1.alwaysValidSchema)(it, sch))
-	                return;
-	            const schCxt = cxt.subschema({ keyword: "allOf", schemaProp: i }, valid);
-	            cxt.ok(valid);
-	            cxt.mergeEvaluated(schCxt);
-	        });
-	    },
-	};
-	allOf.default = def;
-	
-	return allOf;
-}
-
-var _if = {};
-
-var hasRequired_if;
-
-function require_if () {
-	if (hasRequired_if) return _if;
-	hasRequired_if = 1;
-	Object.defineProperty(_if, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: ({ params }) => (0, codegen_1.str) `must match "${params.ifClause}" schema`,
-	    params: ({ params }) => (0, codegen_1._) `{failingKeyword: ${params.ifClause}}`,
-	};
-	const def = {
-	    keyword: "if",
-	    schemaType: ["object", "boolean"],
-	    trackErrors: true,
-	    error,
-	    code(cxt) {
-	        const { gen, parentSchema, it } = cxt;
-	        if (parentSchema.then === undefined && parentSchema.else === undefined) {
-	            (0, util_1.checkStrictMode)(it, '"if" without "then" and "else" is ignored');
-	        }
-	        const hasThen = hasSchema(it, "then");
-	        const hasElse = hasSchema(it, "else");
-	        if (!hasThen && !hasElse)
-	            return;
-	        const valid = gen.let("valid", true);
-	        const schValid = gen.name("_valid");
-	        validateIf();
-	        cxt.reset();
-	        if (hasThen && hasElse) {
-	            const ifClause = gen.let("ifClause");
-	            cxt.setParams({ ifClause });
-	            gen.if(schValid, validateClause("then", ifClause), validateClause("else", ifClause));
-	        }
-	        else if (hasThen) {
-	            gen.if(schValid, validateClause("then"));
-	        }
-	        else {
-	            gen.if((0, codegen_1.not)(schValid), validateClause("else"));
-	        }
-	        cxt.pass(valid, () => cxt.error(true));
-	        function validateIf() {
-	            const schCxt = cxt.subschema({
-	                keyword: "if",
-	                compositeRule: true,
-	                createErrors: false,
-	                allErrors: false,
-	            }, schValid);
-	            cxt.mergeEvaluated(schCxt);
-	        }
-	        function validateClause(keyword, ifClause) {
-	            return () => {
-	                const schCxt = cxt.subschema({ keyword }, schValid);
-	                gen.assign(valid, schValid);
-	                cxt.mergeValidEvaluated(schCxt, valid);
-	                if (ifClause)
-	                    gen.assign(ifClause, (0, codegen_1._) `${keyword}`);
-	                else
-	                    cxt.setParams({ ifClause: keyword });
-	            };
-	        }
-	    },
-	};
-	function hasSchema(it, keyword) {
-	    const schema = it.schema[keyword];
-	    return schema !== undefined && !(0, util_1.alwaysValidSchema)(it, schema);
-	}
-	_if.default = def;
-	
-	return _if;
-}
-
-var thenElse = {};
-
-var hasRequiredThenElse;
-
-function requireThenElse () {
-	if (hasRequiredThenElse) return thenElse;
-	hasRequiredThenElse = 1;
-	Object.defineProperty(thenElse, "__esModule", { value: true });
-	const util_1 = requireUtil$1();
-	const def = {
-	    keyword: ["then", "else"],
-	    schemaType: ["object", "boolean"],
-	    code({ keyword, parentSchema, it }) {
-	        if (parentSchema.if === undefined)
-	            (0, util_1.checkStrictMode)(it, `"${keyword}" without "if" is ignored`);
-	    },
-	};
-	thenElse.default = def;
-	
-	return thenElse;
-}
-
-var hasRequiredApplicator;
-
-function requireApplicator () {
-	if (hasRequiredApplicator) return applicator;
-	hasRequiredApplicator = 1;
-	Object.defineProperty(applicator, "__esModule", { value: true });
-	const additionalItems_1 = requireAdditionalItems();
-	const prefixItems_1 = requirePrefixItems();
-	const items_1 = requireItems();
-	const items2020_1 = requireItems2020();
-	const contains_1 = requireContains();
-	const dependencies_1 = requireDependencies();
-	const propertyNames_1 = requirePropertyNames();
-	const additionalProperties_1 = requireAdditionalProperties();
-	const properties_1 = requireProperties();
-	const patternProperties_1 = requirePatternProperties();
-	const not_1 = requireNot();
-	const anyOf_1 = requireAnyOf();
-	const oneOf_1 = requireOneOf();
-	const allOf_1 = requireAllOf();
-	const if_1 = require_if();
-	const thenElse_1 = requireThenElse();
-	function getApplicator(draft2020 = false) {
-	    const applicator = [
-	        // any
-	        not_1.default,
-	        anyOf_1.default,
-	        oneOf_1.default,
-	        allOf_1.default,
-	        if_1.default,
-	        thenElse_1.default,
-	        // object
-	        propertyNames_1.default,
-	        additionalProperties_1.default,
-	        dependencies_1.default,
-	        properties_1.default,
-	        patternProperties_1.default,
-	    ];
-	    // array
-	    if (draft2020)
-	        applicator.push(prefixItems_1.default, items2020_1.default);
-	    else
-	        applicator.push(additionalItems_1.default, items_1.default);
-	    applicator.push(contains_1.default);
-	    return applicator;
-	}
-	applicator.default = getApplicator;
-	
-	return applicator;
-}
-
-var format$1 = {};
-
-var format = {};
-
-var hasRequiredFormat$1;
-
-function requireFormat$1 () {
-	if (hasRequiredFormat$1) return format;
-	hasRequiredFormat$1 = 1;
-	Object.defineProperty(format, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const error = {
-	    message: ({ schemaCode }) => (0, codegen_1.str) `must match format "${schemaCode}"`,
-	    params: ({ schemaCode }) => (0, codegen_1._) `{format: ${schemaCode}}`,
-	};
-	const def = {
-	    keyword: "format",
-	    type: ["number", "string"],
-	    schemaType: "string",
-	    $data: true,
-	    error,
-	    code(cxt, ruleType) {
-	        const { gen, data, $data, schema, schemaCode, it } = cxt;
-	        const { opts, errSchemaPath, schemaEnv, self } = it;
-	        if (!opts.validateFormats)
-	            return;
-	        if ($data)
-	            validate$DataFormat();
-	        else
-	            validateFormat();
-	        function validate$DataFormat() {
-	            const fmts = gen.scopeValue("formats", {
-	                ref: self.formats,
-	                code: opts.code.formats,
-	            });
-	            const fDef = gen.const("fDef", (0, codegen_1._) `${fmts}[${schemaCode}]`);
-	            const fType = gen.let("fType");
-	            const format = gen.let("format");
-	            // TODO simplify
-	            gen.if((0, codegen_1._) `typeof ${fDef} == "object" && !(${fDef} instanceof RegExp)`, () => gen.assign(fType, (0, codegen_1._) `${fDef}.type || "string"`).assign(format, (0, codegen_1._) `${fDef}.validate`), () => gen.assign(fType, (0, codegen_1._) `"string"`).assign(format, fDef));
-	            cxt.fail$data((0, codegen_1.or)(unknownFmt(), invalidFmt()));
-	            function unknownFmt() {
-	                if (opts.strictSchema === false)
-	                    return codegen_1.nil;
-	                return (0, codegen_1._) `${schemaCode} && !${format}`;
-	            }
-	            function invalidFmt() {
-	                const callFormat = schemaEnv.$async
-	                    ? (0, codegen_1._) `(${fDef}.async ? await ${format}(${data}) : ${format}(${data}))`
-	                    : (0, codegen_1._) `${format}(${data})`;
-	                const validData = (0, codegen_1._) `(typeof ${format} == "function" ? ${callFormat} : ${format}.test(${data}))`;
-	                return (0, codegen_1._) `${format} && ${format} !== true && ${fType} === ${ruleType} && !${validData}`;
-	            }
-	        }
-	        function validateFormat() {
-	            const formatDef = self.formats[schema];
-	            if (!formatDef) {
-	                unknownFormat();
-	                return;
-	            }
-	            if (formatDef === true)
-	                return;
-	            const [fmtType, format, fmtRef] = getFormat(formatDef);
-	            if (fmtType === ruleType)
-	                cxt.pass(validCondition());
-	            function unknownFormat() {
-	                if (opts.strictSchema === false) {
-	                    self.logger.warn(unknownMsg());
-	                    return;
-	                }
-	                throw new Error(unknownMsg());
-	                function unknownMsg() {
-	                    return `unknown format "${schema}" ignored in schema at path "${errSchemaPath}"`;
-	                }
-	            }
-	            function getFormat(fmtDef) {
-	                const code = fmtDef instanceof RegExp
-	                    ? (0, codegen_1.regexpCode)(fmtDef)
-	                    : opts.code.formats
-	                        ? (0, codegen_1._) `${opts.code.formats}${(0, codegen_1.getProperty)(schema)}`
-	                        : undefined;
-	                const fmt = gen.scopeValue("formats", { key: schema, ref: fmtDef, code });
-	                if (typeof fmtDef == "object" && !(fmtDef instanceof RegExp)) {
-	                    return [fmtDef.type || "string", fmtDef.validate, (0, codegen_1._) `${fmt}.validate`];
-	                }
-	                return ["string", fmtDef, fmt];
-	            }
-	            function validCondition() {
-	                if (typeof formatDef == "object" && !(formatDef instanceof RegExp) && formatDef.async) {
-	                    if (!schemaEnv.$async)
-	                        throw new Error("async format in sync schema");
-	                    return (0, codegen_1._) `await ${fmtRef}(${data})`;
-	                }
-	                return typeof format == "function" ? (0, codegen_1._) `${fmtRef}(${data})` : (0, codegen_1._) `${fmtRef}.test(${data})`;
-	            }
-	        }
-	    },
-	};
-	format.default = def;
-	
-	return format;
-}
-
-var hasRequiredFormat;
-
-function requireFormat () {
-	if (hasRequiredFormat) return format$1;
-	hasRequiredFormat = 1;
-	Object.defineProperty(format$1, "__esModule", { value: true });
-	const format_1 = requireFormat$1();
-	const format = [format_1.default];
-	format$1.default = format;
-	
-	return format$1;
-}
-
-var metadata = {};
-
-var hasRequiredMetadata;
-
-function requireMetadata () {
-	if (hasRequiredMetadata) return metadata;
-	hasRequiredMetadata = 1;
-	Object.defineProperty(metadata, "__esModule", { value: true });
-	metadata.contentVocabulary = metadata.metadataVocabulary = void 0;
-	metadata.metadataVocabulary = [
-	    "title",
-	    "description",
-	    "default",
-	    "deprecated",
-	    "readOnly",
-	    "writeOnly",
-	    "examples",
-	];
-	metadata.contentVocabulary = [
-	    "contentMediaType",
-	    "contentEncoding",
-	    "contentSchema",
-	];
-	
-	return metadata;
-}
-
-var hasRequiredDraft7;
-
-function requireDraft7 () {
-	if (hasRequiredDraft7) return draft7;
-	hasRequiredDraft7 = 1;
-	Object.defineProperty(draft7, "__esModule", { value: true });
-	const core_1 = requireCore();
-	const validation_1 = requireValidation();
-	const applicator_1 = requireApplicator();
-	const format_1 = requireFormat();
-	const metadata_1 = requireMetadata();
-	const draft7Vocabularies = [
-	    core_1.default,
-	    validation_1.default,
-	    (0, applicator_1.default)(),
-	    format_1.default,
-	    metadata_1.metadataVocabulary,
-	    metadata_1.contentVocabulary,
-	];
-	draft7.default = draft7Vocabularies;
-	
-	return draft7;
-}
-
-var discriminator = {};
-
-var types = {};
-
-var hasRequiredTypes;
-
-function requireTypes () {
-	if (hasRequiredTypes) return types;
-	hasRequiredTypes = 1;
-	Object.defineProperty(types, "__esModule", { value: true });
-	types.DiscrError = void 0;
-	var DiscrError;
-	(function (DiscrError) {
-	    DiscrError["Tag"] = "tag";
-	    DiscrError["Mapping"] = "mapping";
-	})(DiscrError || (types.DiscrError = DiscrError = {}));
-	
-	return types;
-}
-
-var hasRequiredDiscriminator;
-
-function requireDiscriminator () {
-	if (hasRequiredDiscriminator) return discriminator;
-	hasRequiredDiscriminator = 1;
-	Object.defineProperty(discriminator, "__esModule", { value: true });
-	const codegen_1 = requireCodegen();
-	const types_1 = requireTypes();
-	const compile_1 = requireCompile();
-	const ref_error_1 = requireRef_error();
-	const util_1 = requireUtil$1();
-	const error = {
-	    message: ({ params: { discrError, tagName } }) => discrError === types_1.DiscrError.Tag
-	        ? `tag "${tagName}" must be string`
-	        : `value of tag "${tagName}" must be in oneOf`,
-	    params: ({ params: { discrError, tag, tagName } }) => (0, codegen_1._) `{error: ${discrError}, tag: ${tagName}, tagValue: ${tag}}`,
-	};
-	const def = {
-	    keyword: "discriminator",
-	    type: "object",
-	    schemaType: "object",
-	    error,
-	    code(cxt) {
-	        const { gen, data, schema, parentSchema, it } = cxt;
-	        const { oneOf } = parentSchema;
-	        if (!it.opts.discriminator) {
-	            throw new Error("discriminator: requires discriminator option");
-	        }
-	        const tagName = schema.propertyName;
-	        if (typeof tagName != "string")
-	            throw new Error("discriminator: requires propertyName");
-	        if (schema.mapping)
-	            throw new Error("discriminator: mapping is not supported");
-	        if (!oneOf)
-	            throw new Error("discriminator: requires oneOf keyword");
-	        const valid = gen.let("valid", false);
-	        const tag = gen.const("tag", (0, codegen_1._) `${data}${(0, codegen_1.getProperty)(tagName)}`);
-	        gen.if((0, codegen_1._) `typeof ${tag} == "string"`, () => validateMapping(), () => cxt.error(false, { discrError: types_1.DiscrError.Tag, tag, tagName }));
-	        cxt.ok(valid);
-	        function validateMapping() {
-	            const mapping = getMapping();
-	            gen.if(false);
-	            for (const tagValue in mapping) {
-	                gen.elseIf((0, codegen_1._) `${tag} === ${tagValue}`);
-	                gen.assign(valid, applyTagSchema(mapping[tagValue]));
-	            }
-	            gen.else();
-	            cxt.error(false, { discrError: types_1.DiscrError.Mapping, tag, tagName });
-	            gen.endIf();
-	        }
-	        function applyTagSchema(schemaProp) {
-	            const _valid = gen.name("valid");
-	            const schCxt = cxt.subschema({ keyword: "oneOf", schemaProp }, _valid);
-	            cxt.mergeEvaluated(schCxt, codegen_1.Name);
-	            return _valid;
-	        }
-	        function getMapping() {
-	            var _a;
-	            const oneOfMapping = {};
-	            const topRequired = hasRequired(parentSchema);
-	            let tagRequired = true;
-	            for (let i = 0; i < oneOf.length; i++) {
-	                let sch = oneOf[i];
-	                if ((sch === null || sch === void 0 ? void 0 : sch.$ref) && !(0, util_1.schemaHasRulesButRef)(sch, it.self.RULES)) {
-	                    const ref = sch.$ref;
-	                    sch = compile_1.resolveRef.call(it.self, it.schemaEnv.root, it.baseId, ref);
-	                    if (sch instanceof compile_1.SchemaEnv)
-	                        sch = sch.schema;
-	                    if (sch === undefined)
-	                        throw new ref_error_1.default(it.opts.uriResolver, it.baseId, ref);
-	                }
-	                const propSch = (_a = sch === null || sch === void 0 ? void 0 : sch.properties) === null || _a === void 0 ? void 0 : _a[tagName];
-	                if (typeof propSch != "object") {
-	                    throw new Error(`discriminator: oneOf subschemas (or referenced schemas) must have "properties/${tagName}"`);
-	                }
-	                tagRequired = tagRequired && (topRequired || hasRequired(sch));
-	                addMappings(propSch, i);
-	            }
-	            if (!tagRequired)
-	                throw new Error(`discriminator: "${tagName}" must be required`);
-	            return oneOfMapping;
-	            function hasRequired({ required }) {
-	                return Array.isArray(required) && required.includes(tagName);
-	            }
-	            function addMappings(sch, i) {
-	                if (sch.const) {
-	                    addMapping(sch.const, i);
-	                }
-	                else if (sch.enum) {
-	                    for (const tagValue of sch.enum) {
-	                        addMapping(tagValue, i);
-	                    }
-	                }
-	                else {
-	                    throw new Error(`discriminator: "properties/${tagName}" must have "const" or "enum"`);
-	                }
-	            }
-	            function addMapping(tagValue, i) {
-	                if (typeof tagValue != "string" || tagValue in oneOfMapping) {
-	                    throw new Error(`discriminator: "${tagName}" values must be unique strings`);
-	                }
-	                oneOfMapping[tagValue] = i;
-	            }
-	        }
-	    },
-	};
-	discriminator.default = def;
-	
-	return discriminator;
-}
-
-const $schema = "http://json-schema.org/draft-07/schema#";
-const $id = "http://json-schema.org/draft-07/schema#";
-const title = "Core schema meta-schema";
-const definitions = {"schemaArray":{"type":"array","minItems":1,"items":{"$ref":"#"}},"nonNegativeInteger":{"type":"integer","minimum":0},"nonNegativeIntegerDefault0":{"allOf":[{"$ref":"#/definitions/nonNegativeInteger"},{"default":0}]},"simpleTypes":{"enum":["array","boolean","integer","null","number","object","string"]},"stringArray":{"type":"array","items":{"type":"string"},"uniqueItems":true,"default":[]}};
-const type = ["object","boolean"];
-const properties = {"$id":{"type":"string","format":"uri-reference"},"$schema":{"type":"string","format":"uri"},"$ref":{"type":"string","format":"uri-reference"},"$comment":{"type":"string"},"title":{"type":"string"},"description":{"type":"string"},"default":true,"readOnly":{"type":"boolean","default":false},"examples":{"type":"array","items":true},"multipleOf":{"type":"number","exclusiveMinimum":0},"maximum":{"type":"number"},"exclusiveMaximum":{"type":"number"},"minimum":{"type":"number"},"exclusiveMinimum":{"type":"number"},"maxLength":{"$ref":"#/definitions/nonNegativeInteger"},"minLength":{"$ref":"#/definitions/nonNegativeIntegerDefault0"},"pattern":{"type":"string","format":"regex"},"additionalItems":{"$ref":"#"},"items":{"anyOf":[{"$ref":"#"},{"$ref":"#/definitions/schemaArray"}],"default":true},"maxItems":{"$ref":"#/definitions/nonNegativeInteger"},"minItems":{"$ref":"#/definitions/nonNegativeIntegerDefault0"},"uniqueItems":{"type":"boolean","default":false},"contains":{"$ref":"#"},"maxProperties":{"$ref":"#/definitions/nonNegativeInteger"},"minProperties":{"$ref":"#/definitions/nonNegativeIntegerDefault0"},"required":{"$ref":"#/definitions/stringArray"},"additionalProperties":{"$ref":"#"},"definitions":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},"properties":{"type":"object","additionalProperties":{"$ref":"#"},"default":{}},"patternProperties":{"type":"object","additionalProperties":{"$ref":"#"},"propertyNames":{"format":"regex"},"default":{}},"dependencies":{"type":"object","additionalProperties":{"anyOf":[{"$ref":"#"},{"$ref":"#/definitions/stringArray"}]}},"propertyNames":{"$ref":"#"},"const":true,"enum":{"type":"array","items":true,"minItems":1,"uniqueItems":true},"type":{"anyOf":[{"$ref":"#/definitions/simpleTypes"},{"type":"array","items":{"$ref":"#/definitions/simpleTypes"},"minItems":1,"uniqueItems":true}]},"format":{"type":"string"},"contentMediaType":{"type":"string"},"contentEncoding":{"type":"string"},"if":{"$ref":"#"},"then":{"$ref":"#"},"else":{"$ref":"#"},"allOf":{"$ref":"#/definitions/schemaArray"},"anyOf":{"$ref":"#/definitions/schemaArray"},"oneOf":{"$ref":"#/definitions/schemaArray"},"not":{"$ref":"#"}};
-const require$$3 = {
-  $schema,
-  $id,
-  title,
-  definitions,
-  type,
-  properties,
-  "default": true,
-};
-
-var hasRequiredAjv;
-
-function requireAjv () {
-	if (hasRequiredAjv) return ajv.exports;
-	hasRequiredAjv = 1;
-	(function (module, exports$1) {
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.MissingRefError = exports$1.ValidationError = exports$1.CodeGen = exports$1.Name = exports$1.nil = exports$1.stringify = exports$1.str = exports$1._ = exports$1.KeywordCxt = exports$1.Ajv = void 0;
-		const core_1 = requireCore$1();
-		const draft7_1 = requireDraft7();
-		const discriminator_1 = requireDiscriminator();
-		const draft7MetaSchema = require$$3;
-		const META_SUPPORT_DATA = ["/properties"];
-		const META_SCHEMA_ID = "http://json-schema.org/draft-07/schema";
-		class Ajv extends core_1.default {
-		    _addVocabularies() {
-		        super._addVocabularies();
-		        draft7_1.default.forEach((v) => this.addVocabulary(v));
-		        if (this.opts.discriminator)
-		            this.addKeyword(discriminator_1.default);
-		    }
-		    _addDefaultMetaSchema() {
-		        super._addDefaultMetaSchema();
-		        if (!this.opts.meta)
-		            return;
-		        const metaSchema = this.opts.$data
-		            ? this.$dataMetaSchema(draft7MetaSchema, META_SUPPORT_DATA)
-		            : draft7MetaSchema;
-		        this.addMetaSchema(metaSchema, META_SCHEMA_ID, false);
-		        this.refs["http://json-schema.org/schema"] = META_SCHEMA_ID;
-		    }
-		    defaultMeta() {
-		        return (this.opts.defaultMeta =
-		            super.defaultMeta() || (this.getSchema(META_SCHEMA_ID) ? META_SCHEMA_ID : undefined));
-		    }
-		}
-		exports$1.Ajv = Ajv;
-		module.exports = exports$1 = Ajv;
-		module.exports.Ajv = Ajv;
-		Object.defineProperty(exports$1, "__esModule", { value: true });
-		exports$1.default = Ajv;
-		var validate_1 = requireValidate();
-		Object.defineProperty(exports$1, "KeywordCxt", { enumerable: true, get: function () { return validate_1.KeywordCxt; } });
-		var codegen_1 = requireCodegen();
-		Object.defineProperty(exports$1, "_", { enumerable: true, get: function () { return codegen_1._; } });
-		Object.defineProperty(exports$1, "str", { enumerable: true, get: function () { return codegen_1.str; } });
-		Object.defineProperty(exports$1, "stringify", { enumerable: true, get: function () { return codegen_1.stringify; } });
-		Object.defineProperty(exports$1, "nil", { enumerable: true, get: function () { return codegen_1.nil; } });
-		Object.defineProperty(exports$1, "Name", { enumerable: true, get: function () { return codegen_1.Name; } });
-		Object.defineProperty(exports$1, "CodeGen", { enumerable: true, get: function () { return codegen_1.CodeGen; } });
-		var validation_error_1 = requireValidation_error();
-		Object.defineProperty(exports$1, "ValidationError", { enumerable: true, get: function () { return validation_error_1.default; } });
-		var ref_error_1 = requireRef_error();
-		Object.defineProperty(exports$1, "MissingRefError", { enumerable: true, get: function () { return ref_error_1.default; } });
-		
-	} (ajv, ajv.exports));
-	return ajv.exports;
-}
-
-var ajvExports = requireAjv();
-const Ajv = /*@__PURE__*/getDefaultExportFromCjs(ajvExports);
-
-class ConfigBase {
-  name;
-  core;
-  configPath;
-  configData = {};
-  ajv;
-  validate;
-  constructor(name, core, configPath, ConfigSchema) {
-    this.name = name;
-    this.core = core;
-    this.configPath = configPath;
-    this.ajv = new Ajv({ useDefaults: true, coerceTypes: true });
-    this.validate = this.ajv.compile(ConfigSchema);
-    fs__default$1.mkdirSync(this.configPath, { recursive: true });
-    this.read();
-  }
-  getConfigPath(pathName) {
-    const filename = pathName ? `${this.name}_${pathName}.json` : `${this.name}.json`;
-    return path__default.join(this.configPath, filename);
-  }
-  read() {
-    const configPath = this.getConfigPath(this.core.selfInfo.uin);
-    const defaultConfigPath = this.getConfigPath();
-    if (!fs__default$1.existsSync(configPath)) {
-      if (fs__default$1.existsSync(defaultConfigPath)) {
-        this.configData = this.loadConfig(defaultConfigPath);
-      }
-      this.save();
-      return this.configData;
-    }
-    return this.loadConfig(configPath);
-  }
-  loadConfig(configPath) {
-    try {
-      const newConfigData = lib$2.parse(fs__default$1.readFileSync(configPath, "utf-8"));
-      this.validate(newConfigData);
-      this.configData = newConfigData;
-      this.core.context.logger.logDebug(`[Core] [Config] 配置文件${configPath}加载`, this.configData);
-      return this.configData;
-    } catch (e) {
-      this.handleError(e, "读取配置文件时发生错误");
-      return {};
-    }
-  }
-  save(newConfigData = this.configData) {
-    const configPath = this.getConfigPath(this.core.selfInfo.uin);
-    this.validate(newConfigData);
-    this.configData = newConfigData;
-    try {
-      fs__default$1.writeFileSync(configPath, JSON.stringify(this.configData, null, 2));
-    } catch (e) {
-      this.handleError(e, `保存配置文件 ${configPath} 时发生错误:`);
-    }
-  }
-  handleError(e, message) {
-    if (e instanceof SyntaxError) {
-      this.core.context.logger.logError("[Core] [Config] 操作配置文件格式错误，请检查配置文件:", e.message);
-    } else {
-      this.core.context.logger.logError(`[Core] [Config] ${message}:`, e.message);
-    }
-  }
-}
-
-// --------------------------------------------------------------------------
-// PropertyKey
-// --------------------------------------------------------------------------
-/** Returns true if this value has this property key */
-// --------------------------------------------------------------------------
-// Object Instances
-// --------------------------------------------------------------------------
-/** Returns true if this value is an async iterator */
-function IsAsyncIterator$2(value) {
-    return IsObject$3(value) && !IsArray$3(value) && !IsUint8Array$2(value) && Symbol.asyncIterator in value;
-}
-/** Returns true if this value is an array */
-function IsArray$3(value) {
-    return Array.isArray(value);
-}
-/** Returns true if this value is bigint */
-function IsBigInt$2(value) {
-    return typeof value === 'bigint';
-}
-/** Returns true if this value is a boolean */
-function IsBoolean$2(value) {
-    return typeof value === 'boolean';
-}
-/** Returns true if this value is a Date object */
-function IsDate$2(value) {
-    return value instanceof globalThis.Date;
-}
-/** Returns true if this value is a function */
-function IsFunction$2(value) {
-    return typeof value === 'function';
-}
-/** Returns true if this value is an iterator */
-function IsIterator$2(value) {
-    return IsObject$3(value) && !IsArray$3(value) && !IsUint8Array$2(value) && Symbol.iterator in value;
-}
-/** Returns true if this value is null */
-function IsNull$2(value) {
-    return value === null;
-}
-/** Returns true if this value is number */
-function IsNumber$3(value) {
-    return typeof value === 'number';
-}
-/** Returns true if this value is an object */
-function IsObject$3(value) {
-    return typeof value === 'object' && value !== null;
-}
-/** Returns true if this value is RegExp */
-function IsRegExp$2(value) {
-    return value instanceof globalThis.RegExp;
-}
-/** Returns true if this value is string */
-function IsString$2(value) {
-    return typeof value === 'string';
-}
-/** Returns true if this value is symbol */
-function IsSymbol$2(value) {
-    return typeof value === 'symbol';
-}
-/** Returns true if this value is a Uint8Array */
-function IsUint8Array$2(value) {
-    return value instanceof globalThis.Uint8Array;
-}
-/** Returns true if this value is undefined */
-function IsUndefined$3(value) {
-    return value === undefined;
-}
-
-function ArrayType(value) {
-    return value.map((value) => Visit$2(value));
-}
-function DateType(value) {
-    return new Date(value.getTime());
-}
-function Uint8ArrayType(value) {
-    return new Uint8Array(value);
-}
-function RegExpType(value) {
-    return new RegExp(value.source, value.flags);
-}
-function ObjectType(value) {
-    const result = {};
-    for (const key of Object.getOwnPropertyNames(value)) {
-        result[key] = Visit$2(value[key]);
-    }
-    for (const key of Object.getOwnPropertySymbols(value)) {
-        result[key] = Visit$2(value[key]);
-    }
-    return result;
-}
-// prettier-ignore
-function Visit$2(value) {
-    return (IsArray$3(value) ? ArrayType(value) :
-        IsDate$2(value) ? DateType(value) :
-            IsUint8Array$2(value) ? Uint8ArrayType(value) :
-                IsRegExp$2(value) ? RegExpType(value) :
-                    IsObject$3(value) ? ObjectType(value) :
-                        value);
-}
-/** Clones a value */
-function Clone(value) {
-    return Visit$2(value);
-}
-
-/** Clones a Type */
-function CloneType(schema, options) {
-    return options === undefined ? Clone(schema) : Clone({ ...options, ...schema });
-}
-
 // --------------------------------------------------------------------------
 // Iterators
 // --------------------------------------------------------------------------
 /** Returns true if this value is an async iterator */
+function IsAsyncIterator$3(value) {
+    return IsObject$3(value) && globalThis.Symbol.asyncIterator in value;
+}
+/** Returns true if this value is an iterator */
+function IsIterator$3(value) {
+    return IsObject$3(value) && globalThis.Symbol.iterator in value;
+}
+// --------------------------------------------------------------------------
+// JavaScript
+// --------------------------------------------------------------------------
+/** Returns true if this value is a Promise */
+function IsPromise$2(value) {
+    return value instanceof globalThis.Promise;
+}
+/** Returns true if this value is a Date */
+function IsDate$3(value) {
+    return value instanceof Date && globalThis.Number.isFinite(value.getTime());
+}
+/** Returns true if this value is an instance of Map<K, T> */
+function IsMap(value) {
+    return value instanceof globalThis.Map;
+}
+/** Returns true if this value is an instance of Set<T> */
+function IsSet(value) {
+    return value instanceof globalThis.Set;
+}
+/** Returns true if this value is a typed array */
+function IsTypedArray(value) {
+    return globalThis.ArrayBuffer.isView(value);
+}
+/** Returns true if the value is a Uint8Array */
+function IsUint8Array$3(value) {
+    return value instanceof globalThis.Uint8Array;
+}
+// --------------------------------------------------------------------------
+// PropertyKey
+// --------------------------------------------------------------------------
+/** Returns true if this value has this property key */
+function HasPropertyKey(value, key) {
+    return key in value;
+}
 // --------------------------------------------------------------------------
 // Standard
 // --------------------------------------------------------------------------
 /** Returns true of this value is an object type */
-function IsObject$2(value) {
+function IsObject$3(value) {
     return value !== null && typeof value === 'object';
 }
 /** Returns true if this value is an array, but not a typed array */
-function IsArray$2(value) {
+function IsArray$3(value) {
     return globalThis.Array.isArray(value) && !globalThis.ArrayBuffer.isView(value);
 }
 /** Returns true if this value is an undefined */
-function IsUndefined$2(value) {
+function IsUndefined$3(value) {
     return value === undefined;
 }
+/** Returns true if this value is an null */
+function IsNull$3(value) {
+    return value === null;
+}
+/** Returns true if this value is an boolean */
+function IsBoolean$3(value) {
+    return typeof value === 'boolean';
+}
 /** Returns true if this value is an number */
-function IsNumber$2(value) {
+function IsNumber$3(value) {
     return typeof value === 'number';
+}
+/** Returns true if this value is an integer */
+function IsInteger$2(value) {
+    return globalThis.Number.isInteger(value);
+}
+/** Returns true if this value is bigint */
+function IsBigInt$3(value) {
+    return typeof value === 'bigint';
+}
+/** Returns true if this value is string */
+function IsString$3(value) {
+    return typeof value === 'string';
+}
+/** Returns true if this value is a function */
+function IsFunction$3(value) {
+    return typeof value === 'function';
+}
+/** Returns true if this value is a symbol */
+function IsSymbol$3(value) {
+    return typeof value === 'symbol';
+}
+/** Returns true if this value is a value type such as number, string, boolean */
+function IsValueType(value) {
+    // prettier-ignore
+    return (IsBigInt$3(value) ||
+        IsBoolean$3(value) ||
+        IsNull$3(value) ||
+        IsNumber$3(value) ||
+        IsString$3(value) ||
+        IsSymbol$3(value) ||
+        IsUndefined$3(value));
 }
 
 var TypeSystemPolicy;
@@ -59233,8 +52736,8 @@ var TypeSystemPolicy;
     TypeSystemPolicy.IsExactOptionalProperty = IsExactOptionalProperty;
     /** Checks this value using the AllowArrayObjects policy */
     function IsObjectLike(value) {
-        const isObject = IsObject$2(value);
-        return TypeSystemPolicy.AllowArrayObject ? isObject : isObject && !IsArray$2(value);
+        const isObject = IsObject$3(value);
+        return TypeSystemPolicy.AllowArrayObject ? isObject : isObject && !IsArray$3(value);
     }
     TypeSystemPolicy.IsObjectLike = IsObjectLike;
     /** Checks this value as a record using the AllowArrayObjects policy */
@@ -59244,16 +52747,106 @@ var TypeSystemPolicy;
     TypeSystemPolicy.IsRecordLike = IsRecordLike;
     /** Checks this value using the AllowNaN policy */
     function IsNumberLike(value) {
-        return TypeSystemPolicy.AllowNaN ? IsNumber$2(value) : Number.isFinite(value);
+        return TypeSystemPolicy.AllowNaN ? IsNumber$3(value) : Number.isFinite(value);
     }
     TypeSystemPolicy.IsNumberLike = IsNumberLike;
     /** Checks this value using the AllowVoidNull policy */
     function IsVoidLike(value) {
-        const isUndefined = IsUndefined$2(value);
+        const isUndefined = IsUndefined$3(value);
         return TypeSystemPolicy.AllowNullVoid ? isUndefined || value === null : isUndefined;
     }
     TypeSystemPolicy.IsVoidLike = IsVoidLike;
 })(TypeSystemPolicy || (TypeSystemPolicy = {}));
+
+/** A registry for user defined string formats */
+const map$1 = new Map();
+/** Returns true if the user defined string format exists */
+function Has$1(format) {
+    return map$1.has(format);
+}
+/** Gets a validation function for a user defined string format */
+function Get$1(format) {
+    return map$1.get(format);
+}
+
+/** A registry for user defined types */
+const map = new Map();
+/** Returns true if this registry contains this kind */
+function Has(kind) {
+    return map.has(kind);
+}
+/** Gets a custom validation function for a user defined type */
+function Get(kind) {
+    return map.get(kind);
+}
+
+// --------------------------------------------------------------------------
+// PropertyKey
+// --------------------------------------------------------------------------
+/** Returns true if this value has this property key */
+// --------------------------------------------------------------------------
+// Object Instances
+// --------------------------------------------------------------------------
+/** Returns true if this value is an async iterator */
+function IsAsyncIterator$2(value) {
+    return IsObject$2(value) && !IsArray$2(value) && !IsUint8Array$2(value) && Symbol.asyncIterator in value;
+}
+/** Returns true if this value is an array */
+function IsArray$2(value) {
+    return Array.isArray(value);
+}
+/** Returns true if this value is bigint */
+function IsBigInt$2(value) {
+    return typeof value === 'bigint';
+}
+/** Returns true if this value is a boolean */
+function IsBoolean$2(value) {
+    return typeof value === 'boolean';
+}
+/** Returns true if this value is a Date object */
+function IsDate$2(value) {
+    return value instanceof globalThis.Date;
+}
+/** Returns true if this value is a function */
+function IsFunction$2(value) {
+    return typeof value === 'function';
+}
+/** Returns true if this value is an iterator */
+function IsIterator$2(value) {
+    return IsObject$2(value) && !IsArray$2(value) && !IsUint8Array$2(value) && Symbol.iterator in value;
+}
+/** Returns true if this value is null */
+function IsNull$2(value) {
+    return value === null;
+}
+/** Returns true if this value is number */
+function IsNumber$2(value) {
+    return typeof value === 'number';
+}
+/** Returns true if this value is an object */
+function IsObject$2(value) {
+    return typeof value === 'object' && value !== null;
+}
+/** Returns true if this value is RegExp */
+function IsRegExp$2(value) {
+    return value instanceof globalThis.RegExp;
+}
+/** Returns true if this value is string */
+function IsString$2(value) {
+    return typeof value === 'string';
+}
+/** Returns true if this value is symbol */
+function IsSymbol$2(value) {
+    return typeof value === 'symbol';
+}
+/** Returns true if this value is a Uint8Array */
+function IsUint8Array$2(value) {
+    return value instanceof globalThis.Uint8Array;
+}
+/** Returns true if this value is undefined */
+function IsUndefined$2(value) {
+    return value === undefined;
+}
 
 function ImmutableArray(value) {
     return globalThis.Object.freeze(value).map((value) => Immutable(value));
@@ -59280,12 +52873,48 @@ function ImmutableObject(value) {
 /** Specialized deep immutable value. Applies freeze recursively to the given value */
 // prettier-ignore
 function Immutable(value) {
-    return (IsArray$3(value) ? ImmutableArray(value) :
+    return (IsArray$2(value) ? ImmutableArray(value) :
         IsDate$2(value) ? ImmutableDate(value) :
             IsUint8Array$2(value) ? ImmutableUint8Array(value) :
                 IsRegExp$2(value) ? ImmutableRegExp(value) :
-                    IsObject$3(value) ? ImmutableObject(value) :
+                    IsObject$2(value) ? ImmutableObject(value) :
                         value);
+}
+
+function ArrayType$1(value) {
+    return value.map((value) => Visit$d(value));
+}
+function DateType$1(value) {
+    return new Date(value.getTime());
+}
+function Uint8ArrayType$1(value) {
+    return new Uint8Array(value);
+}
+function RegExpType(value) {
+    return new RegExp(value.source, value.flags);
+}
+function ObjectType$1(value) {
+    const result = {};
+    for (const key of Object.getOwnPropertyNames(value)) {
+        result[key] = Visit$d(value[key]);
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+        result[key] = Visit$d(value[key]);
+    }
+    return result;
+}
+// prettier-ignore
+function Visit$d(value) {
+    return (IsArray$2(value) ? ArrayType$1(value) :
+        IsDate$2(value) ? DateType$1(value) :
+            IsUint8Array$2(value) ? Uint8ArrayType$1(value) :
+                IsRegExp$2(value) ? RegExpType(value) :
+                    IsObject$2(value) ? ObjectType$1(value) :
+                        value);
+}
+/** Clones a value */
+function Clone$1(value) {
+    return Visit$d(value);
 }
 
 /** Creates TypeBox schematics using the configured InstanceMode */
@@ -59295,16 +52924,9 @@ function CreateType(schema, options) {
         case 'freeze':
             return Immutable(result);
         case 'clone':
-            return Clone(result);
+            return Clone$1(result);
         default:
             return result;
-    }
-}
-
-/** The base Error type thrown for all TypeBox exceptions  */
-class TypeBoxError extends Error {
-    constructor(message) {
-        super(message);
     }
 }
 
@@ -59319,13 +52941,72 @@ const Hint = Symbol.for('TypeBox.Hint');
 /** Symbol key applied to types */
 const Kind = Symbol.for('TypeBox.Kind');
 
+/** `[Json]` Creates a Unsafe type that will infers as the generic argument T */
+function Unsafe(options = {}) {
+    return CreateType({ [Kind]: options[Kind] ?? 'Unsafe' }, options);
+}
+
+/** The base Error type thrown for all TypeBox exceptions  */
+class TypeBoxError extends Error {
+    constructor(message) {
+        super(message);
+    }
+}
+
+// prettier-ignore
+function MappedResult(properties) {
+    return CreateType({
+        [Kind]: 'MappedResult',
+        properties
+    });
+}
+
+function DiscardKey(value, key) {
+    const { [key]: _, ...rest } = value;
+    return rest;
+}
+/** Discards property keys from the given value. This function returns a shallow Clone. */
+function Discard(value, keys) {
+    return keys.reduce((acc, key) => DiscardKey(acc, key), value);
+}
+
+/** `[Json]` Creates an Array type */
+function Array$1(items, options) {
+    return CreateType({ [Kind]: 'Array', type: 'array', items }, options);
+}
+
+/** `[JavaScript]` Creates a AsyncIterator type */
+function AsyncIterator$1(items, options) {
+    return CreateType({ [Kind]: 'AsyncIterator', type: 'AsyncIterator', items }, options);
+}
+
+/** `[JavaScript]` Creates a Constructor type */
+function Constructor(parameters, returns, options) {
+    return CreateType({ [Kind]: 'Constructor', type: 'Constructor', parameters, returns }, options);
+}
+
+/** `[JavaScript]` Creates a Function type */
+function Function$1(parameters, returns, options) {
+    return CreateType({ [Kind]: 'Function', type: 'Function', parameters, returns }, options);
+}
+
+/** `[Internal]` Creates a deferred computed type. This type is used exclusively in modules to defer resolution of computable types that contain interior references  */
+function Computed(target, parameters, options) {
+    return CreateType({ [Kind]: 'Computed', target, parameters }, options);
+}
+
+/** `[Json]` Creates a Never type */
+function Never(options) {
+    return CreateType({ [Kind]: 'Never', not: {} }, options);
+}
+
 /** `[Kind-Only]` Returns true if this value has a Readonly symbol */
 function IsReadonly(value) {
-    return IsObject$3(value) && value[ReadonlyKind] === 'Readonly';
+    return IsObject$2(value) && value[ReadonlyKind] === 'Readonly';
 }
 /** `[Kind-Only]` Returns true if this value has a Optional symbol */
 function IsOptional$1(value) {
-    return IsObject$3(value) && value[OptionalKind] === 'Optional';
+    return IsObject$2(value) && value[OptionalKind] === 'Optional';
 }
 /** `[Kind-Only]` Returns true if the given value is TAny */
 function IsAny$1(value) {
@@ -59381,11 +53062,11 @@ function IsIterator$1(value) {
 }
 /** `[Kind-Only]` Returns true if the given value is a TKind with the given name. */
 function IsKindOf$1(value, kind) {
-    return IsObject$3(value) && Kind in value && value[Kind] === kind;
+    return IsObject$2(value) && Kind in value && value[Kind] === kind;
 }
 /** `[Kind-Only]` Returns true if the given value is TLiteralValue */
 function IsLiteralValue$1(value) {
-    return IsBoolean$2(value) || IsNumber$3(value) || IsString$2(value);
+    return IsBoolean$2(value) || IsNumber$2(value) || IsString$2(value);
 }
 /** `[Kind-Only]` Returns true if the given value is TLiteral */
 function IsLiteral$1(value) {
@@ -59453,7 +53134,7 @@ function IsThis$1(value) {
 }
 /** `[Kind-Only]` Returns true of this value is TTransform */
 function IsTransform$1(value) {
-    return IsObject$3(value) && TransformKind in value;
+    return IsObject$2(value) && TransformKind in value;
 }
 /** `[Kind-Only]` Returns true if the given value is TTuple */
 function IsTuple$1(value) {
@@ -59485,7 +53166,7 @@ function IsVoid$1(value) {
 }
 /** `[Kind-Only]` Returns true if the given value is TKind */
 function IsKind$1(value) {
-    return IsObject$3(value) && Kind in value && IsString$2(value[Kind]);
+    return IsObject$2(value) && Kind in value && IsString$2(value[Kind]);
 }
 /** `[Kind-Only]` Returns true if the given value is TSchema */
 function IsSchema$1(value) {
@@ -59529,583 +53210,93 @@ function IsSchema$1(value) {
         IsKind$1(value));
 }
 
-const KnownTypes = [
-    'Argument',
-    'Any',
-    'Array',
-    'AsyncIterator',
-    'BigInt',
-    'Boolean',
-    'Computed',
-    'Constructor',
-    'Date',
-    'Enum',
-    'Function',
-    'Integer',
-    'Intersect',
-    'Iterator',
-    'Literal',
-    'MappedKey',
-    'MappedResult',
-    'Not',
-    'Null',
-    'Number',
-    'Object',
-    'Promise',
-    'Record',
-    'Ref',
-    'RegExp',
-    'String',
-    'Symbol',
-    'TemplateLiteral',
-    'This',
-    'Tuple',
-    'Undefined',
-    'Union',
-    'Uint8Array',
-    'Unknown',
-    'Void',
-];
-function IsPattern(value) {
-    try {
-        new RegExp(value);
-        return true;
-    }
-    catch {
-        return false;
-    }
+function RemoveOptional(schema) {
+    return CreateType(Discard(schema, [OptionalKind]));
 }
-function IsControlCharacterFree(value) {
-    if (!IsString$2(value))
-        return false;
-    for (let i = 0; i < value.length; i++) {
-        const code = value.charCodeAt(i);
-        if ((code >= 7 && code <= 13) || code === 27 || code === 127) {
-            return false;
-        }
-    }
-    return true;
+function AddOptional(schema) {
+    return CreateType({ ...schema, [OptionalKind]: 'Optional' });
 }
-function IsAdditionalProperties(value) {
-    return IsOptionalBoolean(value) || IsSchema(value);
+// prettier-ignore
+function OptionalWithFlag(schema, F) {
+    return (F === false
+        ? RemoveOptional(schema)
+        : AddOptional(schema));
 }
-function IsOptionalBigInt(value) {
-    return IsUndefined$3(value) || IsBigInt$2(value);
-}
-function IsOptionalNumber(value) {
-    return IsUndefined$3(value) || IsNumber$3(value);
-}
-function IsOptionalBoolean(value) {
-    return IsUndefined$3(value) || IsBoolean$2(value);
-}
-function IsOptionalString(value) {
-    return IsUndefined$3(value) || IsString$2(value);
-}
-function IsOptionalPattern(value) {
-    return IsUndefined$3(value) || (IsString$2(value) && IsControlCharacterFree(value) && IsPattern(value));
-}
-function IsOptionalFormat(value) {
-    return IsUndefined$3(value) || (IsString$2(value) && IsControlCharacterFree(value));
-}
-function IsOptionalSchema(value) {
-    return IsUndefined$3(value) || IsSchema(value);
-}
-/** Returns true if this value has a Optional symbol */
-function IsOptional(value) {
-    return IsObject$3(value) && value[OptionalKind] === 'Optional';
-}
-// ------------------------------------------------------------------
-// Types
-// ------------------------------------------------------------------
-/** Returns true if the given value is TAny */
-function IsAny(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Any') &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TArgument */
-function IsArgument(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Argument') &&
-        IsNumber$3(value.index));
-}
-/** Returns true if the given value is TArray */
-function IsArray(value) {
-    return (IsKindOf(value, 'Array') &&
-        value.type === 'array' &&
-        IsOptionalString(value.$id) &&
-        IsSchema(value.items) &&
-        IsOptionalNumber(value.minItems) &&
-        IsOptionalNumber(value.maxItems) &&
-        IsOptionalBoolean(value.uniqueItems) &&
-        IsOptionalSchema(value.contains) &&
-        IsOptionalNumber(value.minContains) &&
-        IsOptionalNumber(value.maxContains));
-}
-/** Returns true if the given value is TAsyncIterator */
-function IsAsyncIterator(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'AsyncIterator') &&
-        value.type === 'AsyncIterator' &&
-        IsOptionalString(value.$id) &&
-        IsSchema(value.items));
-}
-/** Returns true if the given value is TBigInt */
-function IsBigInt(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'BigInt') &&
-        value.type === 'bigint' &&
-        IsOptionalString(value.$id) &&
-        IsOptionalBigInt(value.exclusiveMaximum) &&
-        IsOptionalBigInt(value.exclusiveMinimum) &&
-        IsOptionalBigInt(value.maximum) &&
-        IsOptionalBigInt(value.minimum) &&
-        IsOptionalBigInt(value.multipleOf));
-}
-/** Returns true if the given value is TBoolean */
-function IsBoolean(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Boolean') &&
-        value.type === 'boolean' &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TComputed */
-function IsComputed(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Computed') &&
-        IsString$2(value.target) &&
-        IsArray$3(value.parameters) &&
-        value.parameters.every((schema) => IsSchema(schema)));
-}
-/** Returns true if the given value is TConstructor */
-function IsConstructor(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Constructor') &&
-        value.type === 'Constructor' &&
-        IsOptionalString(value.$id) &&
-        IsArray$3(value.parameters) &&
-        value.parameters.every(schema => IsSchema(schema)) &&
-        IsSchema(value.returns));
-}
-/** Returns true if the given value is TDate */
-function IsDate(value) {
-    return (IsKindOf(value, 'Date') &&
-        value.type === 'Date' &&
-        IsOptionalString(value.$id) &&
-        IsOptionalNumber(value.exclusiveMaximumTimestamp) &&
-        IsOptionalNumber(value.exclusiveMinimumTimestamp) &&
-        IsOptionalNumber(value.maximumTimestamp) &&
-        IsOptionalNumber(value.minimumTimestamp) &&
-        IsOptionalNumber(value.multipleOfTimestamp));
-}
-/** Returns true if the given value is TFunction */
-function IsFunction(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Function') &&
-        value.type === 'Function' &&
-        IsOptionalString(value.$id) &&
-        IsArray$3(value.parameters) &&
-        value.parameters.every(schema => IsSchema(schema)) &&
-        IsSchema(value.returns));
-}
-/** Returns true if the given value is TInteger */
-function IsInteger(value) {
-    return (IsKindOf(value, 'Integer') &&
-        value.type === 'integer' &&
-        IsOptionalString(value.$id) &&
-        IsOptionalNumber(value.exclusiveMaximum) &&
-        IsOptionalNumber(value.exclusiveMinimum) &&
-        IsOptionalNumber(value.maximum) &&
-        IsOptionalNumber(value.minimum) &&
-        IsOptionalNumber(value.multipleOf));
-}
-/** Returns true if the given schema is TProperties */
-function IsProperties(value) {
-    // prettier-ignore
-    return (IsObject$3(value) &&
-        Object.entries(value).every(([key, schema]) => IsControlCharacterFree(key) && IsSchema(schema)));
-}
-/** Returns true if the given value is TIntersect */
-function IsIntersect(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Intersect') &&
-        (IsString$2(value.type) && value.type !== 'object' ? false : true) &&
-        IsArray$3(value.allOf) &&
-        value.allOf.every(schema => IsSchema(schema) && !IsTransform(schema)) &&
-        IsOptionalString(value.type) &&
-        (IsOptionalBoolean(value.unevaluatedProperties) || IsOptionalSchema(value.unevaluatedProperties)) &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TIterator */
-function IsIterator(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Iterator') &&
-        value.type === 'Iterator' &&
-        IsOptionalString(value.$id) &&
-        IsSchema(value.items));
-}
-/** Returns true if the given value is a TKind with the given name. */
-function IsKindOf(value, kind) {
-    return IsObject$3(value) && Kind in value && value[Kind] === kind;
-}
-/** Returns true if the given value is TLiteral<string> */
-function IsLiteralString(value) {
-    return IsLiteral(value) && IsString$2(value.const);
-}
-/** Returns true if the given value is TLiteral<number> */
-function IsLiteralNumber(value) {
-    return IsLiteral(value) && IsNumber$3(value.const);
-}
-/** Returns true if the given value is TLiteral<boolean> */
-function IsLiteralBoolean(value) {
-    return IsLiteral(value) && IsBoolean$2(value.const);
-}
-/** Returns true if the given value is TLiteral */
-function IsLiteral(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Literal') &&
-        IsOptionalString(value.$id) && IsLiteralValue(value.const));
-}
-/** Returns true if the given value is a TLiteralValue */
-function IsLiteralValue(value) {
-    return IsBoolean$2(value) || IsNumber$3(value) || IsString$2(value);
-}
-/** Returns true if the given value is a TMappedKey */
-function IsMappedKey(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'MappedKey') &&
-        IsArray$3(value.keys) &&
-        value.keys.every(key => IsNumber$3(key) || IsString$2(key)));
-}
-/** Returns true if the given value is TMappedResult */
-function IsMappedResult(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'MappedResult') &&
-        IsProperties(value.properties));
-}
-/** Returns true if the given value is TNever */
-function IsNever(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Never') &&
-        IsObject$3(value.not) &&
-        Object.getOwnPropertyNames(value.not).length === 0);
-}
-/** Returns true if the given value is TNot */
-function IsNot(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Not') &&
-        IsSchema(value.not));
-}
-/** Returns true if the given value is TNull */
-function IsNull(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Null') &&
-        value.type === 'null' &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TNumber */
-function IsNumber(value) {
-    return (IsKindOf(value, 'Number') &&
-        value.type === 'number' &&
-        IsOptionalString(value.$id) &&
-        IsOptionalNumber(value.exclusiveMaximum) &&
-        IsOptionalNumber(value.exclusiveMinimum) &&
-        IsOptionalNumber(value.maximum) &&
-        IsOptionalNumber(value.minimum) &&
-        IsOptionalNumber(value.multipleOf));
-}
-/** Returns true if the given value is TObject */
-function IsObject(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Object') &&
-        value.type === 'object' &&
-        IsOptionalString(value.$id) &&
-        IsProperties(value.properties) &&
-        IsAdditionalProperties(value.additionalProperties) &&
-        IsOptionalNumber(value.minProperties) &&
-        IsOptionalNumber(value.maxProperties));
-}
-/** Returns true if the given value is TPromise */
-function IsPromise(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Promise') &&
-        value.type === 'Promise' &&
-        IsOptionalString(value.$id) &&
-        IsSchema(value.item));
-}
-/** Returns true if the given value is TRecord */
-function IsRecord(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Record') &&
-        value.type === 'object' &&
-        IsOptionalString(value.$id) &&
-        IsAdditionalProperties(value.additionalProperties) &&
-        IsObject$3(value.patternProperties) &&
-        ((schema) => {
-            const keys = Object.getOwnPropertyNames(schema.patternProperties);
-            return (keys.length === 1 &&
-                IsPattern(keys[0]) &&
-                IsObject$3(schema.patternProperties) &&
-                IsSchema(schema.patternProperties[keys[0]]));
-        })(value));
-}
-/** Returns true if the given value is TRef */
-function IsRef(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Ref') &&
-        IsOptionalString(value.$id) &&
-        IsString$2(value.$ref));
-}
-/** Returns true if the given value is TRegExp */
-function IsRegExp(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'RegExp') &&
-        IsOptionalString(value.$id) &&
-        IsString$2(value.source) &&
-        IsString$2(value.flags) &&
-        IsOptionalNumber(value.maxLength) &&
-        IsOptionalNumber(value.minLength));
-}
-/** Returns true if the given value is TString */
-function IsString(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'String') &&
-        value.type === 'string' &&
-        IsOptionalString(value.$id) &&
-        IsOptionalNumber(value.minLength) &&
-        IsOptionalNumber(value.maxLength) &&
-        IsOptionalPattern(value.pattern) &&
-        IsOptionalFormat(value.format));
-}
-/** Returns true if the given value is TSymbol */
-function IsSymbol(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Symbol') &&
-        value.type === 'symbol' &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TTemplateLiteral */
-function IsTemplateLiteral(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'TemplateLiteral') &&
-        value.type === 'string' &&
-        IsString$2(value.pattern) &&
-        value.pattern[0] === '^' &&
-        value.pattern[value.pattern.length - 1] === '$');
-}
-/** Returns true if the given value is TThis */
-function IsThis(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'This') &&
-        IsOptionalString(value.$id) &&
-        IsString$2(value.$ref));
-}
-/** Returns true of this value is TTransform */
-function IsTransform(value) {
-    return IsObject$3(value) && TransformKind in value;
-}
-/** Returns true if the given value is TTuple */
-function IsTuple(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Tuple') &&
-        value.type === 'array' &&
-        IsOptionalString(value.$id) &&
-        IsNumber$3(value.minItems) &&
-        IsNumber$3(value.maxItems) &&
-        value.minItems === value.maxItems &&
-        (( // empty
-        IsUndefined$3(value.items) &&
-            IsUndefined$3(value.additionalItems) &&
-            value.minItems === 0) || (IsArray$3(value.items) &&
-            value.items.every(schema => IsSchema(schema)))));
-}
-/** Returns true if the given value is TUndefined */
-function IsUndefined(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Undefined') &&
-        value.type === 'undefined' &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TUnion */
-function IsUnion(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Union') &&
-        IsOptionalString(value.$id) &&
-        IsObject$3(value) &&
-        IsArray$3(value.anyOf) &&
-        value.anyOf.every(schema => IsSchema(schema)));
-}
-/** Returns true if the given value is TUint8Array */
-function IsUint8Array(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Uint8Array') &&
-        value.type === 'Uint8Array' &&
-        IsOptionalString(value.$id) &&
-        IsOptionalNumber(value.minByteLength) &&
-        IsOptionalNumber(value.maxByteLength));
-}
-/** Returns true if the given value is TUnknown */
-function IsUnknown(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Unknown') &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is a raw TUnsafe */
-function IsUnsafe(value) {
-    return IsKindOf(value, 'Unsafe');
-}
-/** Returns true if the given value is TVoid */
-function IsVoid(value) {
-    // prettier-ignore
-    return (IsKindOf(value, 'Void') &&
-        value.type === 'void' &&
-        IsOptionalString(value.$id));
-}
-/** Returns true if the given value is TKind */
-function IsKind(value) {
-    return IsObject$3(value) && Kind in value && IsString$2(value[Kind]) && !KnownTypes.includes(value[Kind]);
-}
-/** Returns true if the given value is TSchema */
-function IsSchema(value) {
-    // prettier-ignore
-    return (IsObject$3(value)) && (IsAny(value) ||
-        IsArgument(value) ||
-        IsArray(value) ||
-        IsBoolean(value) ||
-        IsBigInt(value) ||
-        IsAsyncIterator(value) ||
-        IsComputed(value) ||
-        IsConstructor(value) ||
-        IsDate(value) ||
-        IsFunction(value) ||
-        IsInteger(value) ||
-        IsIntersect(value) ||
-        IsIterator(value) ||
-        IsLiteral(value) ||
-        IsMappedKey(value) ||
-        IsMappedResult(value) ||
-        IsNever(value) ||
-        IsNot(value) ||
-        IsNull(value) ||
-        IsNumber(value) ||
-        IsObject(value) ||
-        IsPromise(value) ||
-        IsRecord(value) ||
-        IsRef(value) ||
-        IsRegExp(value) ||
-        IsString(value) ||
-        IsSymbol(value) ||
-        IsTemplateLiteral(value) ||
-        IsThis(value) ||
-        IsTuple(value) ||
-        IsUndefined(value) ||
-        IsUnion(value) ||
-        IsUint8Array(value) ||
-        IsUnknown(value) ||
-        IsUnsafe(value) ||
-        IsVoid(value) ||
-        IsKind(value));
+/** `[Json]` Creates a Optional property */
+function Optional(schema, enable) {
+    const F = enable ?? true;
+    return IsMappedResult$1(schema) ? OptionalFromMappedResult(schema, F) : OptionalWithFlag(schema, F);
 }
 
-const PatternBoolean = '(true|false)';
-const PatternNumber = '(0|[1-9][0-9]*)';
-const PatternString = '(.*)';
-const PatternNever = '(?!.*)';
-const PatternNumberExact = `^${PatternNumber}$`;
-const PatternStringExact = `^${PatternString}$`;
-const PatternNeverExact = `^${PatternNever}$`;
-
-/** Returns true if element right is in the set of left */
 // prettier-ignore
-function SetIncludes(T, S) {
-    return T.includes(S);
-}
-/** Returns a distinct set of elements */
-function SetDistinct(T) {
-    return [...new Set(T)];
-}
-/** Returns the Intersect of the given sets */
-function SetIntersect(T, S) {
-    return T.filter((L) => S.includes(L));
-}
-// prettier-ignore
-function SetIntersectManyResolve(T, Init) {
-    return T.reduce((Acc, L) => {
-        return SetIntersect(Acc, L);
-    }, Init);
-}
-// prettier-ignore
-function SetIntersectMany(T) {
-    return (T.length === 1
-        ? T[0]
-        // Use left to initialize the accumulator for resolve
-        : T.length > 1
-            ? SetIntersectManyResolve(T.slice(1), T[0])
-            : []);
-}
-/** Returns the Union of multiple sets */
-function SetUnionMany(T) {
-    const Acc = [];
-    for (const L of T)
-        Acc.push(...L);
+function FromProperties$i(P, F) {
+    const Acc = {};
+    for (const K2 of globalThis.Object.getOwnPropertyNames(P))
+        Acc[K2] = Optional(P[K2], F);
     return Acc;
 }
-
-/** `[Json]` Creates an Any type */
-function Any$1(options) {
-    return CreateType({ [Kind]: 'Any' }, options);
+// prettier-ignore
+function FromMappedResult$b(R, F) {
+    return FromProperties$i(R.properties, F);
+}
+// prettier-ignore
+function OptionalFromMappedResult(R, F) {
+    const P = FromMappedResult$b(R, F);
+    return MappedResult(P);
 }
 
-/** `[Json]` Creates an Array type */
-function Array$1(items, options) {
-    return CreateType({ [Kind]: 'Array', type: 'array', items }, options);
-}
-
-/** `[JavaScript]` Creates an Argument Type. */
-function Argument(index) {
-    return CreateType({ [Kind]: 'Argument', index });
-}
-
-/** `[JavaScript]` Creates a AsyncIterator type */
-function AsyncIterator$1(items, options) {
-    return CreateType({ [Kind]: 'AsyncIterator', type: 'AsyncIterator', items }, options);
-}
-
-/** `[Internal]` Creates a deferred computed type. This type is used exclusively in modules to defer resolution of computable types that contain interior references  */
-function Computed(target, parameters, options) {
-    return CreateType({ [Kind]: 'Computed', target, parameters }, options);
-}
-
-function DiscardKey(value, key) {
-    const { [key]: _, ...rest } = value;
-    return rest;
-}
-/** Discards property keys from the given value. This function returns a shallow Clone. */
-function Discard(value, keys) {
-    return keys.reduce((acc, key) => DiscardKey(acc, key), value);
-}
-
-/** `[Json]` Creates a Never type */
-function Never(options) {
-    return CreateType({ [Kind]: 'Never', not: {} }, options);
+// ------------------------------------------------------------------
+// IntersectCreate
+// ------------------------------------------------------------------
+// prettier-ignore
+function IntersectCreate(T, options = {}) {
+    const allObjects = T.every((schema) => IsObject$1(schema));
+    const clonedUnevaluatedProperties = IsSchema$1(options.unevaluatedProperties)
+        ? { unevaluatedProperties: options.unevaluatedProperties }
+        : {};
+    return CreateType((options.unevaluatedProperties === false || IsSchema$1(options.unevaluatedProperties) || allObjects
+        ? { ...clonedUnevaluatedProperties, [Kind]: 'Intersect', type: 'object', allOf: T }
+        : { ...clonedUnevaluatedProperties, [Kind]: 'Intersect', allOf: T }), options);
 }
 
 // prettier-ignore
-function MappedResult(properties) {
-    return CreateType({
-        [Kind]: 'MappedResult',
-        properties
-    });
+function IsIntersectOptional(types) {
+    return types.every(left => IsOptional$1(left));
+}
+// prettier-ignore
+function RemoveOptionalFromType$1(type) {
+    return (Discard(type, [OptionalKind]));
+}
+// prettier-ignore
+function RemoveOptionalFromRest$1(types) {
+    return types.map(left => IsOptional$1(left) ? RemoveOptionalFromType$1(left) : left);
+}
+// prettier-ignore
+function ResolveIntersect(types, options) {
+    return (IsIntersectOptional(types)
+        ? Optional(IntersectCreate(RemoveOptionalFromRest$1(types), options))
+        : IntersectCreate(RemoveOptionalFromRest$1(types), options));
+}
+/** `[Json]` Creates an evaluated Intersect type */
+function IntersectEvaluated(types, options = {}) {
+    if (types.length === 1)
+        return CreateType(types[0], options);
+    if (types.length === 0)
+        return Never(options);
+    if (types.some((schema) => IsTransform$1(schema)))
+        throw new Error('Cannot intersect transform types');
+    return ResolveIntersect(types, options);
 }
 
-/** `[JavaScript]` Creates a Constructor type */
-function Constructor(parameters, returns, options) {
-    return CreateType({ [Kind]: 'Constructor', type: 'Constructor', parameters, returns }, options);
-}
-
-/** `[JavaScript]` Creates a Function type */
-function Function$1(parameters, returns, options) {
-    return CreateType({ [Kind]: 'Function', type: 'Function', parameters, returns }, options);
+/** `[Json]` Creates an evaluated Intersect type */
+function Intersect$1(types, options) {
+    if (types.length === 1)
+        return CreateType(types[0], options);
+    if (types.length === 0)
+        return Never(options);
+    if (types.some((schema) => IsTransform$1(schema)))
+        throw new Error('Cannot intersect transform types');
+    return IntersectCreate(types, options);
 }
 
 function UnionCreate(T, options) {
@@ -60117,19 +53308,19 @@ function IsUnionOptional(types) {
     return types.some(type => IsOptional$1(type));
 }
 // prettier-ignore
-function RemoveOptionalFromRest$1(types) {
-    return types.map(left => IsOptional$1(left) ? RemoveOptionalFromType$1(left) : left);
+function RemoveOptionalFromRest(types) {
+    return types.map(left => IsOptional$1(left) ? RemoveOptionalFromType(left) : left);
 }
 // prettier-ignore
-function RemoveOptionalFromType$1(T) {
+function RemoveOptionalFromType(T) {
     return (Discard(T, [OptionalKind]));
 }
 // prettier-ignore
 function ResolveUnion(types, options) {
     const isOptional = IsUnionOptional(types);
     return (isOptional
-        ? Optional(UnionCreate(RemoveOptionalFromRest$1(types), options))
-        : UnionCreate(RemoveOptionalFromRest$1(types), options));
+        ? Optional(UnionCreate(RemoveOptionalFromRest(types), options))
+        : UnionCreate(RemoveOptionalFromRest(types), options));
 }
 /** `[Json]` Creates an evaluated Union type */
 function UnionEvaluated(T, options) {
@@ -60140,7 +53331,7 @@ function UnionEvaluated(T, options) {
 }
 
 /** `[Json]` Creates a Union type */
-function Union(types, options) {
+function Union$1(types, options) {
     // prettier-ignore
     return (types.length === 0 ? Never(options) :
         types.length === 1 ? CreateType(types[0], options) :
@@ -60446,7 +53637,7 @@ function String$1(options) {
 // SyntaxParsers
 // ------------------------------------------------------------------
 // prettier-ignore
-function* FromUnion$9(syntax) {
+function* FromUnion$j(syntax) {
     const trim = syntax.trim().replace(/"|'/g, '');
     return (trim === 'boolean' ? yield Boolean$2() :
         trim === 'number' ? yield Number$1() :
@@ -60468,7 +53659,7 @@ function* FromTerminal(syntax) {
     }
     for (let i = 2; i < syntax.length; i++) {
         if (syntax[i] === '}') {
-            const L = FromUnion$9(syntax.slice(2, i));
+            const L = FromUnion$j(syntax.slice(2, i));
             const R = FromSyntax(syntax.slice(i + 1));
             return yield* [...L, ...R];
         }
@@ -60491,6 +53682,14 @@ function TemplateLiteralSyntax(syntax) {
     return [...FromSyntax(syntax)];
 }
 
+const PatternBoolean = '(true|false)';
+const PatternNumber = '(0|[1-9][0-9]*)';
+const PatternString = '(.*)';
+const PatternNever = '(?!.*)';
+const PatternNumberExact = `^${PatternNumber}$`;
+const PatternStringExact = `^${PatternString}$`;
+const PatternNeverExact = `^${PatternNever}$`;
+
 // ------------------------------------------------------------------
 // TemplateLiteralPatternError
 // ------------------------------------------------------------------
@@ -60503,9 +53702,9 @@ function Escape(value) {
     return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 // prettier-ignore
-function Visit$1(schema, acc) {
+function Visit$c(schema, acc) {
     return (IsTemplateLiteral$1(schema) ? schema.pattern.slice(1, schema.pattern.length - 1) :
-        IsUnion$1(schema) ? `(${schema.anyOf.map((schema) => Visit$1(schema, acc)).join('|')})` :
+        IsUnion$1(schema) ? `(${schema.anyOf.map((schema) => Visit$c(schema, acc)).join('|')})` :
             IsNumber$1(schema) ? `${acc}${PatternNumber}` :
                 IsInteger$1(schema) ? `${acc}${PatternNumber}` :
                     IsBigInt$1(schema) ? `${acc}${PatternNumber}` :
@@ -60515,7 +53714,7 @@ function Visit$1(schema, acc) {
                                     (() => { throw new TemplateLiteralPatternError(`Unexpected Kind '${schema[Kind]}'`); })());
 }
 function TemplateLiteralPattern(kinds) {
-    return `^${kinds.map((schema) => Visit$1(schema, '')).join('')}\$`;
+    return `^${kinds.map((schema) => Visit$c(schema, '')).join('')}\$`;
 }
 
 /** Returns a Union from the given TemplateLiteral */
@@ -60535,35 +53734,35 @@ function TemplateLiteral(unresolved, options) {
 }
 
 // prettier-ignore
-function FromTemplateLiteral$2(templateLiteral) {
+function FromTemplateLiteral$5(templateLiteral) {
     const keys = TemplateLiteralGenerate(templateLiteral);
     return keys.map(key => key.toString());
 }
 // prettier-ignore
-function FromUnion$8(types) {
+function FromUnion$i(types) {
     const result = [];
     for (const type of types)
         result.push(...IndexPropertyKeys(type));
     return result;
 }
 // prettier-ignore
-function FromLiteral$1(literalValue) {
+function FromLiteral$5(literalValue) {
     return ([literalValue.toString()] // TS 5.4 observes TLiteralValue as not having a toString()
     );
 }
 /** Returns a tuple of PropertyKeys derived from the given TSchema */
 // prettier-ignore
 function IndexPropertyKeys(type) {
-    return [...new Set((IsTemplateLiteral$1(type) ? FromTemplateLiteral$2(type) :
-            IsUnion$1(type) ? FromUnion$8(type.anyOf) :
-                IsLiteral$1(type) ? FromLiteral$1(type.const) :
+    return [...new Set((IsTemplateLiteral$1(type) ? FromTemplateLiteral$5(type) :
+            IsUnion$1(type) ? FromUnion$i(type.anyOf) :
+                IsLiteral$1(type) ? FromLiteral$5(type.const) :
                     IsNumber$1(type) ? ['[number]'] :
                         IsInteger$1(type) ? ['[number]'] :
                             []))];
 }
 
 // prettier-ignore
-function FromProperties$i(type, properties, options) {
+function FromProperties$h(type, properties, options) {
     const result = {};
     for (const K2 of Object.getOwnPropertyNames(properties)) {
         result[K2] = Index(type, IndexPropertyKeys(properties[K2]), options);
@@ -60571,12 +53770,12 @@ function FromProperties$i(type, properties, options) {
     return result;
 }
 // prettier-ignore
-function FromMappedResult$b(type, mappedResult, options) {
-    return FromProperties$i(type, mappedResult.properties, options);
+function FromMappedResult$a(type, mappedResult, options) {
+    return FromProperties$h(type, mappedResult.properties, options);
 }
 // prettier-ignore
 function IndexFromMappedResult(type, mappedResult, options) {
-    const properties = FromMappedResult$b(type, mappedResult, options);
+    const properties = FromMappedResult$a(type, mappedResult, options);
     return MappedResult(properties);
 }
 
@@ -60589,7 +53788,7 @@ function FromIntersectRest(types) {
     return types.filter(type => !IsNever$1(type));
 }
 // prettier-ignore
-function FromIntersect$7(types, key) {
+function FromIntersect$h(types, key) {
     return (IntersectEvaluated(FromIntersectRest(FromRest$6(types, key))));
 }
 // prettier-ignore
@@ -60599,17 +53798,17 @@ function FromUnionRest(types) {
         : types);
 }
 // prettier-ignore
-function FromUnion$7(types, key) {
+function FromUnion$h(types, key) {
     return (UnionEvaluated(FromUnionRest(FromRest$6(types, key))));
 }
 // prettier-ignore
-function FromTuple$4(types, key) {
+function FromTuple$e(types, key) {
     return (key in types ? types[key] :
         key === '[number]' ? UnionEvaluated(types) :
             Never());
 }
 // prettier-ignore
-function FromArray$5(type, key) {
+function FromArray$g(type, key) {
     return (key === '[number]'
         ? type
         : Never());
@@ -60620,10 +53819,10 @@ function FromProperty$2(properties, propertyKey) {
 }
 // prettier-ignore
 function IndexFromPropertyKey(type, propertyKey) {
-    return (IsIntersect$1(type) ? FromIntersect$7(type.allOf, propertyKey) :
-        IsUnion$1(type) ? FromUnion$7(type.anyOf, propertyKey) :
-            IsTuple$1(type) ? FromTuple$4(type.items ?? [], propertyKey) :
-                IsArray$1(type) ? FromArray$5(type.items, propertyKey) :
+    return (IsIntersect$1(type) ? FromIntersect$h(type.allOf, propertyKey) :
+        IsUnion$1(type) ? FromUnion$h(type.anyOf, propertyKey) :
+            IsTuple$1(type) ? FromTuple$e(type.items ?? [], propertyKey) :
+                IsArray$1(type) ? FromArray$g(type.items, propertyKey) :
                     IsObject$1(type) ? FromProperty$2(type.properties, propertyKey) :
                         Never());
 }
@@ -60657,7 +53856,7 @@ function Index(type, key, options) {
 
 // prettier-ignore
 function MappedIndexPropertyKey(type, key, options) {
-    return { [key]: Index(type, [key], Clone(options)) };
+    return { [key]: Index(type, [key], Clone$1(options)) };
 }
 // prettier-ignore
 function MappedIndexPropertyKeys(type, propertyKeys, options) {
@@ -60721,19 +53920,19 @@ function Readonly(schema, enable) {
 }
 
 // prettier-ignore
-function FromProperties$h(K, F) {
+function FromProperties$g(K, F) {
     const Acc = {};
     for (const K2 of globalThis.Object.getOwnPropertyNames(K))
         Acc[K2] = Readonly(K[K2], F);
     return Acc;
 }
 // prettier-ignore
-function FromMappedResult$a(R, F) {
-    return FromProperties$h(R.properties, F);
+function FromMappedResult$9(R, F) {
+    return FromProperties$g(R.properties, F);
 }
 // prettier-ignore
 function ReadonlyFromMappedResult(R, F) {
-    const P = FromMappedResult$a(R, F);
+    const P = FromMappedResult$9(R, F);
     return MappedResult(P);
 }
 
@@ -60745,8 +53944,44 @@ function Tuple(types, options) {
         { [Kind]: 'Tuple', type: 'array', minItems: types.length, maxItems: types.length }, options);
 }
 
+/** Returns true if element right is in the set of left */
 // prettier-ignore
-function FromMappedResult$9(K, P) {
+function SetIncludes(T, S) {
+    return T.includes(S);
+}
+/** Returns a distinct set of elements */
+function SetDistinct(T) {
+    return [...new Set(T)];
+}
+/** Returns the Intersect of the given sets */
+function SetIntersect(T, S) {
+    return T.filter((L) => S.includes(L));
+}
+// prettier-ignore
+function SetIntersectManyResolve(T, Init) {
+    return T.reduce((Acc, L) => {
+        return SetIntersect(Acc, L);
+    }, Init);
+}
+// prettier-ignore
+function SetIntersectMany(T) {
+    return (T.length === 1
+        ? T[0]
+        // Use left to initialize the accumulator for resolve
+        : T.length > 1
+            ? SetIntersectManyResolve(T.slice(1), T[0])
+            : []);
+}
+/** Returns the Union of multiple sets */
+function SetUnionMany(T) {
+    const Acc = [];
+    for (const L of T)
+        Acc.push(...L);
+    return Acc;
+}
+
+// prettier-ignore
+function FromMappedResult$8(K, P) {
     return (K in P
         ? FromSchemaType(K, P[K])
         : MappedResult(P));
@@ -60771,14 +54006,14 @@ function MappedKeyToMappedResultProperties(K, P) {
 // prettier-ignore
 function FromMappedKey$3(K, P) {
     const R = MappedKeyToMappedResultProperties(K, P);
-    return FromMappedResult$9(K, R);
+    return FromMappedResult$8(K, R);
 }
 // prettier-ignore
 function FromRest$5(K, T) {
     return T.map(L => FromSchemaType(K, L));
 }
 // prettier-ignore
-function FromProperties$g(K, T) {
+function FromProperties$f(K, T) {
     const Acc = {};
     for (const K2 of globalThis.Object.getOwnPropertyNames(T))
         Acc[K2] = FromSchemaType(K, T[K2]);
@@ -60793,17 +54028,17 @@ function FromSchemaType(K, T) {
     IsOptional$1(T) ? Optional(FromSchemaType(K, Discard(T, [OptionalKind]))) :
         IsReadonly(T) ? Readonly(FromSchemaType(K, Discard(T, [ReadonlyKind]))) :
             // unevaluated mapped types
-            IsMappedResult$1(T) ? FromMappedResult$9(K, T.properties) :
+            IsMappedResult$1(T) ? FromMappedResult$8(K, T.properties) :
                 IsMappedKey$1(T) ? FromMappedKey$3(K, T.keys) :
                     // unevaluated types
                     IsConstructor$1(T) ? Constructor(FromRest$5(K, T.parameters), FromSchemaType(K, T.returns), options) :
                         IsFunction$1(T) ? Function$1(FromRest$5(K, T.parameters), FromSchemaType(K, T.returns), options) :
                             IsAsyncIterator$1(T) ? AsyncIterator$1(FromSchemaType(K, T.items), options) :
                                 IsIterator$1(T) ? Iterator$1(FromSchemaType(K, T.items), options) :
-                                    IsIntersect$1(T) ? Intersect(FromRest$5(K, T.allOf), options) :
-                                        IsUnion$1(T) ? Union(FromRest$5(K, T.anyOf), options) :
+                                    IsIntersect$1(T) ? Intersect$1(FromRest$5(K, T.allOf), options) :
+                                        IsUnion$1(T) ? Union$1(FromRest$5(K, T.anyOf), options) :
                                             IsTuple$1(T) ? Tuple(FromRest$5(K, T.items ?? []), options) :
-                                                IsObject$1(T) ? Object$1(FromProperties$g(K, T.properties), options) :
+                                                IsObject$1(T) ? Object$1(FromProperties$f(K, T.properties), options) :
                                                     IsArray$1(T) ? Array$1(FromSchemaType(K, T.items), options) :
                                                         IsPromise$1(T) ? Promise$1(FromSchemaType(K, T.item), options) :
                                                             T);
@@ -60823,95 +54058,6 @@ function Mapped(key, map, options) {
     return Object$1(R, options);
 }
 
-function RemoveOptional(schema) {
-    return CreateType(Discard(schema, [OptionalKind]));
-}
-function AddOptional(schema) {
-    return CreateType({ ...schema, [OptionalKind]: 'Optional' });
-}
-// prettier-ignore
-function OptionalWithFlag(schema, F) {
-    return (F === false
-        ? RemoveOptional(schema)
-        : AddOptional(schema));
-}
-/** `[Json]` Creates a Optional property */
-function Optional(schema, enable) {
-    const F = enable ?? true;
-    return IsMappedResult$1(schema) ? OptionalFromMappedResult(schema, F) : OptionalWithFlag(schema, F);
-}
-
-// prettier-ignore
-function FromProperties$f(P, F) {
-    const Acc = {};
-    for (const K2 of globalThis.Object.getOwnPropertyNames(P))
-        Acc[K2] = Optional(P[K2], F);
-    return Acc;
-}
-// prettier-ignore
-function FromMappedResult$8(R, F) {
-    return FromProperties$f(R.properties, F);
-}
-// prettier-ignore
-function OptionalFromMappedResult(R, F) {
-    const P = FromMappedResult$8(R, F);
-    return MappedResult(P);
-}
-
-// ------------------------------------------------------------------
-// IntersectCreate
-// ------------------------------------------------------------------
-// prettier-ignore
-function IntersectCreate(T, options = {}) {
-    const allObjects = T.every((schema) => IsObject$1(schema));
-    const clonedUnevaluatedProperties = IsSchema$1(options.unevaluatedProperties)
-        ? { unevaluatedProperties: options.unevaluatedProperties }
-        : {};
-    return CreateType((options.unevaluatedProperties === false || IsSchema$1(options.unevaluatedProperties) || allObjects
-        ? { ...clonedUnevaluatedProperties, [Kind]: 'Intersect', type: 'object', allOf: T }
-        : { ...clonedUnevaluatedProperties, [Kind]: 'Intersect', allOf: T }), options);
-}
-
-// prettier-ignore
-function IsIntersectOptional(types) {
-    return types.every(left => IsOptional$1(left));
-}
-// prettier-ignore
-function RemoveOptionalFromType(type) {
-    return (Discard(type, [OptionalKind]));
-}
-// prettier-ignore
-function RemoveOptionalFromRest(types) {
-    return types.map(left => IsOptional$1(left) ? RemoveOptionalFromType(left) : left);
-}
-// prettier-ignore
-function ResolveIntersect(types, options) {
-    return (IsIntersectOptional(types)
-        ? Optional(IntersectCreate(RemoveOptionalFromRest(types), options))
-        : IntersectCreate(RemoveOptionalFromRest(types), options));
-}
-/** `[Json]` Creates an evaluated Intersect type */
-function IntersectEvaluated(types, options = {}) {
-    if (types.length === 1)
-        return CreateType(types[0], options);
-    if (types.length === 0)
-        return Never(options);
-    if (types.some((schema) => IsTransform$1(schema)))
-        throw new Error('Cannot intersect transform types');
-    return ResolveIntersect(types, options);
-}
-
-/** `[Json]` Creates an evaluated Intersect type */
-function Intersect(types, options) {
-    if (types.length === 1)
-        return CreateType(types[0], options);
-    if (types.length === 0)
-        return Never(options);
-    if (types.some((schema) => IsTransform$1(schema)))
-        throw new Error('Cannot intersect transform types');
-    return IntersectCreate(types, options);
-}
-
 /** `[Json]` Creates a Ref type. The referenced type must contain a $id */
 function Ref(...args) {
     const [$ref, options] = typeof args[0] === 'string' ? [args[0], args[1]] : [args[0].$id, args[1]];
@@ -60921,59 +54067,30 @@ function Ref(...args) {
 }
 
 // prettier-ignore
-function FromComputed$4(target, parameters) {
-    return Computed('Awaited', [Computed(target, parameters)]);
-}
-// prettier-ignore
-function FromRef$3($ref) {
-    return Computed('Awaited', [Ref($ref)]);
-}
-// prettier-ignore
-function FromIntersect$6(types) {
-    return Intersect(FromRest$4(types));
-}
-// prettier-ignore
-function FromUnion$6(types) {
-    return Union(FromRest$4(types));
-}
-// prettier-ignore
-function FromPromise$2(type) {
-    return Awaited(type);
-}
-// prettier-ignore
 function FromRest$4(types) {
-    return types.map(type => Awaited(type));
-}
-/** `[JavaScript]` Constructs a type by recursively unwrapping Promise types */
-function Awaited(type, options) {
-    return CreateType(IsComputed$1(type) ? FromComputed$4(type.target, type.parameters) : IsIntersect$1(type) ? FromIntersect$6(type.allOf) : IsUnion$1(type) ? FromUnion$6(type.anyOf) : IsPromise$1(type) ? FromPromise$2(type.item) : IsRef$1(type) ? FromRef$3(type.$ref) : type, options);
-}
-
-// prettier-ignore
-function FromRest$3(types) {
     const result = [];
     for (const L of types)
         result.push(KeyOfPropertyKeys(L));
     return result;
 }
 // prettier-ignore
-function FromIntersect$5(types) {
-    const propertyKeysArray = FromRest$3(types);
+function FromIntersect$g(types) {
+    const propertyKeysArray = FromRest$4(types);
     const propertyKeys = SetUnionMany(propertyKeysArray);
     return propertyKeys;
 }
 // prettier-ignore
-function FromUnion$5(types) {
-    const propertyKeysArray = FromRest$3(types);
+function FromUnion$g(types) {
+    const propertyKeysArray = FromRest$4(types);
     const propertyKeys = SetIntersectMany(propertyKeysArray);
     return propertyKeys;
 }
 // prettier-ignore
-function FromTuple$3(types) {
+function FromTuple$d(types) {
     return types.map((_, indexer) => indexer.toString());
 }
 // prettier-ignore
-function FromArray$4(_) {
+function FromArray$f(_) {
     return (['[number]']);
 }
 // prettier-ignore
@@ -60985,26 +54102,45 @@ function FromProperties$e(T) {
 // ------------------------------------------------------------------
 // prettier-ignore
 function FromPatternProperties(patternProperties) {
-    return [];
+    if (!includePatternProperties)
+        return [];
+    const patternPropertyKeys = globalThis.Object.getOwnPropertyNames(patternProperties);
+    return patternPropertyKeys.map(key => {
+        return (key[0] === '^' && key[key.length - 1] === '$')
+            ? key.slice(1, key.length - 1)
+            : key;
+    });
 }
 /** Returns a tuple of PropertyKeys derived from the given TSchema. */
 // prettier-ignore
 function KeyOfPropertyKeys(type) {
-    return (IsIntersect$1(type) ? FromIntersect$5(type.allOf) :
-        IsUnion$1(type) ? FromUnion$5(type.anyOf) :
-            IsTuple$1(type) ? FromTuple$3(type.items ?? []) :
-                IsArray$1(type) ? FromArray$4(type.items) :
+    return (IsIntersect$1(type) ? FromIntersect$g(type.allOf) :
+        IsUnion$1(type) ? FromUnion$g(type.anyOf) :
+            IsTuple$1(type) ? FromTuple$d(type.items ?? []) :
+                IsArray$1(type) ? FromArray$f(type.items) :
                     IsObject$1(type) ? FromProperties$e(type.properties) :
                         IsRecord$1(type) ? FromPatternProperties(type.patternProperties) :
                             []);
 }
+// ----------------------------------------------------------------
+// KeyOfPattern
+// ----------------------------------------------------------------
+let includePatternProperties = false;
+/** Returns a regular expression pattern derived from the given TSchema */
+function KeyOfPattern(schema) {
+    includePatternProperties = true;
+    const keys = KeyOfPropertyKeys(schema);
+    includePatternProperties = false;
+    const pattern = keys.map((key) => `(${key})`);
+    return `^(${pattern.join('|')})$`;
+}
 
 // prettier-ignore
-function FromComputed$3(target, parameters) {
+function FromComputed$4(target, parameters) {
     return Computed('KeyOf', [Computed(target, parameters)]);
 }
 // prettier-ignore
-function FromRef$2($ref) {
+function FromRef$d($ref) {
     return Computed('KeyOf', [Ref($ref)]);
 }
 // prettier-ignore
@@ -61020,14 +54156,14 @@ function KeyOfPropertyKeysToRest(propertyKeys) {
 }
 /** `[Json]` Creates a KeyOf type */
 function KeyOf(type, options) {
-    return (IsComputed$1(type) ? FromComputed$3(type.target, type.parameters) : IsRef$1(type) ? FromRef$2(type.$ref) : IsMappedResult$1(type) ? KeyOfFromMappedResult(type, options) : KeyOfFromType(type, options));
+    return (IsComputed$1(type) ? FromComputed$4(type.target, type.parameters) : IsRef$1(type) ? FromRef$d(type.$ref) : IsMappedResult$1(type) ? KeyOfFromMappedResult(type, options) : KeyOfFromType(type, options));
 }
 
 // prettier-ignore
 function FromProperties$d(properties, options) {
     const result = {};
     for (const K2 of globalThis.Object.getOwnPropertyNames(properties))
-        result[K2] = KeyOf(properties[K2], Clone(options));
+        result[K2] = KeyOf(properties[K2], Clone$1(options));
     return result;
 }
 // prettier-ignore
@@ -61038,6 +54174,5228 @@ function FromMappedResult$7(mappedResult, options) {
 function KeyOfFromMappedResult(mappedResult, options) {
     const properties = FromMappedResult$7(mappedResult, options);
     return MappedResult(properties);
+}
+
+/**
+ * `[Utility]` Resolves an array of keys and schemas from the given schema. This method is faster
+ * than obtaining the keys and resolving each individually via indexing. This method was written
+ * accellerate Intersect and Union encoding.
+ */
+function KeyOfPropertyEntries(schema) {
+    const keys = KeyOfPropertyKeys(schema);
+    const schemas = IndexFromPropertyKeys(schema, keys);
+    return keys.map((_, index) => [keys[index], schemas[index]]);
+}
+
+/** Fast undefined check used for properties of type undefined */
+function Intersect(schema) {
+    return schema.allOf.every((schema) => ExtendsUndefinedCheck(schema));
+}
+function Union(schema) {
+    return schema.anyOf.some((schema) => ExtendsUndefinedCheck(schema));
+}
+function Not$1(schema) {
+    return !ExtendsUndefinedCheck(schema.not);
+}
+/** Fast undefined check used for properties of type undefined */
+// prettier-ignore
+function ExtendsUndefinedCheck(schema) {
+    return (schema[Kind] === 'Intersect' ? Intersect(schema) :
+        schema[Kind] === 'Union' ? Union(schema) :
+            schema[Kind] === 'Not' ? Not$1(schema) :
+                schema[Kind] === 'Undefined' ? true :
+                    false);
+}
+
+/** Creates an error message using en-US as the default locale */
+function DefaultErrorFunction(error) {
+    switch (error.errorType) {
+        case ValueErrorType.ArrayContains:
+            return 'Expected array to contain at least one matching value';
+        case ValueErrorType.ArrayMaxContains:
+            return `Expected array to contain no more than ${error.schema.maxContains} matching values`;
+        case ValueErrorType.ArrayMinContains:
+            return `Expected array to contain at least ${error.schema.minContains} matching values`;
+        case ValueErrorType.ArrayMaxItems:
+            return `Expected array length to be less or equal to ${error.schema.maxItems}`;
+        case ValueErrorType.ArrayMinItems:
+            return `Expected array length to be greater or equal to ${error.schema.minItems}`;
+        case ValueErrorType.ArrayUniqueItems:
+            return 'Expected array elements to be unique';
+        case ValueErrorType.Array:
+            return 'Expected array';
+        case ValueErrorType.AsyncIterator:
+            return 'Expected AsyncIterator';
+        case ValueErrorType.BigIntExclusiveMaximum:
+            return `Expected bigint to be less than ${error.schema.exclusiveMaximum}`;
+        case ValueErrorType.BigIntExclusiveMinimum:
+            return `Expected bigint to be greater than ${error.schema.exclusiveMinimum}`;
+        case ValueErrorType.BigIntMaximum:
+            return `Expected bigint to be less or equal to ${error.schema.maximum}`;
+        case ValueErrorType.BigIntMinimum:
+            return `Expected bigint to be greater or equal to ${error.schema.minimum}`;
+        case ValueErrorType.BigIntMultipleOf:
+            return `Expected bigint to be a multiple of ${error.schema.multipleOf}`;
+        case ValueErrorType.BigInt:
+            return 'Expected bigint';
+        case ValueErrorType.Boolean:
+            return 'Expected boolean';
+        case ValueErrorType.DateExclusiveMinimumTimestamp:
+            return `Expected Date timestamp to be greater than ${error.schema.exclusiveMinimumTimestamp}`;
+        case ValueErrorType.DateExclusiveMaximumTimestamp:
+            return `Expected Date timestamp to be less than ${error.schema.exclusiveMaximumTimestamp}`;
+        case ValueErrorType.DateMinimumTimestamp:
+            return `Expected Date timestamp to be greater or equal to ${error.schema.minimumTimestamp}`;
+        case ValueErrorType.DateMaximumTimestamp:
+            return `Expected Date timestamp to be less or equal to ${error.schema.maximumTimestamp}`;
+        case ValueErrorType.DateMultipleOfTimestamp:
+            return `Expected Date timestamp to be a multiple of ${error.schema.multipleOfTimestamp}`;
+        case ValueErrorType.Date:
+            return 'Expected Date';
+        case ValueErrorType.Function:
+            return 'Expected function';
+        case ValueErrorType.IntegerExclusiveMaximum:
+            return `Expected integer to be less than ${error.schema.exclusiveMaximum}`;
+        case ValueErrorType.IntegerExclusiveMinimum:
+            return `Expected integer to be greater than ${error.schema.exclusiveMinimum}`;
+        case ValueErrorType.IntegerMaximum:
+            return `Expected integer to be less or equal to ${error.schema.maximum}`;
+        case ValueErrorType.IntegerMinimum:
+            return `Expected integer to be greater or equal to ${error.schema.minimum}`;
+        case ValueErrorType.IntegerMultipleOf:
+            return `Expected integer to be a multiple of ${error.schema.multipleOf}`;
+        case ValueErrorType.Integer:
+            return 'Expected integer';
+        case ValueErrorType.IntersectUnevaluatedProperties:
+            return 'Unexpected property';
+        case ValueErrorType.Intersect:
+            return 'Expected all values to match';
+        case ValueErrorType.Iterator:
+            return 'Expected Iterator';
+        case ValueErrorType.Literal:
+            return `Expected ${typeof error.schema.const === 'string' ? `'${error.schema.const}'` : error.schema.const}`;
+        case ValueErrorType.Never:
+            return 'Never';
+        case ValueErrorType.Not:
+            return 'Value should not match';
+        case ValueErrorType.Null:
+            return 'Expected null';
+        case ValueErrorType.NumberExclusiveMaximum:
+            return `Expected number to be less than ${error.schema.exclusiveMaximum}`;
+        case ValueErrorType.NumberExclusiveMinimum:
+            return `Expected number to be greater than ${error.schema.exclusiveMinimum}`;
+        case ValueErrorType.NumberMaximum:
+            return `Expected number to be less or equal to ${error.schema.maximum}`;
+        case ValueErrorType.NumberMinimum:
+            return `Expected number to be greater or equal to ${error.schema.minimum}`;
+        case ValueErrorType.NumberMultipleOf:
+            return `Expected number to be a multiple of ${error.schema.multipleOf}`;
+        case ValueErrorType.Number:
+            return 'Expected number';
+        case ValueErrorType.Object:
+            return 'Expected object';
+        case ValueErrorType.ObjectAdditionalProperties:
+            return 'Unexpected property';
+        case ValueErrorType.ObjectMaxProperties:
+            return `Expected object to have no more than ${error.schema.maxProperties} properties`;
+        case ValueErrorType.ObjectMinProperties:
+            return `Expected object to have at least ${error.schema.minProperties} properties`;
+        case ValueErrorType.ObjectRequiredProperty:
+            return 'Expected required property';
+        case ValueErrorType.Promise:
+            return 'Expected Promise';
+        case ValueErrorType.RegExp:
+            return 'Expected string to match regular expression';
+        case ValueErrorType.StringFormatUnknown:
+            return `Unknown format '${error.schema.format}'`;
+        case ValueErrorType.StringFormat:
+            return `Expected string to match '${error.schema.format}' format`;
+        case ValueErrorType.StringMaxLength:
+            return `Expected string length less or equal to ${error.schema.maxLength}`;
+        case ValueErrorType.StringMinLength:
+            return `Expected string length greater or equal to ${error.schema.minLength}`;
+        case ValueErrorType.StringPattern:
+            return `Expected string to match '${error.schema.pattern}'`;
+        case ValueErrorType.String:
+            return 'Expected string';
+        case ValueErrorType.Symbol:
+            return 'Expected symbol';
+        case ValueErrorType.TupleLength:
+            return `Expected tuple to have ${error.schema.maxItems || 0} elements`;
+        case ValueErrorType.Tuple:
+            return 'Expected tuple';
+        case ValueErrorType.Uint8ArrayMaxByteLength:
+            return `Expected byte length less or equal to ${error.schema.maxByteLength}`;
+        case ValueErrorType.Uint8ArrayMinByteLength:
+            return `Expected byte length greater or equal to ${error.schema.minByteLength}`;
+        case ValueErrorType.Uint8Array:
+            return 'Expected Uint8Array';
+        case ValueErrorType.Undefined:
+            return 'Expected undefined';
+        case ValueErrorType.Union:
+            return 'Expected union value';
+        case ValueErrorType.Void:
+            return 'Expected void';
+        case ValueErrorType.Kind:
+            return `Expected kind '${error.schema[Kind]}'`;
+        default:
+            return 'Unknown error type';
+    }
+}
+/** Manages error message providers */
+let errorFunction = DefaultErrorFunction;
+/** Gets the error function used to generate error messages */
+function GetErrorFunction() {
+    return errorFunction;
+}
+
+class TypeDereferenceError extends TypeBoxError {
+    constructor(schema) {
+        super(`Unable to dereference schema with $id '${schema.$ref}'`);
+        this.schema = schema;
+    }
+}
+function Resolve(schema, references) {
+    const target = references.find((target) => target.$id === schema.$ref);
+    if (target === undefined)
+        throw new TypeDereferenceError(schema);
+    return Deref(target, references);
+}
+/** `[Internal]` Pushes a schema onto references if the schema has an $id and does not exist on references */
+function Pushref(schema, references) {
+    if (!IsString$3(schema.$id) || references.some((target) => target.$id === schema.$id))
+        return references;
+    references.push(schema);
+    return references;
+}
+/** `[Internal]` Dereferences a schema from the references array or throws if not found */
+function Deref(schema, references) {
+    // prettier-ignore
+    return (schema[Kind] === 'This' || schema[Kind] === 'Ref')
+        ? Resolve(schema, references)
+        : schema;
+}
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+class ValueHashError extends TypeBoxError {
+    constructor(value) {
+        super(`Unable to hash value`);
+        this.value = value;
+    }
+}
+// ------------------------------------------------------------------
+// ByteMarker
+// ------------------------------------------------------------------
+var ByteMarker;
+(function (ByteMarker) {
+    ByteMarker[ByteMarker["Undefined"] = 0] = "Undefined";
+    ByteMarker[ByteMarker["Null"] = 1] = "Null";
+    ByteMarker[ByteMarker["Boolean"] = 2] = "Boolean";
+    ByteMarker[ByteMarker["Number"] = 3] = "Number";
+    ByteMarker[ByteMarker["String"] = 4] = "String";
+    ByteMarker[ByteMarker["Object"] = 5] = "Object";
+    ByteMarker[ByteMarker["Array"] = 6] = "Array";
+    ByteMarker[ByteMarker["Date"] = 7] = "Date";
+    ByteMarker[ByteMarker["Uint8Array"] = 8] = "Uint8Array";
+    ByteMarker[ByteMarker["Symbol"] = 9] = "Symbol";
+    ByteMarker[ByteMarker["BigInt"] = 10] = "BigInt";
+})(ByteMarker || (ByteMarker = {}));
+// ------------------------------------------------------------------
+// State
+// ------------------------------------------------------------------
+let Accumulator = BigInt('14695981039346656037');
+const [Prime, Size] = [BigInt('1099511628211'), BigInt('18446744073709551616' /* 2 ^ 64 */)];
+const Bytes = Array.from({ length: 256 }).map((_, i) => BigInt(i));
+const F64 = new Float64Array(1);
+const F64In = new DataView(F64.buffer);
+const F64Out = new Uint8Array(F64.buffer);
+// ------------------------------------------------------------------
+// NumberToBytes
+// ------------------------------------------------------------------
+function* NumberToBytes(value) {
+    const byteCount = value === 0 ? 1 : Math.ceil(Math.floor(Math.log2(value) + 1) / 8);
+    for (let i = 0; i < byteCount; i++) {
+        yield (value >> (8 * (byteCount - 1 - i))) & 0xff;
+    }
+}
+// ------------------------------------------------------------------
+// Hashing Functions
+// ------------------------------------------------------------------
+function ArrayType(value) {
+    FNV1A64(ByteMarker.Array);
+    for (const item of value) {
+        Visit$b(item);
+    }
+}
+function BooleanType(value) {
+    FNV1A64(ByteMarker.Boolean);
+    FNV1A64(value ? 1 : 0);
+}
+function BigIntType(value) {
+    FNV1A64(ByteMarker.BigInt);
+    F64In.setBigInt64(0, value);
+    for (const byte of F64Out) {
+        FNV1A64(byte);
+    }
+}
+function DateType(value) {
+    FNV1A64(ByteMarker.Date);
+    Visit$b(value.getTime());
+}
+function NullType(value) {
+    FNV1A64(ByteMarker.Null);
+}
+function NumberType(value) {
+    FNV1A64(ByteMarker.Number);
+    F64In.setFloat64(0, value);
+    for (const byte of F64Out) {
+        FNV1A64(byte);
+    }
+}
+function ObjectType(value) {
+    FNV1A64(ByteMarker.Object);
+    for (const key of globalThis.Object.getOwnPropertyNames(value).sort()) {
+        Visit$b(key);
+        Visit$b(value[key]);
+    }
+}
+function StringType(value) {
+    FNV1A64(ByteMarker.String);
+    for (let i = 0; i < value.length; i++) {
+        for (const byte of NumberToBytes(value.charCodeAt(i))) {
+            FNV1A64(byte);
+        }
+    }
+}
+function SymbolType(value) {
+    FNV1A64(ByteMarker.Symbol);
+    Visit$b(value.description);
+}
+function Uint8ArrayType(value) {
+    FNV1A64(ByteMarker.Uint8Array);
+    for (let i = 0; i < value.length; i++) {
+        FNV1A64(value[i]);
+    }
+}
+function UndefinedType(value) {
+    return FNV1A64(ByteMarker.Undefined);
+}
+function Visit$b(value) {
+    if (IsArray$3(value))
+        return ArrayType(value);
+    if (IsBoolean$3(value))
+        return BooleanType(value);
+    if (IsBigInt$3(value))
+        return BigIntType(value);
+    if (IsDate$3(value))
+        return DateType(value);
+    if (IsNull$3(value))
+        return NullType();
+    if (IsNumber$3(value))
+        return NumberType(value);
+    if (IsObject$3(value))
+        return ObjectType(value);
+    if (IsString$3(value))
+        return StringType(value);
+    if (IsSymbol$3(value))
+        return SymbolType(value);
+    if (IsUint8Array$3(value))
+        return Uint8ArrayType(value);
+    if (IsUndefined$3(value))
+        return UndefinedType();
+    throw new ValueHashError(value);
+}
+function FNV1A64(byte) {
+    Accumulator = Accumulator ^ Bytes[byte];
+    Accumulator = (Accumulator * Prime) % Size;
+}
+// ------------------------------------------------------------------
+// Hash
+// ------------------------------------------------------------------
+/** Creates a FNV1A-64 non cryptographic hash of the given value */
+function Hash(value) {
+    Accumulator = BigInt('14695981039346656037');
+    Visit$b(value);
+    return Accumulator;
+}
+
+/** `[Json]` Creates an Any type */
+function Any$1(options) {
+    return CreateType({ [Kind]: 'Any' }, options);
+}
+
+/** `[Json]` Creates an Unknown type */
+function Unknown(options) {
+    return CreateType({ [Kind]: 'Unknown' }, options);
+}
+
+const KnownTypes = [
+    'Argument',
+    'Any',
+    'Array',
+    'AsyncIterator',
+    'BigInt',
+    'Boolean',
+    'Computed',
+    'Constructor',
+    'Date',
+    'Enum',
+    'Function',
+    'Integer',
+    'Intersect',
+    'Iterator',
+    'Literal',
+    'MappedKey',
+    'MappedResult',
+    'Not',
+    'Null',
+    'Number',
+    'Object',
+    'Promise',
+    'Record',
+    'Ref',
+    'RegExp',
+    'String',
+    'Symbol',
+    'TemplateLiteral',
+    'This',
+    'Tuple',
+    'Undefined',
+    'Union',
+    'Uint8Array',
+    'Unknown',
+    'Void',
+];
+function IsPattern(value) {
+    try {
+        new RegExp(value);
+        return true;
+    }
+    catch {
+        return false;
+    }
+}
+function IsControlCharacterFree(value) {
+    if (!IsString$2(value))
+        return false;
+    for (let i = 0; i < value.length; i++) {
+        const code = value.charCodeAt(i);
+        if ((code >= 7 && code <= 13) || code === 27 || code === 127) {
+            return false;
+        }
+    }
+    return true;
+}
+function IsAdditionalProperties(value) {
+    return IsOptionalBoolean(value) || IsSchema(value);
+}
+function IsOptionalBigInt(value) {
+    return IsUndefined$2(value) || IsBigInt$2(value);
+}
+function IsOptionalNumber(value) {
+    return IsUndefined$2(value) || IsNumber$2(value);
+}
+function IsOptionalBoolean(value) {
+    return IsUndefined$2(value) || IsBoolean$2(value);
+}
+function IsOptionalString(value) {
+    return IsUndefined$2(value) || IsString$2(value);
+}
+function IsOptionalPattern(value) {
+    return IsUndefined$2(value) || (IsString$2(value) && IsControlCharacterFree(value) && IsPattern(value));
+}
+function IsOptionalFormat(value) {
+    return IsUndefined$2(value) || (IsString$2(value) && IsControlCharacterFree(value));
+}
+function IsOptionalSchema(value) {
+    return IsUndefined$2(value) || IsSchema(value);
+}
+/** Returns true if this value has a Optional symbol */
+function IsOptional(value) {
+    return IsObject$2(value) && value[OptionalKind] === 'Optional';
+}
+// ------------------------------------------------------------------
+// Types
+// ------------------------------------------------------------------
+/** Returns true if the given value is TAny */
+function IsAny(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Any') &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TArgument */
+function IsArgument(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Argument') &&
+        IsNumber$2(value.index));
+}
+/** Returns true if the given value is TArray */
+function IsArray(value) {
+    return (IsKindOf(value, 'Array') &&
+        value.type === 'array' &&
+        IsOptionalString(value.$id) &&
+        IsSchema(value.items) &&
+        IsOptionalNumber(value.minItems) &&
+        IsOptionalNumber(value.maxItems) &&
+        IsOptionalBoolean(value.uniqueItems) &&
+        IsOptionalSchema(value.contains) &&
+        IsOptionalNumber(value.minContains) &&
+        IsOptionalNumber(value.maxContains));
+}
+/** Returns true if the given value is TAsyncIterator */
+function IsAsyncIterator(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'AsyncIterator') &&
+        value.type === 'AsyncIterator' &&
+        IsOptionalString(value.$id) &&
+        IsSchema(value.items));
+}
+/** Returns true if the given value is TBigInt */
+function IsBigInt(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'BigInt') &&
+        value.type === 'bigint' &&
+        IsOptionalString(value.$id) &&
+        IsOptionalBigInt(value.exclusiveMaximum) &&
+        IsOptionalBigInt(value.exclusiveMinimum) &&
+        IsOptionalBigInt(value.maximum) &&
+        IsOptionalBigInt(value.minimum) &&
+        IsOptionalBigInt(value.multipleOf));
+}
+/** Returns true if the given value is TBoolean */
+function IsBoolean(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Boolean') &&
+        value.type === 'boolean' &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TComputed */
+function IsComputed(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Computed') &&
+        IsString$2(value.target) &&
+        IsArray$2(value.parameters) &&
+        value.parameters.every((schema) => IsSchema(schema)));
+}
+/** Returns true if the given value is TConstructor */
+function IsConstructor(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Constructor') &&
+        value.type === 'Constructor' &&
+        IsOptionalString(value.$id) &&
+        IsArray$2(value.parameters) &&
+        value.parameters.every(schema => IsSchema(schema)) &&
+        IsSchema(value.returns));
+}
+/** Returns true if the given value is TDate */
+function IsDate(value) {
+    return (IsKindOf(value, 'Date') &&
+        value.type === 'Date' &&
+        IsOptionalString(value.$id) &&
+        IsOptionalNumber(value.exclusiveMaximumTimestamp) &&
+        IsOptionalNumber(value.exclusiveMinimumTimestamp) &&
+        IsOptionalNumber(value.maximumTimestamp) &&
+        IsOptionalNumber(value.minimumTimestamp) &&
+        IsOptionalNumber(value.multipleOfTimestamp));
+}
+/** Returns true if the given value is TFunction */
+function IsFunction(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Function') &&
+        value.type === 'Function' &&
+        IsOptionalString(value.$id) &&
+        IsArray$2(value.parameters) &&
+        value.parameters.every(schema => IsSchema(schema)) &&
+        IsSchema(value.returns));
+}
+/** Returns true if the given value is TInteger */
+function IsInteger(value) {
+    return (IsKindOf(value, 'Integer') &&
+        value.type === 'integer' &&
+        IsOptionalString(value.$id) &&
+        IsOptionalNumber(value.exclusiveMaximum) &&
+        IsOptionalNumber(value.exclusiveMinimum) &&
+        IsOptionalNumber(value.maximum) &&
+        IsOptionalNumber(value.minimum) &&
+        IsOptionalNumber(value.multipleOf));
+}
+/** Returns true if the given schema is TProperties */
+function IsProperties(value) {
+    // prettier-ignore
+    return (IsObject$2(value) &&
+        Object.entries(value).every(([key, schema]) => IsControlCharacterFree(key) && IsSchema(schema)));
+}
+/** Returns true if the given value is TIntersect */
+function IsIntersect(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Intersect') &&
+        (IsString$2(value.type) && value.type !== 'object' ? false : true) &&
+        IsArray$2(value.allOf) &&
+        value.allOf.every(schema => IsSchema(schema) && !IsTransform(schema)) &&
+        IsOptionalString(value.type) &&
+        (IsOptionalBoolean(value.unevaluatedProperties) || IsOptionalSchema(value.unevaluatedProperties)) &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TIterator */
+function IsIterator(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Iterator') &&
+        value.type === 'Iterator' &&
+        IsOptionalString(value.$id) &&
+        IsSchema(value.items));
+}
+/** Returns true if the given value is a TKind with the given name. */
+function IsKindOf(value, kind) {
+    return IsObject$2(value) && Kind in value && value[Kind] === kind;
+}
+/** Returns true if the given value is TLiteral<string> */
+function IsLiteralString(value) {
+    return IsLiteral(value) && IsString$2(value.const);
+}
+/** Returns true if the given value is TLiteral<number> */
+function IsLiteralNumber(value) {
+    return IsLiteral(value) && IsNumber$2(value.const);
+}
+/** Returns true if the given value is TLiteral<boolean> */
+function IsLiteralBoolean(value) {
+    return IsLiteral(value) && IsBoolean$2(value.const);
+}
+/** Returns true if the given value is TLiteral */
+function IsLiteral(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Literal') &&
+        IsOptionalString(value.$id) && IsLiteralValue(value.const));
+}
+/** Returns true if the given value is a TLiteralValue */
+function IsLiteralValue(value) {
+    return IsBoolean$2(value) || IsNumber$2(value) || IsString$2(value);
+}
+/** Returns true if the given value is a TMappedKey */
+function IsMappedKey(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'MappedKey') &&
+        IsArray$2(value.keys) &&
+        value.keys.every(key => IsNumber$2(key) || IsString$2(key)));
+}
+/** Returns true if the given value is TMappedResult */
+function IsMappedResult(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'MappedResult') &&
+        IsProperties(value.properties));
+}
+/** Returns true if the given value is TNever */
+function IsNever(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Never') &&
+        IsObject$2(value.not) &&
+        Object.getOwnPropertyNames(value.not).length === 0);
+}
+/** Returns true if the given value is TNot */
+function IsNot(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Not') &&
+        IsSchema(value.not));
+}
+/** Returns true if the given value is TNull */
+function IsNull(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Null') &&
+        value.type === 'null' &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TNumber */
+function IsNumber(value) {
+    return (IsKindOf(value, 'Number') &&
+        value.type === 'number' &&
+        IsOptionalString(value.$id) &&
+        IsOptionalNumber(value.exclusiveMaximum) &&
+        IsOptionalNumber(value.exclusiveMinimum) &&
+        IsOptionalNumber(value.maximum) &&
+        IsOptionalNumber(value.minimum) &&
+        IsOptionalNumber(value.multipleOf));
+}
+/** Returns true if the given value is TObject */
+function IsObject(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Object') &&
+        value.type === 'object' &&
+        IsOptionalString(value.$id) &&
+        IsProperties(value.properties) &&
+        IsAdditionalProperties(value.additionalProperties) &&
+        IsOptionalNumber(value.minProperties) &&
+        IsOptionalNumber(value.maxProperties));
+}
+/** Returns true if the given value is TPromise */
+function IsPromise(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Promise') &&
+        value.type === 'Promise' &&
+        IsOptionalString(value.$id) &&
+        IsSchema(value.item));
+}
+/** Returns true if the given value is TRecord */
+function IsRecord(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Record') &&
+        value.type === 'object' &&
+        IsOptionalString(value.$id) &&
+        IsAdditionalProperties(value.additionalProperties) &&
+        IsObject$2(value.patternProperties) &&
+        ((schema) => {
+            const keys = Object.getOwnPropertyNames(schema.patternProperties);
+            return (keys.length === 1 &&
+                IsPattern(keys[0]) &&
+                IsObject$2(schema.patternProperties) &&
+                IsSchema(schema.patternProperties[keys[0]]));
+        })(value));
+}
+/** Returns true if the given value is TRef */
+function IsRef(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Ref') &&
+        IsOptionalString(value.$id) &&
+        IsString$2(value.$ref));
+}
+/** Returns true if the given value is TRegExp */
+function IsRegExp(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'RegExp') &&
+        IsOptionalString(value.$id) &&
+        IsString$2(value.source) &&
+        IsString$2(value.flags) &&
+        IsOptionalNumber(value.maxLength) &&
+        IsOptionalNumber(value.minLength));
+}
+/** Returns true if the given value is TString */
+function IsString(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'String') &&
+        value.type === 'string' &&
+        IsOptionalString(value.$id) &&
+        IsOptionalNumber(value.minLength) &&
+        IsOptionalNumber(value.maxLength) &&
+        IsOptionalPattern(value.pattern) &&
+        IsOptionalFormat(value.format));
+}
+/** Returns true if the given value is TSymbol */
+function IsSymbol(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Symbol') &&
+        value.type === 'symbol' &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TTemplateLiteral */
+function IsTemplateLiteral(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'TemplateLiteral') &&
+        value.type === 'string' &&
+        IsString$2(value.pattern) &&
+        value.pattern[0] === '^' &&
+        value.pattern[value.pattern.length - 1] === '$');
+}
+/** Returns true if the given value is TThis */
+function IsThis(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'This') &&
+        IsOptionalString(value.$id) &&
+        IsString$2(value.$ref));
+}
+/** Returns true of this value is TTransform */
+function IsTransform(value) {
+    return IsObject$2(value) && TransformKind in value;
+}
+/** Returns true if the given value is TTuple */
+function IsTuple(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Tuple') &&
+        value.type === 'array' &&
+        IsOptionalString(value.$id) &&
+        IsNumber$2(value.minItems) &&
+        IsNumber$2(value.maxItems) &&
+        value.minItems === value.maxItems &&
+        (( // empty
+        IsUndefined$2(value.items) &&
+            IsUndefined$2(value.additionalItems) &&
+            value.minItems === 0) || (IsArray$2(value.items) &&
+            value.items.every(schema => IsSchema(schema)))));
+}
+/** Returns true if the given value is TUndefined */
+function IsUndefined(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Undefined') &&
+        value.type === 'undefined' &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TUnion */
+function IsUnion(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Union') &&
+        IsOptionalString(value.$id) &&
+        IsObject$2(value) &&
+        IsArray$2(value.anyOf) &&
+        value.anyOf.every(schema => IsSchema(schema)));
+}
+/** Returns true if the given value is TUint8Array */
+function IsUint8Array(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Uint8Array') &&
+        value.type === 'Uint8Array' &&
+        IsOptionalString(value.$id) &&
+        IsOptionalNumber(value.minByteLength) &&
+        IsOptionalNumber(value.maxByteLength));
+}
+/** Returns true if the given value is TUnknown */
+function IsUnknown(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Unknown') &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is a raw TUnsafe */
+function IsUnsafe(value) {
+    return IsKindOf(value, 'Unsafe');
+}
+/** Returns true if the given value is TVoid */
+function IsVoid(value) {
+    // prettier-ignore
+    return (IsKindOf(value, 'Void') &&
+        value.type === 'void' &&
+        IsOptionalString(value.$id));
+}
+/** Returns true if the given value is TKind */
+function IsKind(value) {
+    return IsObject$2(value) && Kind in value && IsString$2(value[Kind]) && !KnownTypes.includes(value[Kind]);
+}
+/** Returns true if the given value is TSchema */
+function IsSchema(value) {
+    // prettier-ignore
+    return (IsObject$2(value)) && (IsAny(value) ||
+        IsArgument(value) ||
+        IsArray(value) ||
+        IsBoolean(value) ||
+        IsBigInt(value) ||
+        IsAsyncIterator(value) ||
+        IsComputed(value) ||
+        IsConstructor(value) ||
+        IsDate(value) ||
+        IsFunction(value) ||
+        IsInteger(value) ||
+        IsIntersect(value) ||
+        IsIterator(value) ||
+        IsLiteral(value) ||
+        IsMappedKey(value) ||
+        IsMappedResult(value) ||
+        IsNever(value) ||
+        IsNot(value) ||
+        IsNull(value) ||
+        IsNumber(value) ||
+        IsObject(value) ||
+        IsPromise(value) ||
+        IsRecord(value) ||
+        IsRef(value) ||
+        IsRegExp(value) ||
+        IsString(value) ||
+        IsSymbol(value) ||
+        IsTemplateLiteral(value) ||
+        IsThis(value) ||
+        IsTuple(value) ||
+        IsUndefined(value) ||
+        IsUnion(value) ||
+        IsUint8Array(value) ||
+        IsUnknown(value) ||
+        IsUnsafe(value) ||
+        IsVoid(value) ||
+        IsKind(value));
+}
+
+class ExtendsResolverError extends TypeBoxError {
+}
+var ExtendsResult;
+(function (ExtendsResult) {
+    ExtendsResult[ExtendsResult["Union"] = 0] = "Union";
+    ExtendsResult[ExtendsResult["True"] = 1] = "True";
+    ExtendsResult[ExtendsResult["False"] = 2] = "False";
+})(ExtendsResult || (ExtendsResult = {}));
+// ------------------------------------------------------------------
+// IntoBooleanResult
+// ------------------------------------------------------------------
+// prettier-ignore
+function IntoBooleanResult(result) {
+    return result === ExtendsResult.False ? result : ExtendsResult.True;
+}
+// ------------------------------------------------------------------
+// Throw
+// ------------------------------------------------------------------
+// prettier-ignore
+function Throw(message) {
+    throw new ExtendsResolverError(message);
+}
+// ------------------------------------------------------------------
+// StructuralRight
+// ------------------------------------------------------------------
+// prettier-ignore
+function IsStructuralRight(right) {
+    return (IsNever(right) ||
+        IsIntersect(right) ||
+        IsUnion(right) ||
+        IsUnknown(right) ||
+        IsAny(right));
+}
+// prettier-ignore
+function StructuralRight(left, right) {
+    return (IsNever(right) ? FromNeverRight() :
+        IsIntersect(right) ? FromIntersectRight(left, right) :
+            IsUnion(right) ? FromUnionRight(left, right) :
+                IsUnknown(right) ? FromUnknownRight() :
+                    IsAny(right) ? FromAnyRight() :
+                        Throw('StructuralRight'));
+}
+// ------------------------------------------------------------------
+// Any
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromAnyRight(left, right) {
+    return ExtendsResult.True;
+}
+// prettier-ignore
+function FromAny$3(left, right) {
+    return (IsIntersect(right) ? FromIntersectRight(left, right) :
+        (IsUnion(right) && right.anyOf.some((schema) => IsAny(schema) || IsUnknown(schema))) ? ExtendsResult.True :
+            IsUnion(right) ? ExtendsResult.Union :
+                IsUnknown(right) ? ExtendsResult.True :
+                    IsAny(right) ? ExtendsResult.True :
+                        ExtendsResult.Union);
+}
+// ------------------------------------------------------------------
+// Array
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromArrayRight(left, right) {
+    return (IsUnknown(left) ? ExtendsResult.False :
+        IsAny(left) ? ExtendsResult.Union :
+            IsNever(left) ? ExtendsResult.True :
+                ExtendsResult.False);
+}
+// prettier-ignore
+function FromArray$e(left, right) {
+    return (IsObject(right) && IsObjectArrayLike(right) ? ExtendsResult.True :
+        IsStructuralRight(right) ? StructuralRight(left, right) :
+            !IsArray(right) ? ExtendsResult.False :
+                IntoBooleanResult(Visit$a(left.items, right.items)));
+}
+// ------------------------------------------------------------------
+// AsyncIterator
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromAsyncIterator$6(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        !IsAsyncIterator(right) ? ExtendsResult.False :
+            IntoBooleanResult(Visit$a(left.items, right.items)));
+}
+// ------------------------------------------------------------------
+// BigInt
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromBigInt$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsBigInt(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Boolean
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromBooleanRight(left, right) {
+    return (IsLiteralBoolean(left) ? ExtendsResult.True :
+        IsBoolean(left) ? ExtendsResult.True :
+            ExtendsResult.False);
+}
+// prettier-ignore
+function FromBoolean$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsBoolean(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Constructor
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromConstructor$7(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            !IsConstructor(right) ? ExtendsResult.False :
+                left.parameters.length > right.parameters.length ? ExtendsResult.False :
+                    (!left.parameters.every((schema, index) => IntoBooleanResult(Visit$a(right.parameters[index], schema)) === ExtendsResult.True)) ? ExtendsResult.False :
+                        IntoBooleanResult(Visit$a(left.returns, right.returns)));
+}
+// ------------------------------------------------------------------
+// Date
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromDate$6(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsDate(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Function
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromFunction$6(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            !IsFunction(right) ? ExtendsResult.False :
+                left.parameters.length > right.parameters.length ? ExtendsResult.False :
+                    (!left.parameters.every((schema, index) => IntoBooleanResult(Visit$a(right.parameters[index], schema)) === ExtendsResult.True)) ? ExtendsResult.False :
+                        IntoBooleanResult(Visit$a(left.returns, right.returns)));
+}
+// ------------------------------------------------------------------
+// Integer
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromIntegerRight(left, right) {
+    return (IsLiteral(left) && IsNumber$2(left.const) ? ExtendsResult.True :
+        IsNumber(left) || IsInteger(left) ? ExtendsResult.True :
+            ExtendsResult.False);
+}
+// prettier-ignore
+function FromInteger$4(left, right) {
+    return (IsInteger(right) || IsNumber(right) ? ExtendsResult.True :
+        IsStructuralRight(right) ? StructuralRight(left, right) :
+            IsObject(right) ? FromObjectRight(left, right) :
+                IsRecord(right) ? FromRecordRight(left, right) :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Intersect
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromIntersectRight(left, right) {
+    return right.allOf.every((schema) => Visit$a(left, schema) === ExtendsResult.True)
+        ? ExtendsResult.True
+        : ExtendsResult.False;
+}
+// prettier-ignore
+function FromIntersect$f(left, right) {
+    return left.allOf.some((schema) => Visit$a(schema, right) === ExtendsResult.True)
+        ? ExtendsResult.True
+        : ExtendsResult.False;
+}
+// ------------------------------------------------------------------
+// Iterator
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromIterator$6(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        !IsIterator(right) ? ExtendsResult.False :
+            IntoBooleanResult(Visit$a(left.items, right.items)));
+}
+// ------------------------------------------------------------------
+// Literal
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromLiteral$4(left, right) {
+    return (IsLiteral(right) && right.const === left.const ? ExtendsResult.True :
+        IsStructuralRight(right) ? StructuralRight(left, right) :
+            IsObject(right) ? FromObjectRight(left, right) :
+                IsRecord(right) ? FromRecordRight(left, right) :
+                    IsString(right) ? FromStringRight(left) :
+                        IsNumber(right) ? FromNumberRight(left) :
+                            IsInteger(right) ? FromIntegerRight(left) :
+                                IsBoolean(right) ? FromBooleanRight(left) :
+                                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Never
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromNeverRight(left, right) {
+    return ExtendsResult.False;
+}
+// prettier-ignore
+function FromNever$4(left, right) {
+    return ExtendsResult.True;
+}
+// ------------------------------------------------------------------
+// Not
+// ------------------------------------------------------------------
+// prettier-ignore
+function UnwrapTNot(schema) {
+    let [current, depth] = [schema, 0];
+    while (true) {
+        if (!IsNot(current))
+            break;
+        current = current.not;
+        depth += 1;
+    }
+    return depth % 2 === 0 ? current : Unknown();
+}
+// prettier-ignore
+function FromNot$6(left, right) {
+    // TypeScript has no concept of negated types, and attempts to correctly check the negated
+    // type at runtime would put TypeBox at odds with TypeScripts ability to statically infer
+    // the type. Instead we unwrap to either unknown or T and continue evaluating.
+    // prettier-ignore
+    return (IsNot(left) ? Visit$a(UnwrapTNot(left), right) :
+        IsNot(right) ? Visit$a(left, UnwrapTNot(right)) :
+            Throw('Invalid fallthrough for Not'));
+}
+// ------------------------------------------------------------------
+// Null
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromNull$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsNull(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Number
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromNumberRight(left, right) {
+    return (IsLiteralNumber(left) ? ExtendsResult.True :
+        IsNumber(left) || IsInteger(left) ? ExtendsResult.True :
+            ExtendsResult.False);
+}
+// prettier-ignore
+function FromNumber$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsInteger(right) || IsNumber(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Object
+// ------------------------------------------------------------------
+// prettier-ignore
+function IsObjectPropertyCount(schema, count) {
+    return Object.getOwnPropertyNames(schema.properties).length === count;
+}
+// prettier-ignore
+function IsObjectStringLike(schema) {
+    return IsObjectArrayLike(schema);
+}
+// prettier-ignore
+function IsObjectSymbolLike(schema) {
+    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'description' in schema.properties && IsUnion(schema.properties.description) && schema.properties.description.anyOf.length === 2 && ((IsString(schema.properties.description.anyOf[0]) &&
+        IsUndefined(schema.properties.description.anyOf[1])) || (IsString(schema.properties.description.anyOf[1]) &&
+        IsUndefined(schema.properties.description.anyOf[0]))));
+}
+// prettier-ignore
+function IsObjectNumberLike(schema) {
+    return IsObjectPropertyCount(schema, 0);
+}
+// prettier-ignore
+function IsObjectBooleanLike(schema) {
+    return IsObjectPropertyCount(schema, 0);
+}
+// prettier-ignore
+function IsObjectBigIntLike(schema) {
+    return IsObjectPropertyCount(schema, 0);
+}
+// prettier-ignore
+function IsObjectDateLike(schema) {
+    return IsObjectPropertyCount(schema, 0);
+}
+// prettier-ignore
+function IsObjectUint8ArrayLike(schema) {
+    return IsObjectArrayLike(schema);
+}
+// prettier-ignore
+function IsObjectFunctionLike(schema) {
+    const length = Number$1();
+    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'length' in schema.properties && IntoBooleanResult(Visit$a(schema.properties['length'], length)) === ExtendsResult.True);
+}
+// prettier-ignore
+function IsObjectConstructorLike(schema) {
+    return IsObjectPropertyCount(schema, 0);
+}
+// prettier-ignore
+function IsObjectArrayLike(schema) {
+    const length = Number$1();
+    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'length' in schema.properties && IntoBooleanResult(Visit$a(schema.properties['length'], length)) === ExtendsResult.True);
+}
+// prettier-ignore
+function IsObjectPromiseLike(schema) {
+    const then = Function$1([Any$1()], Any$1());
+    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'then' in schema.properties && IntoBooleanResult(Visit$a(schema.properties['then'], then)) === ExtendsResult.True);
+}
+// ------------------------------------------------------------------
+// Property
+// ------------------------------------------------------------------
+// prettier-ignore
+function Property(left, right) {
+    return (Visit$a(left, right) === ExtendsResult.False ? ExtendsResult.False :
+        IsOptional(left) && !IsOptional(right) ? ExtendsResult.False :
+            ExtendsResult.True);
+}
+// prettier-ignore
+function FromObjectRight(left, right) {
+    return (IsUnknown(left) ? ExtendsResult.False :
+        IsAny(left) ? ExtendsResult.Union : (IsNever(left) ||
+            (IsLiteralString(left) && IsObjectStringLike(right)) ||
+            (IsLiteralNumber(left) && IsObjectNumberLike(right)) ||
+            (IsLiteralBoolean(left) && IsObjectBooleanLike(right)) ||
+            (IsSymbol(left) && IsObjectSymbolLike(right)) ||
+            (IsBigInt(left) && IsObjectBigIntLike(right)) ||
+            (IsString(left) && IsObjectStringLike(right)) ||
+            (IsSymbol(left) && IsObjectSymbolLike(right)) ||
+            (IsNumber(left) && IsObjectNumberLike(right)) ||
+            (IsInteger(left) && IsObjectNumberLike(right)) ||
+            (IsBoolean(left) && IsObjectBooleanLike(right)) ||
+            (IsUint8Array(left) && IsObjectUint8ArrayLike(right)) ||
+            (IsDate(left) && IsObjectDateLike(right)) ||
+            (IsConstructor(left) && IsObjectConstructorLike(right)) ||
+            (IsFunction(left) && IsObjectFunctionLike(right))) ? ExtendsResult.True :
+            (IsRecord(left) && IsString(RecordKey$1(left))) ? (() => {
+                // When expressing a Record with literal key values, the Record is converted into a Object with
+                // the Hint assigned as `Record`. This is used to invert the extends logic.
+                return right[Hint] === 'Record' ? ExtendsResult.True : ExtendsResult.False;
+            })() :
+                (IsRecord(left) && IsNumber(RecordKey$1(left))) ? (() => {
+                    return IsObjectPropertyCount(right, 0) ? ExtendsResult.True : ExtendsResult.False;
+                })() :
+                    ExtendsResult.False);
+}
+// prettier-ignore
+function FromObject$h(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsRecord(right) ? FromRecordRight(left, right) :
+            !IsObject(right) ? ExtendsResult.False :
+                (() => {
+                    for (const key of Object.getOwnPropertyNames(right.properties)) {
+                        if (!(key in left.properties) && !IsOptional(right.properties[key])) {
+                            return ExtendsResult.False;
+                        }
+                        if (IsOptional(right.properties[key])) {
+                            return ExtendsResult.True;
+                        }
+                        if (Property(left.properties[key], right.properties[key]) === ExtendsResult.False) {
+                            return ExtendsResult.False;
+                        }
+                    }
+                    return ExtendsResult.True;
+                })());
+}
+// ------------------------------------------------------------------
+// Promise
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromPromise$6(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) && IsObjectPromiseLike(right) ? ExtendsResult.True :
+            !IsPromise(right) ? ExtendsResult.False :
+                IntoBooleanResult(Visit$a(left.item, right.item)));
+}
+// ------------------------------------------------------------------
+// Record
+// ------------------------------------------------------------------
+// prettier-ignore
+function RecordKey$1(schema) {
+    return (PatternNumberExact in schema.patternProperties ? Number$1() :
+        PatternStringExact in schema.patternProperties ? String$1() :
+            Throw('Unknown record key pattern'));
+}
+// prettier-ignore
+function RecordValue$1(schema) {
+    return (PatternNumberExact in schema.patternProperties ? schema.patternProperties[PatternNumberExact] :
+        PatternStringExact in schema.patternProperties ? schema.patternProperties[PatternStringExact] :
+            Throw('Unable to get record value schema'));
+}
+// prettier-ignore
+function FromRecordRight(left, right) {
+    const [Key, Value] = [RecordKey$1(right), RecordValue$1(right)];
+    return ((IsLiteralString(left) && IsNumber(Key) && IntoBooleanResult(Visit$a(left, Value)) === ExtendsResult.True) ? ExtendsResult.True :
+        IsUint8Array(left) && IsNumber(Key) ? Visit$a(left, Value) :
+            IsString(left) && IsNumber(Key) ? Visit$a(left, Value) :
+                IsArray(left) && IsNumber(Key) ? Visit$a(left, Value) :
+                    IsObject(left) ? (() => {
+                        for (const key of Object.getOwnPropertyNames(left.properties)) {
+                            if (Property(Value, left.properties[key]) === ExtendsResult.False) {
+                                return ExtendsResult.False;
+                            }
+                        }
+                        return ExtendsResult.True;
+                    })() :
+                        ExtendsResult.False);
+}
+// prettier-ignore
+function FromRecord$c(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            !IsRecord(right) ? ExtendsResult.False :
+                Visit$a(RecordValue$1(left), RecordValue$1(right)));
+}
+// ------------------------------------------------------------------
+// RegExp
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromRegExp$3(left, right) {
+    // Note: RegExp types evaluate as strings, not RegExp objects.
+    // Here we remap either into string and continue evaluating.
+    const L = IsRegExp(left) ? String$1() : left;
+    const R = IsRegExp(right) ? String$1() : right;
+    return Visit$a(L, R);
+}
+// ------------------------------------------------------------------
+// String
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromStringRight(left, right) {
+    return (IsLiteral(left) && IsString$2(left.const) ? ExtendsResult.True :
+        IsString(left) ? ExtendsResult.True :
+            ExtendsResult.False);
+}
+// prettier-ignore
+function FromString$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsString(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Symbol
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromSymbol$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsSymbol(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// TemplateLiteral
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromTemplateLiteral$4(left, right) {
+    // TemplateLiteral types are resolved to either unions for finite expressions or string
+    // for infinite expressions. Here we call to TemplateLiteralResolver to resolve for
+    // either type and continue evaluating.
+    return (IsTemplateLiteral(left) ? Visit$a(TemplateLiteralToUnion(left), right) :
+        IsTemplateLiteral(right) ? Visit$a(left, TemplateLiteralToUnion(right)) :
+            Throw('Invalid fallthrough for TemplateLiteral'));
+}
+// ------------------------------------------------------------------
+// Tuple
+// ------------------------------------------------------------------
+// prettier-ignore
+function IsArrayOfTuple(left, right) {
+    return (IsArray(right) &&
+        left.items !== undefined &&
+        left.items.every((schema) => Visit$a(schema, right.items) === ExtendsResult.True));
+}
+// prettier-ignore
+function FromTupleRight(left, right) {
+    return (IsNever(left) ? ExtendsResult.True :
+        IsUnknown(left) ? ExtendsResult.False :
+            IsAny(left) ? ExtendsResult.Union :
+                ExtendsResult.False);
+}
+// prettier-ignore
+function FromTuple$c(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) && IsObjectArrayLike(right) ? ExtendsResult.True :
+            IsArray(right) && IsArrayOfTuple(left, right) ? ExtendsResult.True :
+                !IsTuple(right) ? ExtendsResult.False :
+                    (IsUndefined$2(left.items) && !IsUndefined$2(right.items)) || (!IsUndefined$2(left.items) && IsUndefined$2(right.items)) ? ExtendsResult.False :
+                        (IsUndefined$2(left.items) && !IsUndefined$2(right.items)) ? ExtendsResult.True :
+                            left.items.every((schema, index) => Visit$a(schema, right.items[index]) === ExtendsResult.True) ? ExtendsResult.True :
+                                ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Uint8Array
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromUint8Array$3(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsUint8Array(right) ? ExtendsResult.True :
+                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Undefined
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromUndefined$4(left, right) {
+    return (IsStructuralRight(right) ? StructuralRight(left, right) :
+        IsObject(right) ? FromObjectRight(left, right) :
+            IsRecord(right) ? FromRecordRight(left, right) :
+                IsVoid(right) ? FromVoidRight(left) :
+                    IsUndefined(right) ? ExtendsResult.True :
+                        ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Union
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromUnionRight(left, right) {
+    return right.anyOf.some((schema) => Visit$a(left, schema) === ExtendsResult.True)
+        ? ExtendsResult.True
+        : ExtendsResult.False;
+}
+// prettier-ignore
+function FromUnion$f(left, right) {
+    return left.anyOf.every((schema) => Visit$a(schema, right) === ExtendsResult.True)
+        ? ExtendsResult.True
+        : ExtendsResult.False;
+}
+// ------------------------------------------------------------------
+// Unknown
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromUnknownRight(left, right) {
+    return ExtendsResult.True;
+}
+// prettier-ignore
+function FromUnknown$3(left, right) {
+    return (IsNever(right) ? FromNeverRight() :
+        IsIntersect(right) ? FromIntersectRight(left, right) :
+            IsUnion(right) ? FromUnionRight(left, right) :
+                IsAny(right) ? FromAnyRight() :
+                    IsString(right) ? FromStringRight(left) :
+                        IsNumber(right) ? FromNumberRight(left) :
+                            IsInteger(right) ? FromIntegerRight(left) :
+                                IsBoolean(right) ? FromBooleanRight(left) :
+                                    IsArray(right) ? FromArrayRight(left) :
+                                        IsTuple(right) ? FromTupleRight(left) :
+                                            IsObject(right) ? FromObjectRight(left, right) :
+                                                IsUnknown(right) ? ExtendsResult.True :
+                                                    ExtendsResult.False);
+}
+// ------------------------------------------------------------------
+// Void
+// ------------------------------------------------------------------
+// prettier-ignore
+function FromVoidRight(left, right) {
+    return (IsUndefined(left) ? ExtendsResult.True :
+        IsUndefined(left) ? ExtendsResult.True :
+            ExtendsResult.False);
+}
+// prettier-ignore
+function FromVoid$3(left, right) {
+    return (IsIntersect(right) ? FromIntersectRight(left, right) :
+        IsUnion(right) ? FromUnionRight(left, right) :
+            IsUnknown(right) ? FromUnknownRight() :
+                IsAny(right) ? FromAnyRight() :
+                    IsObject(right) ? FromObjectRight(left, right) :
+                        IsVoid(right) ? ExtendsResult.True :
+                            ExtendsResult.False);
+}
+// prettier-ignore
+function Visit$a(left, right) {
+    return (
+    // resolvable
+    (IsTemplateLiteral(left) || IsTemplateLiteral(right)) ? FromTemplateLiteral$4(left, right) :
+        (IsRegExp(left) || IsRegExp(right)) ? FromRegExp$3(left, right) :
+            (IsNot(left) || IsNot(right)) ? FromNot$6(left, right) :
+                // standard
+                IsAny(left) ? FromAny$3(left, right) :
+                    IsArray(left) ? FromArray$e(left, right) :
+                        IsBigInt(left) ? FromBigInt$4(left, right) :
+                            IsBoolean(left) ? FromBoolean$4(left, right) :
+                                IsAsyncIterator(left) ? FromAsyncIterator$6(left, right) :
+                                    IsConstructor(left) ? FromConstructor$7(left, right) :
+                                        IsDate(left) ? FromDate$6(left, right) :
+                                            IsFunction(left) ? FromFunction$6(left, right) :
+                                                IsInteger(left) ? FromInteger$4(left, right) :
+                                                    IsIntersect(left) ? FromIntersect$f(left, right) :
+                                                        IsIterator(left) ? FromIterator$6(left, right) :
+                                                            IsLiteral(left) ? FromLiteral$4(left, right) :
+                                                                IsNever(left) ? FromNever$4() :
+                                                                    IsNull(left) ? FromNull$4(left, right) :
+                                                                        IsNumber(left) ? FromNumber$4(left, right) :
+                                                                            IsObject(left) ? FromObject$h(left, right) :
+                                                                                IsRecord(left) ? FromRecord$c(left, right) :
+                                                                                    IsString(left) ? FromString$4(left, right) :
+                                                                                        IsSymbol(left) ? FromSymbol$4(left, right) :
+                                                                                            IsTuple(left) ? FromTuple$c(left, right) :
+                                                                                                IsPromise(left) ? FromPromise$6(left, right) :
+                                                                                                    IsUint8Array(left) ? FromUint8Array$3(left, right) :
+                                                                                                        IsUndefined(left) ? FromUndefined$4(left, right) :
+                                                                                                            IsUnion(left) ? FromUnion$f(left, right) :
+                                                                                                                IsUnknown(left) ? FromUnknown$3(left, right) :
+                                                                                                                    IsVoid(left) ? FromVoid$3(left, right) :
+                                                                                                                        Throw(`Unknown left type operand '${left[Kind]}'`));
+}
+function ExtendsCheck(left, right) {
+    return Visit$a(left, right);
+}
+
+// prettier-ignore
+function FromProperties$c(P, Right, True, False, options) {
+    const Acc = {};
+    for (const K2 of globalThis.Object.getOwnPropertyNames(P))
+        Acc[K2] = Extends(P[K2], Right, True, False, Clone$1(options));
+    return Acc;
+}
+// prettier-ignore
+function FromMappedResult$6(Left, Right, True, False, options) {
+    return FromProperties$c(Left.properties, Right, True, False, options);
+}
+// prettier-ignore
+function ExtendsFromMappedResult(Left, Right, True, False, options) {
+    const P = FromMappedResult$6(Left, Right, True, False, options);
+    return MappedResult(P);
+}
+
+// prettier-ignore
+function ExtendsResolve(left, right, trueType, falseType) {
+    const R = ExtendsCheck(left, right);
+    return (R === ExtendsResult.Union ? Union$1([trueType, falseType]) :
+        R === ExtendsResult.True ? trueType :
+            falseType);
+}
+/** `[Json]` Creates a Conditional type */
+function Extends(L, R, T, F, options) {
+    // prettier-ignore
+    return (IsMappedResult$1(L) ? ExtendsFromMappedResult(L, R, T, F, options) :
+        IsMappedKey$1(L) ? CreateType(ExtendsFromMappedKey(L, R, T, F, options)) :
+            CreateType(ExtendsResolve(L, R, T, F), options));
+}
+
+// prettier-ignore
+function FromPropertyKey$2(K, U, L, R, options) {
+    return {
+        [K]: Extends(Literal(K), U, L, R, Clone$1(options))
+    };
+}
+// prettier-ignore
+function FromPropertyKeys$2(K, U, L, R, options) {
+    return K.reduce((Acc, LK) => {
+        return { ...Acc, ...FromPropertyKey$2(LK, U, L, R, options) };
+    }, {});
+}
+// prettier-ignore
+function FromMappedKey$2(K, U, L, R, options) {
+    return FromPropertyKeys$2(K.keys, U, L, R, options);
+}
+// prettier-ignore
+function ExtendsFromMappedKey(T, U, L, R, options) {
+    const P = FromMappedKey$2(T, U, L, R, options);
+    return MappedResult(P);
+}
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+class ValueCheckUnknownTypeError extends TypeBoxError {
+    constructor(schema) {
+        super(`Unknown type`);
+        this.schema = schema;
+    }
+}
+// ------------------------------------------------------------------
+// TypeGuards
+// ------------------------------------------------------------------
+function IsAnyOrUnknown(schema) {
+    return schema[Kind] === 'Any' || schema[Kind] === 'Unknown';
+}
+// ------------------------------------------------------------------
+// Guards
+// ------------------------------------------------------------------
+function IsDefined$1(value) {
+    return value !== undefined;
+}
+// ------------------------------------------------------------------
+// Types
+// ------------------------------------------------------------------
+function FromAny$2(schema, references, value) {
+    return true;
+}
+function FromArgument$3(schema, references, value) {
+    return true;
+}
+function FromArray$d(schema, references, value) {
+    if (!IsArray$3(value))
+        return false;
+    if (IsDefined$1(schema.minItems) && !(value.length >= schema.minItems)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maxItems) && !(value.length <= schema.maxItems)) {
+        return false;
+    }
+    if (!value.every((value) => Visit$9(schema.items, references, value))) {
+        return false;
+    }
+    // prettier-ignore
+    if (schema.uniqueItems === true && !((function () { const set = new Set(); for (const element of value) {
+        const hashed = Hash(element);
+        if (set.has(hashed)) {
+            return false;
+        }
+        else {
+            set.add(hashed);
+        }
+    } return true; })())) {
+        return false;
+    }
+    // contains
+    if (!(IsDefined$1(schema.contains) || IsNumber$3(schema.minContains) || IsNumber$3(schema.maxContains))) {
+        return true; // exit
+    }
+    const containsSchema = IsDefined$1(schema.contains) ? schema.contains : Never();
+    const containsCount = value.reduce((acc, value) => (Visit$9(containsSchema, references, value) ? acc + 1 : acc), 0);
+    if (containsCount === 0) {
+        return false;
+    }
+    if (IsNumber$3(schema.minContains) && containsCount < schema.minContains) {
+        return false;
+    }
+    if (IsNumber$3(schema.maxContains) && containsCount > schema.maxContains) {
+        return false;
+    }
+    return true;
+}
+function FromAsyncIterator$5(schema, references, value) {
+    return IsAsyncIterator$3(value);
+}
+function FromBigInt$3(schema, references, value) {
+    if (!IsBigInt$3(value))
+        return false;
+    if (IsDefined$1(schema.exclusiveMaximum) && !(value < schema.exclusiveMaximum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.exclusiveMinimum) && !(value > schema.exclusiveMinimum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maximum) && !(value <= schema.maximum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minimum) && !(value >= schema.minimum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.multipleOf) && !(value % schema.multipleOf === BigInt(0))) {
+        return false;
+    }
+    return true;
+}
+function FromBoolean$3(schema, references, value) {
+    return IsBoolean$3(value);
+}
+function FromConstructor$6(schema, references, value) {
+    return Visit$9(schema.returns, references, value.prototype);
+}
+function FromDate$5(schema, references, value) {
+    if (!IsDate$3(value))
+        return false;
+    if (IsDefined$1(schema.exclusiveMaximumTimestamp) && !(value.getTime() < schema.exclusiveMaximumTimestamp)) {
+        return false;
+    }
+    if (IsDefined$1(schema.exclusiveMinimumTimestamp) && !(value.getTime() > schema.exclusiveMinimumTimestamp)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maximumTimestamp) && !(value.getTime() <= schema.maximumTimestamp)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minimumTimestamp) && !(value.getTime() >= schema.minimumTimestamp)) {
+        return false;
+    }
+    if (IsDefined$1(schema.multipleOfTimestamp) && !(value.getTime() % schema.multipleOfTimestamp === 0)) {
+        return false;
+    }
+    return true;
+}
+function FromFunction$5(schema, references, value) {
+    return IsFunction$3(value);
+}
+function FromImport$9(schema, references, value) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    return Visit$9(target, [...references, ...definitions], value);
+}
+function FromInteger$3(schema, references, value) {
+    if (!IsInteger$2(value)) {
+        return false;
+    }
+    if (IsDefined$1(schema.exclusiveMaximum) && !(value < schema.exclusiveMaximum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.exclusiveMinimum) && !(value > schema.exclusiveMinimum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maximum) && !(value <= schema.maximum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minimum) && !(value >= schema.minimum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.multipleOf) && !(value % schema.multipleOf === 0)) {
+        return false;
+    }
+    return true;
+}
+function FromIntersect$e(schema, references, value) {
+    const check1 = schema.allOf.every((schema) => Visit$9(schema, references, value));
+    if (schema.unevaluatedProperties === false) {
+        const keyPattern = new RegExp(KeyOfPattern(schema));
+        const check2 = Object.getOwnPropertyNames(value).every((key) => keyPattern.test(key));
+        return check1 && check2;
+    }
+    else if (IsSchema$1(schema.unevaluatedProperties)) {
+        const keyCheck = new RegExp(KeyOfPattern(schema));
+        const check2 = Object.getOwnPropertyNames(value).every((key) => keyCheck.test(key) || Visit$9(schema.unevaluatedProperties, references, value[key]));
+        return check1 && check2;
+    }
+    else {
+        return check1;
+    }
+}
+function FromIterator$5(schema, references, value) {
+    return IsIterator$3(value);
+}
+function FromLiteral$3(schema, references, value) {
+    return value === schema.const;
+}
+function FromNever$3(schema, references, value) {
+    return false;
+}
+function FromNot$5(schema, references, value) {
+    return !Visit$9(schema.not, references, value);
+}
+function FromNull$3(schema, references, value) {
+    return IsNull$3(value);
+}
+function FromNumber$3(schema, references, value) {
+    if (!TypeSystemPolicy.IsNumberLike(value))
+        return false;
+    if (IsDefined$1(schema.exclusiveMaximum) && !(value < schema.exclusiveMaximum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.exclusiveMinimum) && !(value > schema.exclusiveMinimum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minimum) && !(value >= schema.minimum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maximum) && !(value <= schema.maximum)) {
+        return false;
+    }
+    if (IsDefined$1(schema.multipleOf) && !(value % schema.multipleOf === 0)) {
+        return false;
+    }
+    return true;
+}
+function FromObject$g(schema, references, value) {
+    if (!TypeSystemPolicy.IsObjectLike(value))
+        return false;
+    if (IsDefined$1(schema.minProperties) && !(Object.getOwnPropertyNames(value).length >= schema.minProperties)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maxProperties) && !(Object.getOwnPropertyNames(value).length <= schema.maxProperties)) {
+        return false;
+    }
+    const knownKeys = Object.getOwnPropertyNames(schema.properties);
+    for (const knownKey of knownKeys) {
+        const property = schema.properties[knownKey];
+        if (schema.required && schema.required.includes(knownKey)) {
+            if (!Visit$9(property, references, value[knownKey])) {
+                return false;
+            }
+            if ((ExtendsUndefinedCheck(property) || IsAnyOrUnknown(property)) && !(knownKey in value)) {
+                return false;
+            }
+        }
+        else {
+            if (TypeSystemPolicy.IsExactOptionalProperty(value, knownKey) && !Visit$9(property, references, value[knownKey])) {
+                return false;
+            }
+        }
+    }
+    if (schema.additionalProperties === false) {
+        const valueKeys = Object.getOwnPropertyNames(value);
+        // optimization: value is valid if schemaKey length matches the valueKey length
+        if (schema.required && schema.required.length === knownKeys.length && valueKeys.length === knownKeys.length) {
+            return true;
+        }
+        else {
+            return valueKeys.every((valueKey) => knownKeys.includes(valueKey));
+        }
+    }
+    else if (typeof schema.additionalProperties === 'object') {
+        const valueKeys = Object.getOwnPropertyNames(value);
+        return valueKeys.every((key) => knownKeys.includes(key) || Visit$9(schema.additionalProperties, references, value[key]));
+    }
+    else {
+        return true;
+    }
+}
+function FromPromise$5(schema, references, value) {
+    return IsPromise$2(value);
+}
+function FromRecord$b(schema, references, value) {
+    if (!TypeSystemPolicy.IsRecordLike(value)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minProperties) && !(Object.getOwnPropertyNames(value).length >= schema.minProperties)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maxProperties) && !(Object.getOwnPropertyNames(value).length <= schema.maxProperties)) {
+        return false;
+    }
+    const [patternKey, patternSchema] = Object.entries(schema.patternProperties)[0];
+    const regex = new RegExp(patternKey);
+    // prettier-ignore
+    const check1 = Object.entries(value).every(([key, value]) => {
+        return (regex.test(key)) ? Visit$9(patternSchema, references, value) : true;
+    });
+    // prettier-ignore
+    const check2 = typeof schema.additionalProperties === 'object' ? Object.entries(value).every(([key, value]) => {
+        return (!regex.test(key)) ? Visit$9(schema.additionalProperties, references, value) : true;
+    }) : true;
+    const check3 = schema.additionalProperties === false
+        ? Object.getOwnPropertyNames(value).every((key) => {
+            return regex.test(key);
+        })
+        : true;
+    return check1 && check2 && check3;
+}
+function FromRef$c(schema, references, value) {
+    return Visit$9(Deref(schema, references), references, value);
+}
+function FromRegExp$2(schema, references, value) {
+    const regex = new RegExp(schema.source, schema.flags);
+    if (IsDefined$1(schema.minLength)) {
+        if (!(value.length >= schema.minLength))
+            return false;
+    }
+    if (IsDefined$1(schema.maxLength)) {
+        if (!(value.length <= schema.maxLength))
+            return false;
+    }
+    return regex.test(value);
+}
+function FromString$3(schema, references, value) {
+    if (!IsString$3(value)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minLength)) {
+        if (!(value.length >= schema.minLength))
+            return false;
+    }
+    if (IsDefined$1(schema.maxLength)) {
+        if (!(value.length <= schema.maxLength))
+            return false;
+    }
+    if (IsDefined$1(schema.pattern)) {
+        const regex = new RegExp(schema.pattern);
+        if (!regex.test(value))
+            return false;
+    }
+    if (IsDefined$1(schema.format)) {
+        if (!Has$1(schema.format))
+            return false;
+        const func = Get$1(schema.format);
+        return func(value);
+    }
+    return true;
+}
+function FromSymbol$3(schema, references, value) {
+    return IsSymbol$3(value);
+}
+function FromTemplateLiteral$3(schema, references, value) {
+    return IsString$3(value) && new RegExp(schema.pattern).test(value);
+}
+function FromThis$9(schema, references, value) {
+    return Visit$9(Deref(schema, references), references, value);
+}
+function FromTuple$b(schema, references, value) {
+    if (!IsArray$3(value)) {
+        return false;
+    }
+    if (schema.items === undefined && !(value.length === 0)) {
+        return false;
+    }
+    if (!(value.length === schema.maxItems)) {
+        return false;
+    }
+    if (!schema.items) {
+        return true;
+    }
+    for (let i = 0; i < schema.items.length; i++) {
+        if (!Visit$9(schema.items[i], references, value[i]))
+            return false;
+    }
+    return true;
+}
+function FromUndefined$3(schema, references, value) {
+    return IsUndefined$3(value);
+}
+function FromUnion$e(schema, references, value) {
+    return schema.anyOf.some((inner) => Visit$9(inner, references, value));
+}
+function FromUint8Array$2(schema, references, value) {
+    if (!IsUint8Array$3(value)) {
+        return false;
+    }
+    if (IsDefined$1(schema.maxByteLength) && !(value.length <= schema.maxByteLength)) {
+        return false;
+    }
+    if (IsDefined$1(schema.minByteLength) && !(value.length >= schema.minByteLength)) {
+        return false;
+    }
+    return true;
+}
+function FromUnknown$2(schema, references, value) {
+    return true;
+}
+function FromVoid$2(schema, references, value) {
+    return TypeSystemPolicy.IsVoidLike(value);
+}
+function FromKind$2(schema, references, value) {
+    if (!Has(schema[Kind]))
+        return false;
+    const func = Get(schema[Kind]);
+    return func(schema, value);
+}
+function Visit$9(schema, references, value) {
+    const references_ = IsDefined$1(schema.$id) ? Pushref(schema, references) : references;
+    const schema_ = schema;
+    switch (schema_[Kind]) {
+        case 'Any':
+            return FromAny$2();
+        case 'Argument':
+            return FromArgument$3();
+        case 'Array':
+            return FromArray$d(schema_, references_, value);
+        case 'AsyncIterator':
+            return FromAsyncIterator$5(schema_, references_, value);
+        case 'BigInt':
+            return FromBigInt$3(schema_, references_, value);
+        case 'Boolean':
+            return FromBoolean$3(schema_, references_, value);
+        case 'Constructor':
+            return FromConstructor$6(schema_, references_, value);
+        case 'Date':
+            return FromDate$5(schema_, references_, value);
+        case 'Function':
+            return FromFunction$5(schema_, references_, value);
+        case 'Import':
+            return FromImport$9(schema_, references_, value);
+        case 'Integer':
+            return FromInteger$3(schema_, references_, value);
+        case 'Intersect':
+            return FromIntersect$e(schema_, references_, value);
+        case 'Iterator':
+            return FromIterator$5(schema_, references_, value);
+        case 'Literal':
+            return FromLiteral$3(schema_, references_, value);
+        case 'Never':
+            return FromNever$3();
+        case 'Not':
+            return FromNot$5(schema_, references_, value);
+        case 'Null':
+            return FromNull$3(schema_, references_, value);
+        case 'Number':
+            return FromNumber$3(schema_, references_, value);
+        case 'Object':
+            return FromObject$g(schema_, references_, value);
+        case 'Promise':
+            return FromPromise$5(schema_, references_, value);
+        case 'Record':
+            return FromRecord$b(schema_, references_, value);
+        case 'Ref':
+            return FromRef$c(schema_, references_, value);
+        case 'RegExp':
+            return FromRegExp$2(schema_, references_, value);
+        case 'String':
+            return FromString$3(schema_, references_, value);
+        case 'Symbol':
+            return FromSymbol$3(schema_, references_, value);
+        case 'TemplateLiteral':
+            return FromTemplateLiteral$3(schema_, references_, value);
+        case 'This':
+            return FromThis$9(schema_, references_, value);
+        case 'Tuple':
+            return FromTuple$b(schema_, references_, value);
+        case 'Undefined':
+            return FromUndefined$3(schema_, references_, value);
+        case 'Union':
+            return FromUnion$e(schema_, references_, value);
+        case 'Uint8Array':
+            return FromUint8Array$2(schema_, references_, value);
+        case 'Unknown':
+            return FromUnknown$2();
+        case 'Void':
+            return FromVoid$2(schema_, references_, value);
+        default:
+            if (!Has(schema_[Kind]))
+                throw new ValueCheckUnknownTypeError(schema_);
+            return FromKind$2(schema_, references_, value);
+    }
+}
+/** Returns true if the value matches the given type. */
+function Check(...args) {
+    return args.length === 3 ? Visit$9(args[0], args[1], args[2]) : Visit$9(args[0], [], args[1]);
+}
+
+// ------------------------------------------------------------------
+// ValueErrorType
+// ------------------------------------------------------------------
+var ValueErrorType;
+(function (ValueErrorType) {
+    ValueErrorType[ValueErrorType["ArrayContains"] = 0] = "ArrayContains";
+    ValueErrorType[ValueErrorType["ArrayMaxContains"] = 1] = "ArrayMaxContains";
+    ValueErrorType[ValueErrorType["ArrayMaxItems"] = 2] = "ArrayMaxItems";
+    ValueErrorType[ValueErrorType["ArrayMinContains"] = 3] = "ArrayMinContains";
+    ValueErrorType[ValueErrorType["ArrayMinItems"] = 4] = "ArrayMinItems";
+    ValueErrorType[ValueErrorType["ArrayUniqueItems"] = 5] = "ArrayUniqueItems";
+    ValueErrorType[ValueErrorType["Array"] = 6] = "Array";
+    ValueErrorType[ValueErrorType["AsyncIterator"] = 7] = "AsyncIterator";
+    ValueErrorType[ValueErrorType["BigIntExclusiveMaximum"] = 8] = "BigIntExclusiveMaximum";
+    ValueErrorType[ValueErrorType["BigIntExclusiveMinimum"] = 9] = "BigIntExclusiveMinimum";
+    ValueErrorType[ValueErrorType["BigIntMaximum"] = 10] = "BigIntMaximum";
+    ValueErrorType[ValueErrorType["BigIntMinimum"] = 11] = "BigIntMinimum";
+    ValueErrorType[ValueErrorType["BigIntMultipleOf"] = 12] = "BigIntMultipleOf";
+    ValueErrorType[ValueErrorType["BigInt"] = 13] = "BigInt";
+    ValueErrorType[ValueErrorType["Boolean"] = 14] = "Boolean";
+    ValueErrorType[ValueErrorType["DateExclusiveMaximumTimestamp"] = 15] = "DateExclusiveMaximumTimestamp";
+    ValueErrorType[ValueErrorType["DateExclusiveMinimumTimestamp"] = 16] = "DateExclusiveMinimumTimestamp";
+    ValueErrorType[ValueErrorType["DateMaximumTimestamp"] = 17] = "DateMaximumTimestamp";
+    ValueErrorType[ValueErrorType["DateMinimumTimestamp"] = 18] = "DateMinimumTimestamp";
+    ValueErrorType[ValueErrorType["DateMultipleOfTimestamp"] = 19] = "DateMultipleOfTimestamp";
+    ValueErrorType[ValueErrorType["Date"] = 20] = "Date";
+    ValueErrorType[ValueErrorType["Function"] = 21] = "Function";
+    ValueErrorType[ValueErrorType["IntegerExclusiveMaximum"] = 22] = "IntegerExclusiveMaximum";
+    ValueErrorType[ValueErrorType["IntegerExclusiveMinimum"] = 23] = "IntegerExclusiveMinimum";
+    ValueErrorType[ValueErrorType["IntegerMaximum"] = 24] = "IntegerMaximum";
+    ValueErrorType[ValueErrorType["IntegerMinimum"] = 25] = "IntegerMinimum";
+    ValueErrorType[ValueErrorType["IntegerMultipleOf"] = 26] = "IntegerMultipleOf";
+    ValueErrorType[ValueErrorType["Integer"] = 27] = "Integer";
+    ValueErrorType[ValueErrorType["IntersectUnevaluatedProperties"] = 28] = "IntersectUnevaluatedProperties";
+    ValueErrorType[ValueErrorType["Intersect"] = 29] = "Intersect";
+    ValueErrorType[ValueErrorType["Iterator"] = 30] = "Iterator";
+    ValueErrorType[ValueErrorType["Kind"] = 31] = "Kind";
+    ValueErrorType[ValueErrorType["Literal"] = 32] = "Literal";
+    ValueErrorType[ValueErrorType["Never"] = 33] = "Never";
+    ValueErrorType[ValueErrorType["Not"] = 34] = "Not";
+    ValueErrorType[ValueErrorType["Null"] = 35] = "Null";
+    ValueErrorType[ValueErrorType["NumberExclusiveMaximum"] = 36] = "NumberExclusiveMaximum";
+    ValueErrorType[ValueErrorType["NumberExclusiveMinimum"] = 37] = "NumberExclusiveMinimum";
+    ValueErrorType[ValueErrorType["NumberMaximum"] = 38] = "NumberMaximum";
+    ValueErrorType[ValueErrorType["NumberMinimum"] = 39] = "NumberMinimum";
+    ValueErrorType[ValueErrorType["NumberMultipleOf"] = 40] = "NumberMultipleOf";
+    ValueErrorType[ValueErrorType["Number"] = 41] = "Number";
+    ValueErrorType[ValueErrorType["ObjectAdditionalProperties"] = 42] = "ObjectAdditionalProperties";
+    ValueErrorType[ValueErrorType["ObjectMaxProperties"] = 43] = "ObjectMaxProperties";
+    ValueErrorType[ValueErrorType["ObjectMinProperties"] = 44] = "ObjectMinProperties";
+    ValueErrorType[ValueErrorType["ObjectRequiredProperty"] = 45] = "ObjectRequiredProperty";
+    ValueErrorType[ValueErrorType["Object"] = 46] = "Object";
+    ValueErrorType[ValueErrorType["Promise"] = 47] = "Promise";
+    ValueErrorType[ValueErrorType["RegExp"] = 48] = "RegExp";
+    ValueErrorType[ValueErrorType["StringFormatUnknown"] = 49] = "StringFormatUnknown";
+    ValueErrorType[ValueErrorType["StringFormat"] = 50] = "StringFormat";
+    ValueErrorType[ValueErrorType["StringMaxLength"] = 51] = "StringMaxLength";
+    ValueErrorType[ValueErrorType["StringMinLength"] = 52] = "StringMinLength";
+    ValueErrorType[ValueErrorType["StringPattern"] = 53] = "StringPattern";
+    ValueErrorType[ValueErrorType["String"] = 54] = "String";
+    ValueErrorType[ValueErrorType["Symbol"] = 55] = "Symbol";
+    ValueErrorType[ValueErrorType["TupleLength"] = 56] = "TupleLength";
+    ValueErrorType[ValueErrorType["Tuple"] = 57] = "Tuple";
+    ValueErrorType[ValueErrorType["Uint8ArrayMaxByteLength"] = 58] = "Uint8ArrayMaxByteLength";
+    ValueErrorType[ValueErrorType["Uint8ArrayMinByteLength"] = 59] = "Uint8ArrayMinByteLength";
+    ValueErrorType[ValueErrorType["Uint8Array"] = 60] = "Uint8Array";
+    ValueErrorType[ValueErrorType["Undefined"] = 61] = "Undefined";
+    ValueErrorType[ValueErrorType["Union"] = 62] = "Union";
+    ValueErrorType[ValueErrorType["Void"] = 63] = "Void";
+})(ValueErrorType || (ValueErrorType = {}));
+// ------------------------------------------------------------------
+// ValueErrors
+// ------------------------------------------------------------------
+class ValueErrorsUnknownTypeError extends TypeBoxError {
+    constructor(schema) {
+        super('Unknown type');
+        this.schema = schema;
+    }
+}
+// ------------------------------------------------------------------
+// EscapeKey
+// ------------------------------------------------------------------
+function EscapeKey(key) {
+    return key.replace(/~/g, '~0').replace(/\//g, '~1'); // RFC6901 Path
+}
+// ------------------------------------------------------------------
+// Guards
+// ------------------------------------------------------------------
+function IsDefined(value) {
+    return value !== undefined;
+}
+// ------------------------------------------------------------------
+// ValueErrorIterator
+// ------------------------------------------------------------------
+class ValueErrorIterator {
+    constructor(iterator) {
+        this.iterator = iterator;
+    }
+    [Symbol.iterator]() {
+        return this.iterator;
+    }
+    /** Returns the first value error or undefined if no errors */
+    First() {
+        const next = this.iterator.next();
+        return next.done ? undefined : next.value;
+    }
+}
+// --------------------------------------------------------------------------
+// Create
+// --------------------------------------------------------------------------
+function Create$1(errorType, schema, path, value, errors = []) {
+    return {
+        type: errorType,
+        schema,
+        path,
+        value,
+        message: GetErrorFunction()({ errorType, path, schema, value, errors }),
+        errors,
+    };
+}
+// --------------------------------------------------------------------------
+// Types
+// --------------------------------------------------------------------------
+function* FromAny$1(schema, references, path, value) { }
+function* FromArgument$2(schema, references, path, value) { }
+function* FromArray$c(schema, references, path, value) {
+    if (!IsArray$3(value)) {
+        return yield Create$1(ValueErrorType.Array, schema, path, value);
+    }
+    if (IsDefined(schema.minItems) && !(value.length >= schema.minItems)) {
+        yield Create$1(ValueErrorType.ArrayMinItems, schema, path, value);
+    }
+    if (IsDefined(schema.maxItems) && !(value.length <= schema.maxItems)) {
+        yield Create$1(ValueErrorType.ArrayMaxItems, schema, path, value);
+    }
+    for (let i = 0; i < value.length; i++) {
+        yield* Visit$8(schema.items, references, `${path}/${i}`, value[i]);
+    }
+    // prettier-ignore
+    if (schema.uniqueItems === true && !((function () { const set = new Set(); for (const element of value) {
+        const hashed = Hash(element);
+        if (set.has(hashed)) {
+            return false;
+        }
+        else {
+            set.add(hashed);
+        }
+    } return true; })())) {
+        yield Create$1(ValueErrorType.ArrayUniqueItems, schema, path, value);
+    }
+    // contains
+    if (!(IsDefined(schema.contains) || IsDefined(schema.minContains) || IsDefined(schema.maxContains))) {
+        return;
+    }
+    const containsSchema = IsDefined(schema.contains) ? schema.contains : Never();
+    const containsCount = value.reduce((acc, value, index) => (Visit$8(containsSchema, references, `${path}${index}`, value).next().done === true ? acc + 1 : acc), 0);
+    if (containsCount === 0) {
+        yield Create$1(ValueErrorType.ArrayContains, schema, path, value);
+    }
+    if (IsNumber$3(schema.minContains) && containsCount < schema.minContains) {
+        yield Create$1(ValueErrorType.ArrayMinContains, schema, path, value);
+    }
+    if (IsNumber$3(schema.maxContains) && containsCount > schema.maxContains) {
+        yield Create$1(ValueErrorType.ArrayMaxContains, schema, path, value);
+    }
+}
+function* FromAsyncIterator$4(schema, references, path, value) {
+    if (!IsAsyncIterator$3(value))
+        yield Create$1(ValueErrorType.AsyncIterator, schema, path, value);
+}
+function* FromBigInt$2(schema, references, path, value) {
+    if (!IsBigInt$3(value))
+        return yield Create$1(ValueErrorType.BigInt, schema, path, value);
+    if (IsDefined(schema.exclusiveMaximum) && !(value < schema.exclusiveMaximum)) {
+        yield Create$1(ValueErrorType.BigIntExclusiveMaximum, schema, path, value);
+    }
+    if (IsDefined(schema.exclusiveMinimum) && !(value > schema.exclusiveMinimum)) {
+        yield Create$1(ValueErrorType.BigIntExclusiveMinimum, schema, path, value);
+    }
+    if (IsDefined(schema.maximum) && !(value <= schema.maximum)) {
+        yield Create$1(ValueErrorType.BigIntMaximum, schema, path, value);
+    }
+    if (IsDefined(schema.minimum) && !(value >= schema.minimum)) {
+        yield Create$1(ValueErrorType.BigIntMinimum, schema, path, value);
+    }
+    if (IsDefined(schema.multipleOf) && !(value % schema.multipleOf === BigInt(0))) {
+        yield Create$1(ValueErrorType.BigIntMultipleOf, schema, path, value);
+    }
+}
+function* FromBoolean$2(schema, references, path, value) {
+    if (!IsBoolean$3(value))
+        yield Create$1(ValueErrorType.Boolean, schema, path, value);
+}
+function* FromConstructor$5(schema, references, path, value) {
+    yield* Visit$8(schema.returns, references, path, value.prototype);
+}
+function* FromDate$4(schema, references, path, value) {
+    if (!IsDate$3(value))
+        return yield Create$1(ValueErrorType.Date, schema, path, value);
+    if (IsDefined(schema.exclusiveMaximumTimestamp) && !(value.getTime() < schema.exclusiveMaximumTimestamp)) {
+        yield Create$1(ValueErrorType.DateExclusiveMaximumTimestamp, schema, path, value);
+    }
+    if (IsDefined(schema.exclusiveMinimumTimestamp) && !(value.getTime() > schema.exclusiveMinimumTimestamp)) {
+        yield Create$1(ValueErrorType.DateExclusiveMinimumTimestamp, schema, path, value);
+    }
+    if (IsDefined(schema.maximumTimestamp) && !(value.getTime() <= schema.maximumTimestamp)) {
+        yield Create$1(ValueErrorType.DateMaximumTimestamp, schema, path, value);
+    }
+    if (IsDefined(schema.minimumTimestamp) && !(value.getTime() >= schema.minimumTimestamp)) {
+        yield Create$1(ValueErrorType.DateMinimumTimestamp, schema, path, value);
+    }
+    if (IsDefined(schema.multipleOfTimestamp) && !(value.getTime() % schema.multipleOfTimestamp === 0)) {
+        yield Create$1(ValueErrorType.DateMultipleOfTimestamp, schema, path, value);
+    }
+}
+function* FromFunction$4(schema, references, path, value) {
+    if (!IsFunction$3(value))
+        yield Create$1(ValueErrorType.Function, schema, path, value);
+}
+function* FromImport$8(schema, references, path, value) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    yield* Visit$8(target, [...references, ...definitions], path, value);
+}
+function* FromInteger$2(schema, references, path, value) {
+    if (!IsInteger$2(value))
+        return yield Create$1(ValueErrorType.Integer, schema, path, value);
+    if (IsDefined(schema.exclusiveMaximum) && !(value < schema.exclusiveMaximum)) {
+        yield Create$1(ValueErrorType.IntegerExclusiveMaximum, schema, path, value);
+    }
+    if (IsDefined(schema.exclusiveMinimum) && !(value > schema.exclusiveMinimum)) {
+        yield Create$1(ValueErrorType.IntegerExclusiveMinimum, schema, path, value);
+    }
+    if (IsDefined(schema.maximum) && !(value <= schema.maximum)) {
+        yield Create$1(ValueErrorType.IntegerMaximum, schema, path, value);
+    }
+    if (IsDefined(schema.minimum) && !(value >= schema.minimum)) {
+        yield Create$1(ValueErrorType.IntegerMinimum, schema, path, value);
+    }
+    if (IsDefined(schema.multipleOf) && !(value % schema.multipleOf === 0)) {
+        yield Create$1(ValueErrorType.IntegerMultipleOf, schema, path, value);
+    }
+}
+function* FromIntersect$d(schema, references, path, value) {
+    let hasError = false;
+    for (const inner of schema.allOf) {
+        for (const error of Visit$8(inner, references, path, value)) {
+            hasError = true;
+            yield error;
+        }
+    }
+    if (hasError) {
+        return yield Create$1(ValueErrorType.Intersect, schema, path, value);
+    }
+    if (schema.unevaluatedProperties === false) {
+        const keyCheck = new RegExp(KeyOfPattern(schema));
+        for (const valueKey of Object.getOwnPropertyNames(value)) {
+            if (!keyCheck.test(valueKey)) {
+                yield Create$1(ValueErrorType.IntersectUnevaluatedProperties, schema, `${path}/${valueKey}`, value);
+            }
+        }
+    }
+    if (typeof schema.unevaluatedProperties === 'object') {
+        const keyCheck = new RegExp(KeyOfPattern(schema));
+        for (const valueKey of Object.getOwnPropertyNames(value)) {
+            if (!keyCheck.test(valueKey)) {
+                const next = Visit$8(schema.unevaluatedProperties, references, `${path}/${valueKey}`, value[valueKey]).next();
+                if (!next.done)
+                    yield next.value; // yield interior
+            }
+        }
+    }
+}
+function* FromIterator$4(schema, references, path, value) {
+    if (!IsIterator$3(value))
+        yield Create$1(ValueErrorType.Iterator, schema, path, value);
+}
+function* FromLiteral$2(schema, references, path, value) {
+    if (!(value === schema.const))
+        yield Create$1(ValueErrorType.Literal, schema, path, value);
+}
+function* FromNever$2(schema, references, path, value) {
+    yield Create$1(ValueErrorType.Never, schema, path, value);
+}
+function* FromNot$4(schema, references, path, value) {
+    if (Visit$8(schema.not, references, path, value).next().done === true)
+        yield Create$1(ValueErrorType.Not, schema, path, value);
+}
+function* FromNull$2(schema, references, path, value) {
+    if (!IsNull$3(value))
+        yield Create$1(ValueErrorType.Null, schema, path, value);
+}
+function* FromNumber$2(schema, references, path, value) {
+    if (!TypeSystemPolicy.IsNumberLike(value))
+        return yield Create$1(ValueErrorType.Number, schema, path, value);
+    if (IsDefined(schema.exclusiveMaximum) && !(value < schema.exclusiveMaximum)) {
+        yield Create$1(ValueErrorType.NumberExclusiveMaximum, schema, path, value);
+    }
+    if (IsDefined(schema.exclusiveMinimum) && !(value > schema.exclusiveMinimum)) {
+        yield Create$1(ValueErrorType.NumberExclusiveMinimum, schema, path, value);
+    }
+    if (IsDefined(schema.maximum) && !(value <= schema.maximum)) {
+        yield Create$1(ValueErrorType.NumberMaximum, schema, path, value);
+    }
+    if (IsDefined(schema.minimum) && !(value >= schema.minimum)) {
+        yield Create$1(ValueErrorType.NumberMinimum, schema, path, value);
+    }
+    if (IsDefined(schema.multipleOf) && !(value % schema.multipleOf === 0)) {
+        yield Create$1(ValueErrorType.NumberMultipleOf, schema, path, value);
+    }
+}
+function* FromObject$f(schema, references, path, value) {
+    if (!TypeSystemPolicy.IsObjectLike(value))
+        return yield Create$1(ValueErrorType.Object, schema, path, value);
+    if (IsDefined(schema.minProperties) && !(Object.getOwnPropertyNames(value).length >= schema.minProperties)) {
+        yield Create$1(ValueErrorType.ObjectMinProperties, schema, path, value);
+    }
+    if (IsDefined(schema.maxProperties) && !(Object.getOwnPropertyNames(value).length <= schema.maxProperties)) {
+        yield Create$1(ValueErrorType.ObjectMaxProperties, schema, path, value);
+    }
+    const requiredKeys = Array.isArray(schema.required) ? schema.required : [];
+    const knownKeys = Object.getOwnPropertyNames(schema.properties);
+    const unknownKeys = Object.getOwnPropertyNames(value);
+    for (const requiredKey of requiredKeys) {
+        if (unknownKeys.includes(requiredKey))
+            continue;
+        yield Create$1(ValueErrorType.ObjectRequiredProperty, schema.properties[requiredKey], `${path}/${EscapeKey(requiredKey)}`, undefined);
+    }
+    if (schema.additionalProperties === false) {
+        for (const valueKey of unknownKeys) {
+            if (!knownKeys.includes(valueKey)) {
+                yield Create$1(ValueErrorType.ObjectAdditionalProperties, schema, `${path}/${EscapeKey(valueKey)}`, value[valueKey]);
+            }
+        }
+    }
+    if (typeof schema.additionalProperties === 'object') {
+        for (const valueKey of unknownKeys) {
+            if (knownKeys.includes(valueKey))
+                continue;
+            yield* Visit$8(schema.additionalProperties, references, `${path}/${EscapeKey(valueKey)}`, value[valueKey]);
+        }
+    }
+    for (const knownKey of knownKeys) {
+        const property = schema.properties[knownKey];
+        if (schema.required && schema.required.includes(knownKey)) {
+            yield* Visit$8(property, references, `${path}/${EscapeKey(knownKey)}`, value[knownKey]);
+            if (ExtendsUndefinedCheck(schema) && !(knownKey in value)) {
+                yield Create$1(ValueErrorType.ObjectRequiredProperty, property, `${path}/${EscapeKey(knownKey)}`, undefined);
+            }
+        }
+        else {
+            if (TypeSystemPolicy.IsExactOptionalProperty(value, knownKey)) {
+                yield* Visit$8(property, references, `${path}/${EscapeKey(knownKey)}`, value[knownKey]);
+            }
+        }
+    }
+}
+function* FromPromise$4(schema, references, path, value) {
+    if (!IsPromise$2(value))
+        yield Create$1(ValueErrorType.Promise, schema, path, value);
+}
+function* FromRecord$a(schema, references, path, value) {
+    if (!TypeSystemPolicy.IsRecordLike(value))
+        return yield Create$1(ValueErrorType.Object, schema, path, value);
+    if (IsDefined(schema.minProperties) && !(Object.getOwnPropertyNames(value).length >= schema.minProperties)) {
+        yield Create$1(ValueErrorType.ObjectMinProperties, schema, path, value);
+    }
+    if (IsDefined(schema.maxProperties) && !(Object.getOwnPropertyNames(value).length <= schema.maxProperties)) {
+        yield Create$1(ValueErrorType.ObjectMaxProperties, schema, path, value);
+    }
+    const [patternKey, patternSchema] = Object.entries(schema.patternProperties)[0];
+    const regex = new RegExp(patternKey);
+    for (const [propertyKey, propertyValue] of Object.entries(value)) {
+        if (regex.test(propertyKey))
+            yield* Visit$8(patternSchema, references, `${path}/${EscapeKey(propertyKey)}`, propertyValue);
+    }
+    if (typeof schema.additionalProperties === 'object') {
+        for (const [propertyKey, propertyValue] of Object.entries(value)) {
+            if (!regex.test(propertyKey))
+                yield* Visit$8(schema.additionalProperties, references, `${path}/${EscapeKey(propertyKey)}`, propertyValue);
+        }
+    }
+    if (schema.additionalProperties === false) {
+        for (const [propertyKey, propertyValue] of Object.entries(value)) {
+            if (regex.test(propertyKey))
+                continue;
+            return yield Create$1(ValueErrorType.ObjectAdditionalProperties, schema, `${path}/${EscapeKey(propertyKey)}`, propertyValue);
+        }
+    }
+}
+function* FromRef$b(schema, references, path, value) {
+    yield* Visit$8(Deref(schema, references), references, path, value);
+}
+function* FromRegExp$1(schema, references, path, value) {
+    if (!IsString$3(value))
+        return yield Create$1(ValueErrorType.String, schema, path, value);
+    if (IsDefined(schema.minLength) && !(value.length >= schema.minLength)) {
+        yield Create$1(ValueErrorType.StringMinLength, schema, path, value);
+    }
+    if (IsDefined(schema.maxLength) && !(value.length <= schema.maxLength)) {
+        yield Create$1(ValueErrorType.StringMaxLength, schema, path, value);
+    }
+    const regex = new RegExp(schema.source, schema.flags);
+    if (!regex.test(value)) {
+        return yield Create$1(ValueErrorType.RegExp, schema, path, value);
+    }
+}
+function* FromString$2(schema, references, path, value) {
+    if (!IsString$3(value))
+        return yield Create$1(ValueErrorType.String, schema, path, value);
+    if (IsDefined(schema.minLength) && !(value.length >= schema.minLength)) {
+        yield Create$1(ValueErrorType.StringMinLength, schema, path, value);
+    }
+    if (IsDefined(schema.maxLength) && !(value.length <= schema.maxLength)) {
+        yield Create$1(ValueErrorType.StringMaxLength, schema, path, value);
+    }
+    if (IsString$3(schema.pattern)) {
+        const regex = new RegExp(schema.pattern);
+        if (!regex.test(value)) {
+            yield Create$1(ValueErrorType.StringPattern, schema, path, value);
+        }
+    }
+    if (IsString$3(schema.format)) {
+        if (!Has$1(schema.format)) {
+            yield Create$1(ValueErrorType.StringFormatUnknown, schema, path, value);
+        }
+        else {
+            const format = Get$1(schema.format);
+            if (!format(value)) {
+                yield Create$1(ValueErrorType.StringFormat, schema, path, value);
+            }
+        }
+    }
+}
+function* FromSymbol$2(schema, references, path, value) {
+    if (!IsSymbol$3(value))
+        yield Create$1(ValueErrorType.Symbol, schema, path, value);
+}
+function* FromTemplateLiteral$2(schema, references, path, value) {
+    if (!IsString$3(value))
+        return yield Create$1(ValueErrorType.String, schema, path, value);
+    const regex = new RegExp(schema.pattern);
+    if (!regex.test(value)) {
+        yield Create$1(ValueErrorType.StringPattern, schema, path, value);
+    }
+}
+function* FromThis$8(schema, references, path, value) {
+    yield* Visit$8(Deref(schema, references), references, path, value);
+}
+function* FromTuple$a(schema, references, path, value) {
+    if (!IsArray$3(value))
+        return yield Create$1(ValueErrorType.Tuple, schema, path, value);
+    if (schema.items === undefined && !(value.length === 0)) {
+        return yield Create$1(ValueErrorType.TupleLength, schema, path, value);
+    }
+    if (!(value.length === schema.maxItems)) {
+        return yield Create$1(ValueErrorType.TupleLength, schema, path, value);
+    }
+    if (!schema.items) {
+        return;
+    }
+    for (let i = 0; i < schema.items.length; i++) {
+        yield* Visit$8(schema.items[i], references, `${path}/${i}`, value[i]);
+    }
+}
+function* FromUndefined$2(schema, references, path, value) {
+    if (!IsUndefined$3(value))
+        yield Create$1(ValueErrorType.Undefined, schema, path, value);
+}
+function* FromUnion$d(schema, references, path, value) {
+    if (Check(schema, references, value))
+        return;
+    const errors = schema.anyOf.map((variant) => new ValueErrorIterator(Visit$8(variant, references, path, value)));
+    yield Create$1(ValueErrorType.Union, schema, path, value, errors);
+}
+function* FromUint8Array$1(schema, references, path, value) {
+    if (!IsUint8Array$3(value))
+        return yield Create$1(ValueErrorType.Uint8Array, schema, path, value);
+    if (IsDefined(schema.maxByteLength) && !(value.length <= schema.maxByteLength)) {
+        yield Create$1(ValueErrorType.Uint8ArrayMaxByteLength, schema, path, value);
+    }
+    if (IsDefined(schema.minByteLength) && !(value.length >= schema.minByteLength)) {
+        yield Create$1(ValueErrorType.Uint8ArrayMinByteLength, schema, path, value);
+    }
+}
+function* FromUnknown$1(schema, references, path, value) { }
+function* FromVoid$1(schema, references, path, value) {
+    if (!TypeSystemPolicy.IsVoidLike(value))
+        yield Create$1(ValueErrorType.Void, schema, path, value);
+}
+function* FromKind$1(schema, references, path, value) {
+    const check = Get(schema[Kind]);
+    if (!check(schema, value))
+        yield Create$1(ValueErrorType.Kind, schema, path, value);
+}
+function* Visit$8(schema, references, path, value) {
+    const references_ = IsDefined(schema.$id) ? [...references, schema] : references;
+    const schema_ = schema;
+    switch (schema_[Kind]) {
+        case 'Any':
+            return yield* FromAny$1();
+        case 'Argument':
+            return yield* FromArgument$2();
+        case 'Array':
+            return yield* FromArray$c(schema_, references_, path, value);
+        case 'AsyncIterator':
+            return yield* FromAsyncIterator$4(schema_, references_, path, value);
+        case 'BigInt':
+            return yield* FromBigInt$2(schema_, references_, path, value);
+        case 'Boolean':
+            return yield* FromBoolean$2(schema_, references_, path, value);
+        case 'Constructor':
+            return yield* FromConstructor$5(schema_, references_, path, value);
+        case 'Date':
+            return yield* FromDate$4(schema_, references_, path, value);
+        case 'Function':
+            return yield* FromFunction$4(schema_, references_, path, value);
+        case 'Import':
+            return yield* FromImport$8(schema_, references_, path, value);
+        case 'Integer':
+            return yield* FromInteger$2(schema_, references_, path, value);
+        case 'Intersect':
+            return yield* FromIntersect$d(schema_, references_, path, value);
+        case 'Iterator':
+            return yield* FromIterator$4(schema_, references_, path, value);
+        case 'Literal':
+            return yield* FromLiteral$2(schema_, references_, path, value);
+        case 'Never':
+            return yield* FromNever$2(schema_, references_, path, value);
+        case 'Not':
+            return yield* FromNot$4(schema_, references_, path, value);
+        case 'Null':
+            return yield* FromNull$2(schema_, references_, path, value);
+        case 'Number':
+            return yield* FromNumber$2(schema_, references_, path, value);
+        case 'Object':
+            return yield* FromObject$f(schema_, references_, path, value);
+        case 'Promise':
+            return yield* FromPromise$4(schema_, references_, path, value);
+        case 'Record':
+            return yield* FromRecord$a(schema_, references_, path, value);
+        case 'Ref':
+            return yield* FromRef$b(schema_, references_, path, value);
+        case 'RegExp':
+            return yield* FromRegExp$1(schema_, references_, path, value);
+        case 'String':
+            return yield* FromString$2(schema_, references_, path, value);
+        case 'Symbol':
+            return yield* FromSymbol$2(schema_, references_, path, value);
+        case 'TemplateLiteral':
+            return yield* FromTemplateLiteral$2(schema_, references_, path, value);
+        case 'This':
+            return yield* FromThis$8(schema_, references_, path, value);
+        case 'Tuple':
+            return yield* FromTuple$a(schema_, references_, path, value);
+        case 'Undefined':
+            return yield* FromUndefined$2(schema_, references_, path, value);
+        case 'Union':
+            return yield* FromUnion$d(schema_, references_, path, value);
+        case 'Uint8Array':
+            return yield* FromUint8Array$1(schema_, references_, path, value);
+        case 'Unknown':
+            return yield* FromUnknown$1();
+        case 'Void':
+            return yield* FromVoid$1(schema_, references_, path, value);
+        default:
+            if (!Has(schema_[Kind]))
+                throw new ValueErrorsUnknownTypeError(schema);
+            return yield* FromKind$1(schema_, references_, path, value);
+    }
+}
+/** Returns an iterator for each error in this value. */
+function Errors(...args) {
+    const iterator = args.length === 3 ? Visit$8(args[0], args[1], '', args[2]) : Visit$8(args[0], [], '', args[1]);
+    return new ValueErrorIterator(iterator);
+}
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+// thrown externally
+// prettier-ignore
+class TransformDecodeCheckError extends TypeBoxError {
+    constructor(schema, value, error) {
+        super(`Unable to decode value as it does not match the expected schema`);
+        this.schema = schema;
+        this.value = value;
+        this.error = error;
+    }
+}
+// prettier-ignore
+class TransformDecodeError extends TypeBoxError {
+    constructor(schema, path, value, error) {
+        super(error instanceof Error ? error.message : 'Unknown error');
+        this.schema = schema;
+        this.path = path;
+        this.value = value;
+        this.error = error;
+    }
+}
+// ------------------------------------------------------------------
+// Decode
+// ------------------------------------------------------------------
+// prettier-ignore
+function Default$4(schema, path, value) {
+    try {
+        return IsTransform$1(schema) ? schema[TransformKind].Decode(value) : value;
+    }
+    catch (error) {
+        throw new TransformDecodeError(schema, path, value, error);
+    }
+}
+// prettier-ignore
+function FromArray$b(schema, references, path, value) {
+    return (IsArray$3(value))
+        ? Default$4(schema, path, value.map((value, index) => Visit$7(schema.items, references, `${path}/${index}`, value)))
+        : Default$4(schema, path, value);
+}
+// prettier-ignore
+function FromIntersect$c(schema, references, path, value) {
+    if (!IsObject$3(value) || IsValueType(value))
+        return Default$4(schema, path, value);
+    const knownEntries = KeyOfPropertyEntries(schema);
+    const knownKeys = knownEntries.map(entry => entry[0]);
+    const knownProperties = { ...value };
+    for (const [knownKey, knownSchema] of knownEntries)
+        if (knownKey in knownProperties) {
+            knownProperties[knownKey] = Visit$7(knownSchema, references, `${path}/${knownKey}`, knownProperties[knownKey]);
+        }
+    if (!IsTransform$1(schema.unevaluatedProperties)) {
+        return Default$4(schema, path, knownProperties);
+    }
+    const unknownKeys = Object.getOwnPropertyNames(knownProperties);
+    const unevaluatedProperties = schema.unevaluatedProperties;
+    const unknownProperties = { ...knownProperties };
+    for (const key of unknownKeys)
+        if (!knownKeys.includes(key)) {
+            unknownProperties[key] = Default$4(unevaluatedProperties, `${path}/${key}`, unknownProperties[key]);
+        }
+    return Default$4(schema, path, unknownProperties);
+}
+// prettier-ignore
+function FromImport$7(schema, references, path, value) {
+    const additional = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    const result = Visit$7(target, [...references, ...additional], path, value);
+    return Default$4(schema, path, result);
+}
+function FromNot$3(schema, references, path, value) {
+    return Default$4(schema, path, Visit$7(schema.not, references, path, value));
+}
+// prettier-ignore
+function FromObject$e(schema, references, path, value) {
+    if (!IsObject$3(value))
+        return Default$4(schema, path, value);
+    const knownKeys = KeyOfPropertyKeys(schema);
+    const knownProperties = { ...value };
+    for (const key of knownKeys) {
+        if (!HasPropertyKey(knownProperties, key))
+            continue;
+        // if the property value is undefined, but the target is not, nor does it satisfy exact optional 
+        // property policy, then we need to continue. This is a special case for optional property handling 
+        // where a transforms wrapped in a optional modifiers should not run.
+        if (IsUndefined$3(knownProperties[key]) && (!IsUndefined$1(schema.properties[key]) ||
+            TypeSystemPolicy.IsExactOptionalProperty(knownProperties, key)))
+            continue;
+        // decode property
+        knownProperties[key] = Visit$7(schema.properties[key], references, `${path}/${key}`, knownProperties[key]);
+    }
+    if (!IsSchema$1(schema.additionalProperties)) {
+        return Default$4(schema, path, knownProperties);
+    }
+    const unknownKeys = Object.getOwnPropertyNames(knownProperties);
+    const additionalProperties = schema.additionalProperties;
+    const unknownProperties = { ...knownProperties };
+    for (const key of unknownKeys)
+        if (!knownKeys.includes(key)) {
+            unknownProperties[key] = Default$4(additionalProperties, `${path}/${key}`, unknownProperties[key]);
+        }
+    return Default$4(schema, path, unknownProperties);
+}
+// prettier-ignore
+function FromRecord$9(schema, references, path, value) {
+    if (!IsObject$3(value))
+        return Default$4(schema, path, value);
+    const pattern = Object.getOwnPropertyNames(schema.patternProperties)[0];
+    const knownKeys = new RegExp(pattern);
+    const knownProperties = { ...value };
+    for (const key of Object.getOwnPropertyNames(value))
+        if (knownKeys.test(key)) {
+            knownProperties[key] = Visit$7(schema.patternProperties[pattern], references, `${path}/${key}`, knownProperties[key]);
+        }
+    if (!IsSchema$1(schema.additionalProperties)) {
+        return Default$4(schema, path, knownProperties);
+    }
+    const unknownKeys = Object.getOwnPropertyNames(knownProperties);
+    const additionalProperties = schema.additionalProperties;
+    const unknownProperties = { ...knownProperties };
+    for (const key of unknownKeys)
+        if (!knownKeys.test(key)) {
+            unknownProperties[key] = Default$4(additionalProperties, `${path}/${key}`, unknownProperties[key]);
+        }
+    return Default$4(schema, path, unknownProperties);
+}
+// prettier-ignore
+function FromRef$a(schema, references, path, value) {
+    const target = Deref(schema, references);
+    return Default$4(schema, path, Visit$7(target, references, path, value));
+}
+// prettier-ignore
+function FromThis$7(schema, references, path, value) {
+    const target = Deref(schema, references);
+    return Default$4(schema, path, Visit$7(target, references, path, value));
+}
+// prettier-ignore
+function FromTuple$9(schema, references, path, value) {
+    return (IsArray$3(value) && IsArray$3(schema.items))
+        ? Default$4(schema, path, schema.items.map((schema, index) => Visit$7(schema, references, `${path}/${index}`, value[index])))
+        : Default$4(schema, path, value);
+}
+// prettier-ignore
+function FromUnion$c(schema, references, path, value) {
+    for (const subschema of schema.anyOf) {
+        if (!Check(subschema, references, value))
+            continue;
+        // note: ensure interior is decoded first
+        const decoded = Visit$7(subschema, references, path, value);
+        return Default$4(schema, path, decoded);
+    }
+    return Default$4(schema, path, value);
+}
+// prettier-ignore
+function Visit$7(schema, references, path, value) {
+    const references_ = Pushref(schema, references);
+    const schema_ = schema;
+    switch (schema[Kind]) {
+        case 'Array':
+            return FromArray$b(schema_, references_, path, value);
+        case 'Import':
+            return FromImport$7(schema_, references_, path, value);
+        case 'Intersect':
+            return FromIntersect$c(schema_, references_, path, value);
+        case 'Not':
+            return FromNot$3(schema_, references_, path, value);
+        case 'Object':
+            return FromObject$e(schema_, references_, path, value);
+        case 'Record':
+            return FromRecord$9(schema_, references_, path, value);
+        case 'Ref':
+            return FromRef$a(schema_, references_, path, value);
+        case 'Symbol':
+            return Default$4(schema_, path, value);
+        case 'This':
+            return FromThis$7(schema_, references_, path, value);
+        case 'Tuple':
+            return FromTuple$9(schema_, references_, path, value);
+        case 'Union':
+            return FromUnion$c(schema_, references_, path, value);
+        default:
+            return Default$4(schema_, path, value);
+    }
+}
+/**
+ * `[Internal]` Decodes the value and returns the result. This function requires that
+ * the caller `Check` the value before use. Passing unchecked values may result in
+ * undefined behavior. Refer to the `Value.Decode()` for implementation details.
+ */
+function TransformDecode(schema, references, value) {
+    return Visit$7(schema, references, '', value);
+}
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+// prettier-ignore
+class TransformEncodeCheckError extends TypeBoxError {
+    constructor(schema, value, error) {
+        super(`The encoded value does not match the expected schema`);
+        this.schema = schema;
+        this.value = value;
+        this.error = error;
+    }
+}
+// prettier-ignore
+class TransformEncodeError extends TypeBoxError {
+    constructor(schema, path, value, error) {
+        super(`${error instanceof Error ? error.message : 'Unknown error'}`);
+        this.schema = schema;
+        this.path = path;
+        this.value = value;
+        this.error = error;
+    }
+}
+// ------------------------------------------------------------------
+// Encode
+// ------------------------------------------------------------------
+// prettier-ignore
+function Default$3(schema, path, value) {
+    try {
+        return IsTransform$1(schema) ? schema[TransformKind].Encode(value) : value;
+    }
+    catch (error) {
+        throw new TransformEncodeError(schema, path, value, error);
+    }
+}
+// prettier-ignore
+function FromArray$a(schema, references, path, value) {
+    const defaulted = Default$3(schema, path, value);
+    return IsArray$3(defaulted)
+        ? defaulted.map((value, index) => Visit$6(schema.items, references, `${path}/${index}`, value))
+        : defaulted;
+}
+// prettier-ignore
+function FromImport$6(schema, references, path, value) {
+    const additional = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    const result = Default$3(schema, path, value);
+    return Visit$6(target, [...references, ...additional], path, result);
+}
+// prettier-ignore
+function FromIntersect$b(schema, references, path, value) {
+    const defaulted = Default$3(schema, path, value);
+    if (!IsObject$3(value) || IsValueType(value))
+        return defaulted;
+    const knownEntries = KeyOfPropertyEntries(schema);
+    const knownKeys = knownEntries.map(entry => entry[0]);
+    const knownProperties = { ...defaulted };
+    for (const [knownKey, knownSchema] of knownEntries)
+        if (knownKey in knownProperties) {
+            knownProperties[knownKey] = Visit$6(knownSchema, references, `${path}/${knownKey}`, knownProperties[knownKey]);
+        }
+    if (!IsTransform$1(schema.unevaluatedProperties)) {
+        return knownProperties;
+    }
+    const unknownKeys = Object.getOwnPropertyNames(knownProperties);
+    const unevaluatedProperties = schema.unevaluatedProperties;
+    const properties = { ...knownProperties };
+    for (const key of unknownKeys)
+        if (!knownKeys.includes(key)) {
+            properties[key] = Default$3(unevaluatedProperties, `${path}/${key}`, properties[key]);
+        }
+    return properties;
+}
+// prettier-ignore
+function FromNot$2(schema, references, path, value) {
+    return Default$3(schema.not, path, Default$3(schema, path, value));
+}
+// prettier-ignore
+function FromObject$d(schema, references, path, value) {
+    const defaulted = Default$3(schema, path, value);
+    if (!IsObject$3(defaulted))
+        return defaulted;
+    const knownKeys = KeyOfPropertyKeys(schema);
+    const knownProperties = { ...defaulted };
+    for (const key of knownKeys) {
+        if (!HasPropertyKey(knownProperties, key))
+            continue;
+        // if the property value is undefined, but the target is not, nor does it satisfy exact optional 
+        // property policy, then we need to continue. This is a special case for optional property handling 
+        // where a transforms wrapped in a optional modifiers should not run.
+        if (IsUndefined$3(knownProperties[key]) && (!IsUndefined$1(schema.properties[key]) ||
+            TypeSystemPolicy.IsExactOptionalProperty(knownProperties, key)))
+            continue;
+        // encode property
+        knownProperties[key] = Visit$6(schema.properties[key], references, `${path}/${key}`, knownProperties[key]);
+    }
+    if (!IsSchema$1(schema.additionalProperties)) {
+        return knownProperties;
+    }
+    const unknownKeys = Object.getOwnPropertyNames(knownProperties);
+    const additionalProperties = schema.additionalProperties;
+    const properties = { ...knownProperties };
+    for (const key of unknownKeys)
+        if (!knownKeys.includes(key)) {
+            properties[key] = Default$3(additionalProperties, `${path}/${key}`, properties[key]);
+        }
+    return properties;
+}
+// prettier-ignore
+function FromRecord$8(schema, references, path, value) {
+    const defaulted = Default$3(schema, path, value);
+    if (!IsObject$3(value))
+        return defaulted;
+    const pattern = Object.getOwnPropertyNames(schema.patternProperties)[0];
+    const knownKeys = new RegExp(pattern);
+    const knownProperties = { ...defaulted };
+    for (const key of Object.getOwnPropertyNames(value))
+        if (knownKeys.test(key)) {
+            knownProperties[key] = Visit$6(schema.patternProperties[pattern], references, `${path}/${key}`, knownProperties[key]);
+        }
+    if (!IsSchema$1(schema.additionalProperties)) {
+        return knownProperties;
+    }
+    const unknownKeys = Object.getOwnPropertyNames(knownProperties);
+    const additionalProperties = schema.additionalProperties;
+    const properties = { ...knownProperties };
+    for (const key of unknownKeys)
+        if (!knownKeys.test(key)) {
+            properties[key] = Default$3(additionalProperties, `${path}/${key}`, properties[key]);
+        }
+    return properties;
+}
+// prettier-ignore
+function FromRef$9(schema, references, path, value) {
+    const target = Deref(schema, references);
+    const resolved = Visit$6(target, references, path, value);
+    return Default$3(schema, path, resolved);
+}
+// prettier-ignore
+function FromThis$6(schema, references, path, value) {
+    const target = Deref(schema, references);
+    const resolved = Visit$6(target, references, path, value);
+    return Default$3(schema, path, resolved);
+}
+// prettier-ignore
+function FromTuple$8(schema, references, path, value) {
+    const value1 = Default$3(schema, path, value);
+    return IsArray$3(schema.items) ? schema.items.map((schema, index) => Visit$6(schema, references, `${path}/${index}`, value1[index])) : [];
+}
+// prettier-ignore
+function FromUnion$b(schema, references, path, value) {
+    // test value against union variants
+    for (const subschema of schema.anyOf) {
+        if (!Check(subschema, references, value))
+            continue;
+        const value1 = Visit$6(subschema, references, path, value);
+        return Default$3(schema, path, value1);
+    }
+    // test transformed value against union variants
+    for (const subschema of schema.anyOf) {
+        const value1 = Visit$6(subschema, references, path, value);
+        if (!Check(schema, references, value1))
+            continue;
+        return Default$3(schema, path, value1);
+    }
+    return Default$3(schema, path, value);
+}
+// prettier-ignore
+function Visit$6(schema, references, path, value) {
+    const references_ = Pushref(schema, references);
+    const schema_ = schema;
+    switch (schema[Kind]) {
+        case 'Array':
+            return FromArray$a(schema_, references_, path, value);
+        case 'Import':
+            return FromImport$6(schema_, references_, path, value);
+        case 'Intersect':
+            return FromIntersect$b(schema_, references_, path, value);
+        case 'Not':
+            return FromNot$2(schema_, references_, path, value);
+        case 'Object':
+            return FromObject$d(schema_, references_, path, value);
+        case 'Record':
+            return FromRecord$8(schema_, references_, path, value);
+        case 'Ref':
+            return FromRef$9(schema_, references_, path, value);
+        case 'This':
+            return FromThis$6(schema_, references_, path, value);
+        case 'Tuple':
+            return FromTuple$8(schema_, references_, path, value);
+        case 'Union':
+            return FromUnion$b(schema_, references_, path, value);
+        default:
+            return Default$3(schema_, path, value);
+    }
+}
+/**
+ * `[Internal]` Encodes the value and returns the result. This function expects the
+ * caller to pass a statically checked value. This function does not check the encoded
+ * result, meaning the result should be passed to `Check` before use. Refer to the
+ * `Value.Encode()` function for implementation details.
+ */
+function TransformEncode(schema, references, value) {
+    return Visit$6(schema, references, '', value);
+}
+
+// prettier-ignore
+function FromArray$9(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.items, references);
+}
+// prettier-ignore
+function FromAsyncIterator$3(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.items, references);
+}
+// prettier-ignore
+function FromConstructor$4(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.returns, references) || schema.parameters.some((schema) => Visit$5(schema, references));
+}
+// prettier-ignore
+function FromFunction$3(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.returns, references) || schema.parameters.some((schema) => Visit$5(schema, references));
+}
+// prettier-ignore
+function FromIntersect$a(schema, references) {
+    return IsTransform$1(schema) || IsTransform$1(schema.unevaluatedProperties) || schema.allOf.some((schema) => Visit$5(schema, references));
+}
+// prettier-ignore
+function FromImport$5(schema, references) {
+    const additional = globalThis.Object.getOwnPropertyNames(schema.$defs).reduce((result, key) => [...result, schema.$defs[key]], []);
+    const target = schema.$defs[schema.$ref];
+    return IsTransform$1(schema) || Visit$5(target, [...additional, ...references]);
+}
+// prettier-ignore
+function FromIterator$3(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.items, references);
+}
+// prettier-ignore
+function FromNot$1(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.not, references);
+}
+// prettier-ignore
+function FromObject$c(schema, references) {
+    return (IsTransform$1(schema) ||
+        Object.values(schema.properties).some((schema) => Visit$5(schema, references)) ||
+        (IsSchema$1(schema.additionalProperties) && Visit$5(schema.additionalProperties, references)));
+}
+// prettier-ignore
+function FromPromise$3(schema, references) {
+    return IsTransform$1(schema) || Visit$5(schema.item, references);
+}
+// prettier-ignore
+function FromRecord$7(schema, references) {
+    const pattern = Object.getOwnPropertyNames(schema.patternProperties)[0];
+    const property = schema.patternProperties[pattern];
+    return IsTransform$1(schema) || Visit$5(property, references) || (IsSchema$1(schema.additionalProperties) && IsTransform$1(schema.additionalProperties));
+}
+// prettier-ignore
+function FromRef$8(schema, references) {
+    if (IsTransform$1(schema))
+        return true;
+    return Visit$5(Deref(schema, references), references);
+}
+// prettier-ignore
+function FromThis$5(schema, references) {
+    if (IsTransform$1(schema))
+        return true;
+    return Visit$5(Deref(schema, references), references);
+}
+// prettier-ignore
+function FromTuple$7(schema, references) {
+    return IsTransform$1(schema) || (!IsUndefined$3(schema.items) && schema.items.some((schema) => Visit$5(schema, references)));
+}
+// prettier-ignore
+function FromUnion$a(schema, references) {
+    return IsTransform$1(schema) || schema.anyOf.some((schema) => Visit$5(schema, references));
+}
+// prettier-ignore
+function Visit$5(schema, references) {
+    const references_ = Pushref(schema, references);
+    const schema_ = schema;
+    if (schema.$id && visited.has(schema.$id))
+        return false;
+    if (schema.$id)
+        visited.add(schema.$id);
+    switch (schema[Kind]) {
+        case 'Array':
+            return FromArray$9(schema_, references_);
+        case 'AsyncIterator':
+            return FromAsyncIterator$3(schema_, references_);
+        case 'Constructor':
+            return FromConstructor$4(schema_, references_);
+        case 'Function':
+            return FromFunction$3(schema_, references_);
+        case 'Import':
+            return FromImport$5(schema_, references_);
+        case 'Intersect':
+            return FromIntersect$a(schema_, references_);
+        case 'Iterator':
+            return FromIterator$3(schema_, references_);
+        case 'Not':
+            return FromNot$1(schema_, references_);
+        case 'Object':
+            return FromObject$c(schema_, references_);
+        case 'Promise':
+            return FromPromise$3(schema_, references_);
+        case 'Record':
+            return FromRecord$7(schema_, references_);
+        case 'Ref':
+            return FromRef$8(schema_, references_);
+        case 'This':
+            return FromThis$5(schema_, references_);
+        case 'Tuple':
+            return FromTuple$7(schema_, references_);
+        case 'Union':
+            return FromUnion$a(schema_, references_);
+        default:
+            return IsTransform$1(schema);
+    }
+}
+const visited = new Set();
+/** Returns true if this schema contains a transform codec */
+function HasTransform(schema, references) {
+    visited.clear();
+    return Visit$5(schema, references);
+}
+
+// ------------------------------------------------------------------
+// TypeCheck
+// ------------------------------------------------------------------
+class TypeCheck {
+    constructor(schema, references, checkFunc, code) {
+        this.schema = schema;
+        this.references = references;
+        this.checkFunc = checkFunc;
+        this.code = code;
+        this.hasTransform = HasTransform(schema, references);
+    }
+    /** Returns the generated assertion code used to validate this type. */
+    Code() {
+        return this.code;
+    }
+    /** Returns the schema type used to validate */
+    Schema() {
+        return this.schema;
+    }
+    /** Returns reference types used to validate */
+    References() {
+        return this.references;
+    }
+    /** Returns an iterator for each error in this value. */
+    Errors(value) {
+        return Errors(this.schema, this.references, value);
+    }
+    /** Returns true if the value matches the compiled type. */
+    Check(value) {
+        return this.checkFunc(value);
+    }
+    /** Decodes a value or throws if error */
+    Decode(value) {
+        if (!this.checkFunc(value))
+            throw new TransformDecodeCheckError(this.schema, value, this.Errors(value).First());
+        return (this.hasTransform ? TransformDecode(this.schema, this.references, value) : value);
+    }
+    /** Encodes a value or throws if error */
+    Encode(value) {
+        const encoded = this.hasTransform ? TransformEncode(this.schema, this.references, value) : value;
+        if (!this.checkFunc(encoded))
+            throw new TransformEncodeCheckError(this.schema, value, this.Errors(value).First());
+        return encoded;
+    }
+}
+// ------------------------------------------------------------------
+// Character
+// ------------------------------------------------------------------
+var Character;
+(function (Character) {
+    function DollarSign(code) {
+        return code === 36;
+    }
+    Character.DollarSign = DollarSign;
+    function IsUnderscore(code) {
+        return code === 95;
+    }
+    Character.IsUnderscore = IsUnderscore;
+    function IsAlpha(code) {
+        return (code >= 65 && code <= 90) || (code >= 97 && code <= 122);
+    }
+    Character.IsAlpha = IsAlpha;
+    function IsNumeric(code) {
+        return code >= 48 && code <= 57;
+    }
+    Character.IsNumeric = IsNumeric;
+})(Character || (Character = {}));
+// ------------------------------------------------------------------
+// MemberExpression
+// ------------------------------------------------------------------
+var MemberExpression;
+(function (MemberExpression) {
+    function IsFirstCharacterNumeric(value) {
+        if (value.length === 0)
+            return false;
+        return Character.IsNumeric(value.charCodeAt(0));
+    }
+    function IsAccessor(value) {
+        if (IsFirstCharacterNumeric(value))
+            return false;
+        for (let i = 0; i < value.length; i++) {
+            const code = value.charCodeAt(i);
+            const check = Character.IsAlpha(code) || Character.IsNumeric(code) || Character.DollarSign(code) || Character.IsUnderscore(code);
+            if (!check)
+                return false;
+        }
+        return true;
+    }
+    function EscapeHyphen(key) {
+        return key.replace(/'/g, "\\'");
+    }
+    function Encode(object, key) {
+        return IsAccessor(key) ? `${object}.${key}` : `${object}['${EscapeHyphen(key)}']`;
+    }
+    MemberExpression.Encode = Encode;
+})(MemberExpression || (MemberExpression = {}));
+// ------------------------------------------------------------------
+// Identifier
+// ------------------------------------------------------------------
+var Identifier;
+(function (Identifier) {
+    function Encode($id) {
+        const buffer = [];
+        for (let i = 0; i < $id.length; i++) {
+            const code = $id.charCodeAt(i);
+            if (Character.IsNumeric(code) || Character.IsAlpha(code)) {
+                buffer.push($id.charAt(i));
+            }
+            else {
+                buffer.push(`_${code}_`);
+            }
+        }
+        return buffer.join('').replace(/__/g, '_');
+    }
+    Identifier.Encode = Encode;
+})(Identifier || (Identifier = {}));
+// ------------------------------------------------------------------
+// LiteralString
+// ------------------------------------------------------------------
+var LiteralString;
+(function (LiteralString) {
+    function Escape(content) {
+        return content.replace(/'/g, "\\'");
+    }
+    LiteralString.Escape = Escape;
+})(LiteralString || (LiteralString = {}));
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+class TypeCompilerUnknownTypeError extends TypeBoxError {
+    constructor(schema) {
+        super('Unknown type');
+        this.schema = schema;
+    }
+}
+class TypeCompilerTypeGuardError extends TypeBoxError {
+    constructor(schema) {
+        super('Preflight validation check failed to guard for the given schema');
+        this.schema = schema;
+    }
+}
+// ------------------------------------------------------------------
+// Policy
+// ------------------------------------------------------------------
+var Policy;
+(function (Policy) {
+    function IsExactOptionalProperty(value, key, expression) {
+        return TypeSystemPolicy.ExactOptionalPropertyTypes ? `('${key}' in ${value} ? ${expression} : true)` : `(${MemberExpression.Encode(value, key)} !== undefined ? ${expression} : true)`;
+    }
+    Policy.IsExactOptionalProperty = IsExactOptionalProperty;
+    function IsObjectLike(value) {
+        return !TypeSystemPolicy.AllowArrayObject ? `(typeof ${value} === 'object' && ${value} !== null && !Array.isArray(${value}))` : `(typeof ${value} === 'object' && ${value} !== null)`;
+    }
+    Policy.IsObjectLike = IsObjectLike;
+    function IsRecordLike(value) {
+        return !TypeSystemPolicy.AllowArrayObject
+            ? `(typeof ${value} === 'object' && ${value} !== null && !Array.isArray(${value}) && !(${value} instanceof Date) && !(${value} instanceof Uint8Array))`
+            : `(typeof ${value} === 'object' && ${value} !== null && !(${value} instanceof Date) && !(${value} instanceof Uint8Array))`;
+    }
+    Policy.IsRecordLike = IsRecordLike;
+    function IsNumberLike(value) {
+        return TypeSystemPolicy.AllowNaN ? `typeof ${value} === 'number'` : `Number.isFinite(${value})`;
+    }
+    Policy.IsNumberLike = IsNumberLike;
+    function IsVoidLike(value) {
+        return TypeSystemPolicy.AllowNullVoid ? `(${value} === undefined || ${value} === null)` : `${value} === undefined`;
+    }
+    Policy.IsVoidLike = IsVoidLike;
+})(Policy || (Policy = {}));
+/** Compiles Types for Runtime Type Checking */
+var TypeCompiler;
+(function (TypeCompiler) {
+    // ----------------------------------------------------------------
+    // Guards
+    // ----------------------------------------------------------------
+    function IsAnyOrUnknown(schema) {
+        return schema[Kind] === 'Any' || schema[Kind] === 'Unknown';
+    }
+    // ----------------------------------------------------------------
+    // Types
+    // ----------------------------------------------------------------
+    function* FromAny(schema, references, value) {
+        yield 'true';
+    }
+    function* FromArgument(schema, references, value) {
+        yield 'true';
+    }
+    function* FromArray(schema, references, value) {
+        yield `Array.isArray(${value})`;
+        const [parameter, accumulator] = [CreateParameter('value', 'any'), CreateParameter('acc', 'number')];
+        if (IsNumber$3(schema.maxItems))
+            yield `${value}.length <= ${schema.maxItems}`;
+        if (IsNumber$3(schema.minItems))
+            yield `${value}.length >= ${schema.minItems}`;
+        const elementExpression = CreateExpression(schema.items, references, 'value');
+        yield `${value}.every((${parameter}) => ${elementExpression})`;
+        if (IsSchema(schema.contains) || IsNumber$3(schema.minContains) || IsNumber$3(schema.maxContains)) {
+            const containsSchema = IsSchema(schema.contains) ? schema.contains : Never();
+            const checkExpression = CreateExpression(containsSchema, references, 'value');
+            const checkMinContains = IsNumber$3(schema.minContains) ? [`(count >= ${schema.minContains})`] : [];
+            const checkMaxContains = IsNumber$3(schema.maxContains) ? [`(count <= ${schema.maxContains})`] : [];
+            const checkCount = `const count = value.reduce((${accumulator}, ${parameter}) => ${checkExpression} ? acc + 1 : acc, 0)`;
+            const check = [`(count > 0)`, ...checkMinContains, ...checkMaxContains].join(' && ');
+            yield `((${parameter}) => { ${checkCount}; return ${check}})(${value})`;
+        }
+        if (schema.uniqueItems === true) {
+            const check = `const hashed = hash(element); if(set.has(hashed)) { return false } else { set.add(hashed) } } return true`;
+            const block = `const set = new Set(); for(const element of value) { ${check} }`;
+            yield `((${parameter}) => { ${block} )(${value})`;
+        }
+    }
+    function* FromAsyncIterator(schema, references, value) {
+        yield `(typeof value === 'object' && Symbol.asyncIterator in ${value})`;
+    }
+    function* FromBigInt(schema, references, value) {
+        yield `(typeof ${value} === 'bigint')`;
+        if (IsBigInt$3(schema.exclusiveMaximum))
+            yield `${value} < BigInt(${schema.exclusiveMaximum})`;
+        if (IsBigInt$3(schema.exclusiveMinimum))
+            yield `${value} > BigInt(${schema.exclusiveMinimum})`;
+        if (IsBigInt$3(schema.maximum))
+            yield `${value} <= BigInt(${schema.maximum})`;
+        if (IsBigInt$3(schema.minimum))
+            yield `${value} >= BigInt(${schema.minimum})`;
+        if (IsBigInt$3(schema.multipleOf))
+            yield `(${value} % BigInt(${schema.multipleOf})) === 0`;
+    }
+    function* FromBoolean(schema, references, value) {
+        yield `(typeof ${value} === 'boolean')`;
+    }
+    function* FromConstructor(schema, references, value) {
+        yield* Visit(schema.returns, references, `${value}.prototype`);
+    }
+    function* FromDate(schema, references, value) {
+        yield `(${value} instanceof Date) && Number.isFinite(${value}.getTime())`;
+        if (IsNumber$3(schema.exclusiveMaximumTimestamp))
+            yield `${value}.getTime() < ${schema.exclusiveMaximumTimestamp}`;
+        if (IsNumber$3(schema.exclusiveMinimumTimestamp))
+            yield `${value}.getTime() > ${schema.exclusiveMinimumTimestamp}`;
+        if (IsNumber$3(schema.maximumTimestamp))
+            yield `${value}.getTime() <= ${schema.maximumTimestamp}`;
+        if (IsNumber$3(schema.minimumTimestamp))
+            yield `${value}.getTime() >= ${schema.minimumTimestamp}`;
+        if (IsNumber$3(schema.multipleOfTimestamp))
+            yield `(${value}.getTime() % ${schema.multipleOfTimestamp}) === 0`;
+    }
+    function* FromFunction(schema, references, value) {
+        yield `(typeof ${value} === 'function')`;
+    }
+    function* FromImport(schema, references, value) {
+        const members = globalThis.Object.getOwnPropertyNames(schema.$defs).reduce((result, key) => {
+            return [...result, schema.$defs[key]];
+        }, []);
+        yield* Visit(Ref(schema.$ref), [...references, ...members], value);
+    }
+    function* FromInteger(schema, references, value) {
+        yield `Number.isInteger(${value})`;
+        if (IsNumber$3(schema.exclusiveMaximum))
+            yield `${value} < ${schema.exclusiveMaximum}`;
+        if (IsNumber$3(schema.exclusiveMinimum))
+            yield `${value} > ${schema.exclusiveMinimum}`;
+        if (IsNumber$3(schema.maximum))
+            yield `${value} <= ${schema.maximum}`;
+        if (IsNumber$3(schema.minimum))
+            yield `${value} >= ${schema.minimum}`;
+        if (IsNumber$3(schema.multipleOf))
+            yield `(${value} % ${schema.multipleOf}) === 0`;
+    }
+    function* FromIntersect(schema, references, value) {
+        const check1 = schema.allOf.map((schema) => CreateExpression(schema, references, value)).join(' && ');
+        if (schema.unevaluatedProperties === false) {
+            const keyCheck = CreateVariable(`${new RegExp(KeyOfPattern(schema))};`);
+            const check2 = `Object.getOwnPropertyNames(${value}).every(key => ${keyCheck}.test(key))`;
+            yield `(${check1} && ${check2})`;
+        }
+        else if (IsSchema(schema.unevaluatedProperties)) {
+            const keyCheck = CreateVariable(`${new RegExp(KeyOfPattern(schema))};`);
+            const check2 = `Object.getOwnPropertyNames(${value}).every(key => ${keyCheck}.test(key) || ${CreateExpression(schema.unevaluatedProperties, references, `${value}[key]`)})`;
+            yield `(${check1} && ${check2})`;
+        }
+        else {
+            yield `(${check1})`;
+        }
+    }
+    function* FromIterator(schema, references, value) {
+        yield `(typeof value === 'object' && Symbol.iterator in ${value})`;
+    }
+    function* FromLiteral(schema, references, value) {
+        if (typeof schema.const === 'number' || typeof schema.const === 'boolean') {
+            yield `(${value} === ${schema.const})`;
+        }
+        else {
+            yield `(${value} === '${LiteralString.Escape(schema.const)}')`;
+        }
+    }
+    function* FromNever(schema, references, value) {
+        yield `false`;
+    }
+    function* FromNot(schema, references, value) {
+        const expression = CreateExpression(schema.not, references, value);
+        yield `(!${expression})`;
+    }
+    function* FromNull(schema, references, value) {
+        yield `(${value} === null)`;
+    }
+    function* FromNumber(schema, references, value) {
+        yield Policy.IsNumberLike(value);
+        if (IsNumber$3(schema.exclusiveMaximum))
+            yield `${value} < ${schema.exclusiveMaximum}`;
+        if (IsNumber$3(schema.exclusiveMinimum))
+            yield `${value} > ${schema.exclusiveMinimum}`;
+        if (IsNumber$3(schema.maximum))
+            yield `${value} <= ${schema.maximum}`;
+        if (IsNumber$3(schema.minimum))
+            yield `${value} >= ${schema.minimum}`;
+        if (IsNumber$3(schema.multipleOf))
+            yield `(${value} % ${schema.multipleOf}) === 0`;
+    }
+    function* FromObject(schema, references, value) {
+        yield Policy.IsObjectLike(value);
+        if (IsNumber$3(schema.minProperties))
+            yield `Object.getOwnPropertyNames(${value}).length >= ${schema.minProperties}`;
+        if (IsNumber$3(schema.maxProperties))
+            yield `Object.getOwnPropertyNames(${value}).length <= ${schema.maxProperties}`;
+        const knownKeys = Object.getOwnPropertyNames(schema.properties);
+        for (const knownKey of knownKeys) {
+            const memberExpression = MemberExpression.Encode(value, knownKey);
+            const property = schema.properties[knownKey];
+            if (schema.required && schema.required.includes(knownKey)) {
+                yield* Visit(property, references, memberExpression);
+                if (ExtendsUndefinedCheck(property) || IsAnyOrUnknown(property))
+                    yield `('${knownKey}' in ${value})`;
+            }
+            else {
+                const expression = CreateExpression(property, references, memberExpression);
+                yield Policy.IsExactOptionalProperty(value, knownKey, expression);
+            }
+        }
+        if (schema.additionalProperties === false) {
+            if (schema.required && schema.required.length === knownKeys.length) {
+                yield `Object.getOwnPropertyNames(${value}).length === ${knownKeys.length}`;
+            }
+            else {
+                const keys = `[${knownKeys.map((key) => `'${key}'`).join(', ')}]`;
+                yield `Object.getOwnPropertyNames(${value}).every(key => ${keys}.includes(key))`;
+            }
+        }
+        if (typeof schema.additionalProperties === 'object') {
+            const expression = CreateExpression(schema.additionalProperties, references, `${value}[key]`);
+            const keys = `[${knownKeys.map((key) => `'${key}'`).join(', ')}]`;
+            yield `(Object.getOwnPropertyNames(${value}).every(key => ${keys}.includes(key) || ${expression}))`;
+        }
+    }
+    function* FromPromise(schema, references, value) {
+        yield `${value} instanceof Promise`;
+    }
+    function* FromRecord(schema, references, value) {
+        yield Policy.IsRecordLike(value);
+        if (IsNumber$3(schema.minProperties))
+            yield `Object.getOwnPropertyNames(${value}).length >= ${schema.minProperties}`;
+        if (IsNumber$3(schema.maxProperties))
+            yield `Object.getOwnPropertyNames(${value}).length <= ${schema.maxProperties}`;
+        const [patternKey, patternSchema] = Object.entries(schema.patternProperties)[0];
+        const variable = CreateVariable(`${new RegExp(patternKey)}`);
+        const check1 = CreateExpression(patternSchema, references, 'value');
+        const check2 = IsSchema(schema.additionalProperties) ? CreateExpression(schema.additionalProperties, references, value) : schema.additionalProperties === false ? 'false' : 'true';
+        const expression = `(${variable}.test(key) ? ${check1} : ${check2})`;
+        yield `(Object.entries(${value}).every(([key, value]) => ${expression}))`;
+    }
+    function* FromRef(schema, references, value) {
+        const target = Deref(schema, references);
+        // Reference: If we have seen this reference before we can just yield and return the function call.
+        // If this isn't the case we defer to visit to generate and set the function for subsequent passes.
+        if (state.functions.has(schema.$ref))
+            return yield `${CreateFunctionName(schema.$ref)}(${value})`;
+        yield* Visit(target, references, value);
+    }
+    function* FromRegExp(schema, references, value) {
+        const variable = CreateVariable(`${new RegExp(schema.source, schema.flags)};`);
+        yield `(typeof ${value} === 'string')`;
+        if (IsNumber$3(schema.maxLength))
+            yield `${value}.length <= ${schema.maxLength}`;
+        if (IsNumber$3(schema.minLength))
+            yield `${value}.length >= ${schema.minLength}`;
+        yield `${variable}.test(${value})`;
+    }
+    function* FromString(schema, references, value) {
+        yield `(typeof ${value} === 'string')`;
+        if (IsNumber$3(schema.maxLength))
+            yield `${value}.length <= ${schema.maxLength}`;
+        if (IsNumber$3(schema.minLength))
+            yield `${value}.length >= ${schema.minLength}`;
+        if (schema.pattern !== undefined) {
+            const variable = CreateVariable(`${new RegExp(schema.pattern)};`);
+            yield `${variable}.test(${value})`;
+        }
+        if (schema.format !== undefined) {
+            yield `format('${schema.format}', ${value})`;
+        }
+    }
+    function* FromSymbol(schema, references, value) {
+        yield `(typeof ${value} === 'symbol')`;
+    }
+    function* FromTemplateLiteral(schema, references, value) {
+        yield `(typeof ${value} === 'string')`;
+        const variable = CreateVariable(`${new RegExp(schema.pattern)};`);
+        yield `${variable}.test(${value})`;
+    }
+    function* FromThis(schema, references, value) {
+        // Note: This types are assured to be hoisted prior to this call. Just yield the function.
+        yield `${CreateFunctionName(schema.$ref)}(${value})`;
+    }
+    function* FromTuple(schema, references, value) {
+        yield `Array.isArray(${value})`;
+        if (schema.items === undefined)
+            return yield `${value}.length === 0`;
+        yield `(${value}.length === ${schema.maxItems})`;
+        for (let i = 0; i < schema.items.length; i++) {
+            const expression = CreateExpression(schema.items[i], references, `${value}[${i}]`);
+            yield `${expression}`;
+        }
+    }
+    function* FromUndefined(schema, references, value) {
+        yield `${value} === undefined`;
+    }
+    function* FromUnion(schema, references, value) {
+        const expressions = schema.anyOf.map((schema) => CreateExpression(schema, references, value));
+        yield `(${expressions.join(' || ')})`;
+    }
+    function* FromUint8Array(schema, references, value) {
+        yield `${value} instanceof Uint8Array`;
+        if (IsNumber$3(schema.maxByteLength))
+            yield `(${value}.length <= ${schema.maxByteLength})`;
+        if (IsNumber$3(schema.minByteLength))
+            yield `(${value}.length >= ${schema.minByteLength})`;
+    }
+    function* FromUnknown(schema, references, value) {
+        yield 'true';
+    }
+    function* FromVoid(schema, references, value) {
+        yield Policy.IsVoidLike(value);
+    }
+    function* FromKind(schema, references, value) {
+        const instance = state.instances.size;
+        state.instances.set(instance, schema);
+        yield `kind('${schema[Kind]}', ${instance}, ${value})`;
+    }
+    function* Visit(schema, references, value, useHoisting = true) {
+        const references_ = IsString$3(schema.$id) ? [...references, schema] : references;
+        const schema_ = schema;
+        // --------------------------------------------------------------
+        // Hoisting
+        // --------------------------------------------------------------
+        if (useHoisting && IsString$3(schema.$id)) {
+            const functionName = CreateFunctionName(schema.$id);
+            if (state.functions.has(functionName)) {
+                return yield `${functionName}(${value})`;
+            }
+            else {
+                // Note: In the case of cyclic types, we need to create a 'functions' record
+                // to prevent infinitely re-visiting the CreateFunction. Subsequent attempts
+                // to visit will be caught by the above condition.
+                state.functions.set(functionName, '<deferred>');
+                const functionCode = CreateFunction(functionName, schema, references, 'value', false);
+                state.functions.set(functionName, functionCode);
+                return yield `${functionName}(${value})`;
+            }
+        }
+        switch (schema_[Kind]) {
+            case 'Any':
+                return yield* FromAny();
+            case 'Argument':
+                return yield* FromArgument();
+            case 'Array':
+                return yield* FromArray(schema_, references_, value);
+            case 'AsyncIterator':
+                return yield* FromAsyncIterator(schema_, references_, value);
+            case 'BigInt':
+                return yield* FromBigInt(schema_, references_, value);
+            case 'Boolean':
+                return yield* FromBoolean(schema_, references_, value);
+            case 'Constructor':
+                return yield* FromConstructor(schema_, references_, value);
+            case 'Date':
+                return yield* FromDate(schema_, references_, value);
+            case 'Function':
+                return yield* FromFunction(schema_, references_, value);
+            case 'Import':
+                return yield* FromImport(schema_, references_, value);
+            case 'Integer':
+                return yield* FromInteger(schema_, references_, value);
+            case 'Intersect':
+                return yield* FromIntersect(schema_, references_, value);
+            case 'Iterator':
+                return yield* FromIterator(schema_, references_, value);
+            case 'Literal':
+                return yield* FromLiteral(schema_, references_, value);
+            case 'Never':
+                return yield* FromNever();
+            case 'Not':
+                return yield* FromNot(schema_, references_, value);
+            case 'Null':
+                return yield* FromNull(schema_, references_, value);
+            case 'Number':
+                return yield* FromNumber(schema_, references_, value);
+            case 'Object':
+                return yield* FromObject(schema_, references_, value);
+            case 'Promise':
+                return yield* FromPromise(schema_, references_, value);
+            case 'Record':
+                return yield* FromRecord(schema_, references_, value);
+            case 'Ref':
+                return yield* FromRef(schema_, references_, value);
+            case 'RegExp':
+                return yield* FromRegExp(schema_, references_, value);
+            case 'String':
+                return yield* FromString(schema_, references_, value);
+            case 'Symbol':
+                return yield* FromSymbol(schema_, references_, value);
+            case 'TemplateLiteral':
+                return yield* FromTemplateLiteral(schema_, references_, value);
+            case 'This':
+                return yield* FromThis(schema_, references_, value);
+            case 'Tuple':
+                return yield* FromTuple(schema_, references_, value);
+            case 'Undefined':
+                return yield* FromUndefined(schema_, references_, value);
+            case 'Union':
+                return yield* FromUnion(schema_, references_, value);
+            case 'Uint8Array':
+                return yield* FromUint8Array(schema_, references_, value);
+            case 'Unknown':
+                return yield* FromUnknown();
+            case 'Void':
+                return yield* FromVoid(schema_, references_, value);
+            default:
+                if (!Has(schema_[Kind]))
+                    throw new TypeCompilerUnknownTypeError(schema);
+                return yield* FromKind(schema_, references_, value);
+        }
+    }
+    // ----------------------------------------------------------------
+    // Compiler State
+    // ----------------------------------------------------------------
+    // prettier-ignore
+    const state = {
+        language: 'javascript', // target language
+        functions: new Map(), // local functions
+        variables: new Map(), // local variables
+        instances: new Map() // exterior kind instances
+    };
+    // ----------------------------------------------------------------
+    // Compiler Factory
+    // ----------------------------------------------------------------
+    function CreateExpression(schema, references, value, useHoisting = true) {
+        return `(${[...Visit(schema, references, value, useHoisting)].join(' && ')})`;
+    }
+    function CreateFunctionName($id) {
+        return `check_${Identifier.Encode($id)}`;
+    }
+    function CreateVariable(expression) {
+        const variableName = `local_${state.variables.size}`;
+        state.variables.set(variableName, `const ${variableName} = ${expression}`);
+        return variableName;
+    }
+    function CreateFunction(name, schema, references, value, useHoisting = true) {
+        const [newline, pad] = ['\n', (length) => ''.padStart(length, ' ')];
+        const parameter = CreateParameter('value', 'any');
+        const returns = CreateReturns('boolean');
+        const expression = [...Visit(schema, references, value, useHoisting)].map((expression) => `${pad(4)}${expression}`).join(` &&${newline}`);
+        return `function ${name}(${parameter})${returns} {${newline}${pad(2)}return (${newline}${expression}${newline}${pad(2)})\n}`;
+    }
+    function CreateParameter(name, type) {
+        const annotation = state.language === 'typescript' ? `: ${type}` : '';
+        return `${name}${annotation}`;
+    }
+    function CreateReturns(type) {
+        return state.language === 'typescript' ? `: ${type}` : '';
+    }
+    // ----------------------------------------------------------------
+    // Compile
+    // ----------------------------------------------------------------
+    function Build(schema, references, options) {
+        const functionCode = CreateFunction('check', schema, references, 'value'); // will populate functions and variables
+        const parameter = CreateParameter('value', 'any');
+        const returns = CreateReturns('boolean');
+        const functions = [...state.functions.values()];
+        const variables = [...state.variables.values()];
+        // prettier-ignore
+        const checkFunction = IsString$3(schema.$id) // ensure top level schemas with $id's are hoisted
+            ? `return function check(${parameter})${returns} {\n  return ${CreateFunctionName(schema.$id)}(value)\n}`
+            : `return ${functionCode}`;
+        return [...variables, ...functions, checkFunction].join('\n');
+    }
+    /** Generates the code used to assert this type and returns it as a string */
+    function Code(...args) {
+        const defaults = { language: 'javascript' };
+        // prettier-ignore
+        const [schema, references, options] = (args.length === 2 && IsArray$3(args[1]) ? [args[0], args[1], defaults] :
+            args.length === 2 && !IsArray$3(args[1]) ? [args[0], [], args[1]] :
+                args.length === 3 ? [args[0], args[1], args[2]] :
+                    args.length === 1 ? [args[0], [], defaults] :
+                        [null, [], defaults]);
+        // compiler-reset
+        state.language = options.language;
+        state.variables.clear();
+        state.functions.clear();
+        state.instances.clear();
+        if (!IsSchema(schema))
+            throw new TypeCompilerTypeGuardError(schema);
+        for (const schema of references)
+            if (!IsSchema(schema))
+                throw new TypeCompilerTypeGuardError(schema);
+        return Build(schema, references);
+    }
+    TypeCompiler.Code = Code;
+    /** Compiles a TypeBox type for optimal runtime type checking. Types must be valid TypeBox types of TSchema */
+    function Compile(schema, references = []) {
+        const generatedCode = Code(schema, references, { language: 'javascript' });
+        const compiledFunction = globalThis.Function('kind', 'format', 'hash', generatedCode);
+        const instances = new Map(state.instances);
+        function typeRegistryFunction(kind, instance, value) {
+            if (!Has(kind) || !instances.has(instance))
+                return false;
+            const checkFunc = Get(kind);
+            const schema = instances.get(instance);
+            return checkFunc(schema, value);
+        }
+        function formatRegistryFunction(format, value) {
+            if (!Has$1(format))
+                return false;
+            const checkFunc = Get$1(format);
+            return checkFunc(value);
+        }
+        function hashFunction(value) {
+            return Hash(value);
+        }
+        const checkFunction = compiledFunction(typeRegistryFunction, formatRegistryFunction, hashFunction);
+        return new TypeCheck(schema, references, checkFunction, generatedCode);
+    }
+    TypeCompiler.Compile = Compile;
+})(TypeCompiler || (TypeCompiler = {}));
+
+var __classPrivateFieldSet$2 = (undefined && undefined.__classPrivateFieldSet) || function (receiver, state, value, kind, f) {
+    if (kind === "m") throw new TypeError("Private method is not writable");
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a setter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
+    return (kind === "a" ? f.call(receiver, value) : f ? f.value = value : state.set(receiver, value)), value;
+};
+var __classPrivateFieldGet$2 = (undefined && undefined.__classPrivateFieldGet) || function (receiver, state, kind, f) {
+    if (kind === "a" && !f) throw new TypeError("Private accessor was defined without a getter");
+    if (typeof state === "function" ? receiver !== state || !f : !state.has(receiver)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
+    return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
+};
+var _AssertError_instances, _AssertError_iterator, _AssertError_Iterator;
+// ------------------------------------------------------------------
+// AssertError
+// ------------------------------------------------------------------
+class AssertError extends TypeBoxError {
+    constructor(iterator) {
+        const error = iterator.First();
+        super(error === undefined ? 'Invalid Value' : error.message);
+        _AssertError_instances.add(this);
+        _AssertError_iterator.set(this, void 0);
+        __classPrivateFieldSet$2(this, _AssertError_iterator, iterator, "f");
+        this.error = error;
+    }
+    /** Returns an iterator for each error in this value. */
+    Errors() {
+        return new ValueErrorIterator(__classPrivateFieldGet$2(this, _AssertError_instances, "m", _AssertError_Iterator).call(this));
+    }
+}
+_AssertError_iterator = new WeakMap(), _AssertError_instances = new WeakSet(), _AssertError_Iterator = function* _AssertError_Iterator() {
+    if (this.error)
+        yield this.error;
+    yield* __classPrivateFieldGet$2(this, _AssertError_iterator, "f");
+};
+// ------------------------------------------------------------------
+// AssertValue
+// ------------------------------------------------------------------
+function AssertValue(schema, references, value) {
+    if (Check(schema, references, value))
+        return;
+    throw new AssertError(Errors(schema, references, value));
+}
+/** Asserts a value matches the given type or throws an `AssertError` if invalid */
+function Assert(...args) {
+    return args.length === 3 ? AssertValue(args[0], args[1], args[2]) : AssertValue(args[0], [], args[1]);
+}
+
+// ------------------------------------------------------------------
+// ValueGuard
+// ------------------------------------------------------------------
+// ------------------------------------------------------------------
+// Clonable
+// ------------------------------------------------------------------
+function FromObject$b(value) {
+    const Acc = {};
+    for (const key of Object.getOwnPropertyNames(value)) {
+        Acc[key] = Clone(value[key]);
+    }
+    for (const key of Object.getOwnPropertySymbols(value)) {
+        Acc[key] = Clone(value[key]);
+    }
+    return Acc;
+}
+function FromArray$8(value) {
+    return value.map((element) => Clone(element));
+}
+function FromTypedArray(value) {
+    return value.slice();
+}
+function FromMap(value) {
+    return new Map(Clone([...value.entries()]));
+}
+function FromSet(value) {
+    return new Set(Clone([...value.entries()]));
+}
+function FromDate$3(value) {
+    return new Date(value.toISOString());
+}
+function FromValue$1(value) {
+    return value;
+}
+// ------------------------------------------------------------------
+// Clone
+// ------------------------------------------------------------------
+/** Returns a clone of the given value */
+function Clone(value) {
+    if (IsArray$3(value))
+        return FromArray$8(value);
+    if (IsDate$3(value))
+        return FromDate$3(value);
+    if (IsTypedArray(value))
+        return FromTypedArray(value);
+    if (IsMap(value))
+        return FromMap(value);
+    if (IsSet(value))
+        return FromSet(value);
+    if (IsObject$3(value))
+        return FromObject$b(value);
+    if (IsValueType(value))
+        return FromValue$1(value);
+    throw new Error('ValueClone: Unable to clone value');
+}
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+class ValueCreateError extends TypeBoxError {
+    constructor(schema, message) {
+        super(message);
+        this.schema = schema;
+    }
+}
+// ------------------------------------------------------------------
+// Default
+// ------------------------------------------------------------------
+function FromDefault(value) {
+    return IsFunction$3(value) ? value() : Clone(value);
+}
+// ------------------------------------------------------------------
+// Create
+// ------------------------------------------------------------------
+function FromAny(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return {};
+    }
+}
+function FromArgument$1(schema, references) {
+    return {};
+}
+function FromArray$7(schema, references) {
+    if (schema.uniqueItems === true && !HasPropertyKey(schema, 'default')) {
+        throw new ValueCreateError(schema, 'Array with the uniqueItems constraint requires a default value');
+    }
+    else if ('contains' in schema && !HasPropertyKey(schema, 'default')) {
+        throw new ValueCreateError(schema, 'Array with the contains constraint requires a default value');
+    }
+    else if ('default' in schema) {
+        return FromDefault(schema.default);
+    }
+    else if (schema.minItems !== undefined) {
+        return Array.from({ length: schema.minItems }).map((item) => {
+            return Visit$4(schema.items, references);
+        });
+    }
+    else {
+        return [];
+    }
+}
+function FromAsyncIterator$2(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return (async function* () { })();
+    }
+}
+function FromBigInt$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return BigInt(0);
+    }
+}
+function FromBoolean$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return false;
+    }
+}
+function FromConstructor$3(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        const value = Visit$4(schema.returns, references);
+        if (typeof value === 'object' && !Array.isArray(value)) {
+            return class {
+                constructor() {
+                    for (const [key, val] of Object.entries(value)) {
+                        const self = this;
+                        self[key] = val;
+                    }
+                }
+            };
+        }
+        else {
+            return class {
+            };
+        }
+    }
+}
+function FromDate$2(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else if (schema.minimumTimestamp !== undefined) {
+        return new Date(schema.minimumTimestamp);
+    }
+    else {
+        return new Date();
+    }
+}
+function FromFunction$2(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return () => Visit$4(schema.returns, references);
+    }
+}
+function FromImport$4(schema, references) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    return Visit$4(target, [...references, ...definitions]);
+}
+function FromInteger$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else if (schema.minimum !== undefined) {
+        return schema.minimum;
+    }
+    else {
+        return 0;
+    }
+}
+function FromIntersect$9(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        // --------------------------------------------------------------
+        // Note: The best we can do here is attempt to instance each
+        // sub type and apply through object assign. For non-object
+        // sub types, we just escape the assignment and just return
+        // the value. In the latter case, this is typically going to
+        // be a consequence of an illogical intersection.
+        // --------------------------------------------------------------
+        const value = schema.allOf.reduce((acc, schema) => {
+            const next = Visit$4(schema, references);
+            return typeof next === 'object' ? { ...acc, ...next } : next;
+        }, {});
+        if (!Check(schema, references, value))
+            throw new ValueCreateError(schema, 'Intersect produced invalid value. Consider using a default value.');
+        return value;
+    }
+}
+function FromIterator$2(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return (function* () { })();
+    }
+}
+function FromLiteral$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return schema.const;
+    }
+}
+function FromNever$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        throw new ValueCreateError(schema, 'Never types cannot be created. Consider using a default value.');
+    }
+}
+function FromNot(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        throw new ValueCreateError(schema, 'Not types must have a default value');
+    }
+}
+function FromNull$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return null;
+    }
+}
+function FromNumber$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else if (schema.minimum !== undefined) {
+        return schema.minimum;
+    }
+    else {
+        return 0;
+    }
+}
+function FromObject$a(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        const required = new Set(schema.required);
+        const Acc = {};
+        for (const [key, subschema] of Object.entries(schema.properties)) {
+            if (!required.has(key))
+                continue;
+            Acc[key] = Visit$4(subschema, references);
+        }
+        return Acc;
+    }
+}
+function FromPromise$2(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return Promise.resolve(Visit$4(schema.item, references));
+    }
+}
+function FromRecord$6(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return {};
+    }
+}
+function FromRef$7(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return Visit$4(Deref(schema, references), references);
+    }
+}
+function FromRegExp(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        throw new ValueCreateError(schema, 'RegExp types cannot be created. Consider using a default value.');
+    }
+}
+function FromString$1(schema, references) {
+    if (schema.pattern !== undefined) {
+        if (!HasPropertyKey(schema, 'default')) {
+            throw new ValueCreateError(schema, 'String types with patterns must specify a default value');
+        }
+        else {
+            return FromDefault(schema.default);
+        }
+    }
+    else if (schema.format !== undefined) {
+        if (!HasPropertyKey(schema, 'default')) {
+            throw new ValueCreateError(schema, 'String types with formats must specify a default value');
+        }
+        else {
+            return FromDefault(schema.default);
+        }
+    }
+    else {
+        if (HasPropertyKey(schema, 'default')) {
+            return FromDefault(schema.default);
+        }
+        else if (schema.minLength !== undefined) {
+            // prettier-ignore
+            return Array.from({ length: schema.minLength }).map(() => ' ').join('');
+        }
+        else {
+            return '';
+        }
+    }
+}
+function FromSymbol$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else if ('value' in schema) {
+        return Symbol.for(schema.value);
+    }
+    else {
+        return Symbol();
+    }
+}
+function FromTemplateLiteral$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    if (!IsTemplateLiteralFinite(schema))
+        throw new ValueCreateError(schema, 'Can only create template literals that produce a finite variants. Consider using a default value.');
+    const generated = TemplateLiteralGenerate(schema);
+    return generated[0];
+}
+function FromThis$4(schema, references) {
+    if (recursiveDepth++ > recursiveMaxDepth)
+        throw new ValueCreateError(schema, 'Cannot create recursive type as it appears possibly infinite. Consider using a default.');
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return Visit$4(Deref(schema, references), references);
+    }
+}
+function FromTuple$6(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    if (schema.items === undefined) {
+        return [];
+    }
+    else {
+        return Array.from({ length: schema.minItems }).map((_, index) => Visit$4(schema.items[index], references));
+    }
+}
+function FromUndefined$1(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return undefined;
+    }
+}
+function FromUnion$9(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else if (schema.anyOf.length === 0) {
+        throw new Error('ValueCreate.Union: Cannot create Union with zero variants');
+    }
+    else {
+        return Visit$4(schema.anyOf[0], references);
+    }
+}
+function FromUint8Array(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else if (schema.minByteLength !== undefined) {
+        return new Uint8Array(schema.minByteLength);
+    }
+    else {
+        return new Uint8Array(0);
+    }
+}
+function FromUnknown(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return {};
+    }
+}
+function FromVoid(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        return void 0;
+    }
+}
+function FromKind(schema, references) {
+    if (HasPropertyKey(schema, 'default')) {
+        return FromDefault(schema.default);
+    }
+    else {
+        throw new Error('User defined types must specify a default value');
+    }
+}
+function Visit$4(schema, references) {
+    const references_ = Pushref(schema, references);
+    const schema_ = schema;
+    switch (schema_[Kind]) {
+        case 'Any':
+            return FromAny(schema_);
+        case 'Argument':
+            return FromArgument$1();
+        case 'Array':
+            return FromArray$7(schema_, references_);
+        case 'AsyncIterator':
+            return FromAsyncIterator$2(schema_);
+        case 'BigInt':
+            return FromBigInt$1(schema_);
+        case 'Boolean':
+            return FromBoolean$1(schema_);
+        case 'Constructor':
+            return FromConstructor$3(schema_, references_);
+        case 'Date':
+            return FromDate$2(schema_);
+        case 'Function':
+            return FromFunction$2(schema_, references_);
+        case 'Import':
+            return FromImport$4(schema_, references_);
+        case 'Integer':
+            return FromInteger$1(schema_);
+        case 'Intersect':
+            return FromIntersect$9(schema_, references_);
+        case 'Iterator':
+            return FromIterator$2(schema_);
+        case 'Literal':
+            return FromLiteral$1(schema_);
+        case 'Never':
+            return FromNever$1(schema_);
+        case 'Not':
+            return FromNot(schema_);
+        case 'Null':
+            return FromNull$1(schema_);
+        case 'Number':
+            return FromNumber$1(schema_);
+        case 'Object':
+            return FromObject$a(schema_, references_);
+        case 'Promise':
+            return FromPromise$2(schema_, references_);
+        case 'Record':
+            return FromRecord$6(schema_);
+        case 'Ref':
+            return FromRef$7(schema_, references_);
+        case 'RegExp':
+            return FromRegExp(schema_);
+        case 'String':
+            return FromString$1(schema_);
+        case 'Symbol':
+            return FromSymbol$1(schema_);
+        case 'TemplateLiteral':
+            return FromTemplateLiteral$1(schema_);
+        case 'This':
+            return FromThis$4(schema_, references_);
+        case 'Tuple':
+            return FromTuple$6(schema_, references_);
+        case 'Undefined':
+            return FromUndefined$1(schema_);
+        case 'Union':
+            return FromUnion$9(schema_, references_);
+        case 'Uint8Array':
+            return FromUint8Array(schema_);
+        case 'Unknown':
+            return FromUnknown(schema_);
+        case 'Void':
+            return FromVoid(schema_);
+        default:
+            if (!Has(schema_[Kind]))
+                throw new ValueCreateError(schema_, 'Unknown type');
+            return FromKind(schema_);
+    }
+}
+// ------------------------------------------------------------------
+// State
+// ------------------------------------------------------------------
+const recursiveMaxDepth = 512;
+let recursiveDepth = 0;
+/** Creates a value from the given schema */
+function Create(...args) {
+    recursiveDepth = 0;
+    return args.length === 2 ? Visit$4(args[0], args[1]) : Visit$4(args[0], []);
+}
+
+// ------------------------------------------------------------------
+// Errors
+// ------------------------------------------------------------------
+class ValueCastError extends TypeBoxError {
+    constructor(schema, message) {
+        super(message);
+        this.schema = schema;
+    }
+}
+// ------------------------------------------------------------------
+// The following logic assigns a score to a schema based on how well
+// it matches a given value. For object types, the score is calculated
+// by evaluating each property of the value against the schema's
+// properties. To avoid bias towards objects with many properties,
+// each property contributes equally to the total score. Properties
+// that exactly match literal values receive the highest possible
+// score, as literals are often used as discriminators in union types.
+// ------------------------------------------------------------------
+function ScoreUnion(schema, references, value) {
+    if (schema[Kind] === 'Object' && typeof value === 'object' && !IsNull$3(value)) {
+        const object = schema;
+        const keys = Object.getOwnPropertyNames(value);
+        const entries = Object.entries(object.properties);
+        return entries.reduce((acc, [key, schema]) => {
+            const literal = schema[Kind] === 'Literal' && schema.const === value[key] ? 100 : 0;
+            const checks = Check(schema, references, value[key]) ? 10 : 0;
+            const exists = keys.includes(key) ? 1 : 0;
+            return acc + (literal + checks + exists);
+        }, 0);
+    }
+    else if (schema[Kind] === 'Union') {
+        const schemas = schema.anyOf.map((schema) => Deref(schema, references));
+        const scores = schemas.map((schema) => ScoreUnion(schema, references, value));
+        return Math.max(...scores);
+    }
+    else {
+        return Check(schema, references, value) ? 1 : 0;
+    }
+}
+function SelectUnion(union, references, value) {
+    const schemas = union.anyOf.map((schema) => Deref(schema, references));
+    let [select, best] = [schemas[0], 0];
+    for (const schema of schemas) {
+        const score = ScoreUnion(schema, references, value);
+        if (score > best) {
+            select = schema;
+            best = score;
+        }
+    }
+    return select;
+}
+function CastUnion(union, references, value) {
+    if ('default' in union) {
+        return typeof value === 'function' ? union.default : Clone(union.default);
+    }
+    else {
+        const schema = SelectUnion(union, references, value);
+        return Cast(schema, references, value);
+    }
+}
+// ------------------------------------------------------------------
+// Default
+// ------------------------------------------------------------------
+function DefaultClone(schema, references, value) {
+    return Check(schema, references, value) ? Clone(value) : Create(schema, references);
+}
+function Default$2(schema, references, value) {
+    return Check(schema, references, value) ? value : Create(schema, references);
+}
+// ------------------------------------------------------------------
+// Cast
+// ------------------------------------------------------------------
+function FromArray$6(schema, references, value) {
+    if (Check(schema, references, value))
+        return Clone(value);
+    const created = IsArray$3(value) ? Clone(value) : Create(schema, references);
+    const minimum = IsNumber$3(schema.minItems) && created.length < schema.minItems ? [...created, ...Array.from({ length: schema.minItems - created.length }, () => null)] : created;
+    const maximum = IsNumber$3(schema.maxItems) && minimum.length > schema.maxItems ? minimum.slice(0, schema.maxItems) : minimum;
+    const casted = maximum.map((value) => Visit$3(schema.items, references, value));
+    if (schema.uniqueItems !== true)
+        return casted;
+    const unique = [...new Set(casted)];
+    if (!Check(schema, references, unique))
+        throw new ValueCastError(schema, 'Array cast produced invalid data due to uniqueItems constraint');
+    return unique;
+}
+function FromConstructor$2(schema, references, value) {
+    if (Check(schema, references, value))
+        return Create(schema, references);
+    const required = new Set(schema.returns.required || []);
+    const result = function () { };
+    for (const [key, property] of Object.entries(schema.returns.properties)) {
+        if (!required.has(key) && value.prototype[key] === undefined)
+            continue;
+        result.prototype[key] = Visit$3(property, references, value.prototype[key]);
+    }
+    return result;
+}
+function FromImport$3(schema, references, value) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    return Visit$3(target, [...references, ...definitions], value);
+}
+// ------------------------------------------------------------------
+// Intersect
+// ------------------------------------------------------------------
+function IntersectAssign(correct, value) {
+    // trust correct on mismatch | value on non-object
+    if ((IsObject$3(correct) && !IsObject$3(value)) || (!IsObject$3(correct) && IsObject$3(value)))
+        return correct;
+    if (!IsObject$3(correct) || !IsObject$3(value))
+        return value;
+    return globalThis.Object.getOwnPropertyNames(correct).reduce((result, key) => {
+        const property = key in value ? IntersectAssign(correct[key], value[key]) : correct[key];
+        return { ...result, [key]: property };
+    }, {});
+}
+function FromIntersect$8(schema, references, value) {
+    if (Check(schema, references, value))
+        return value;
+    const correct = Create(schema, references);
+    const assigned = IntersectAssign(correct, value);
+    return Check(schema, references, assigned) ? assigned : correct;
+}
+function FromNever(schema, references, value) {
+    throw new ValueCastError(schema, 'Never types cannot be cast');
+}
+function FromObject$9(schema, references, value) {
+    if (Check(schema, references, value))
+        return value;
+    if (value === null || typeof value !== 'object')
+        return Create(schema, references);
+    const required = new Set(schema.required || []);
+    const result = {};
+    for (const [key, property] of Object.entries(schema.properties)) {
+        if (!required.has(key) && value[key] === undefined)
+            continue;
+        result[key] = Visit$3(property, references, value[key]);
+    }
+    // additional schema properties
+    if (typeof schema.additionalProperties === 'object') {
+        const propertyNames = Object.getOwnPropertyNames(schema.properties);
+        for (const propertyName of Object.getOwnPropertyNames(value)) {
+            if (propertyNames.includes(propertyName))
+                continue;
+            result[propertyName] = Visit$3(schema.additionalProperties, references, value[propertyName]);
+        }
+    }
+    return result;
+}
+function FromRecord$5(schema, references, value) {
+    if (Check(schema, references, value))
+        return Clone(value);
+    if (value === null || typeof value !== 'object' || Array.isArray(value) || value instanceof Date)
+        return Create(schema, references);
+    const subschemaPropertyName = Object.getOwnPropertyNames(schema.patternProperties)[0];
+    const subschema = schema.patternProperties[subschemaPropertyName];
+    const result = {};
+    for (const [propKey, propValue] of Object.entries(value)) {
+        result[propKey] = Visit$3(subschema, references, propValue);
+    }
+    return result;
+}
+function FromRef$6(schema, references, value) {
+    return Visit$3(Deref(schema, references), references, value);
+}
+function FromThis$3(schema, references, value) {
+    return Visit$3(Deref(schema, references), references, value);
+}
+function FromTuple$5(schema, references, value) {
+    if (Check(schema, references, value))
+        return Clone(value);
+    if (!IsArray$3(value))
+        return Create(schema, references);
+    if (schema.items === undefined)
+        return [];
+    return schema.items.map((schema, index) => Visit$3(schema, references, value[index]));
+}
+function FromUnion$8(schema, references, value) {
+    return Check(schema, references, value) ? Clone(value) : CastUnion(schema, references, value);
+}
+function Visit$3(schema, references, value) {
+    const references_ = IsString$3(schema.$id) ? Pushref(schema, references) : references;
+    const schema_ = schema;
+    switch (schema[Kind]) {
+        // --------------------------------------------------------------
+        // Structural
+        // --------------------------------------------------------------
+        case 'Array':
+            return FromArray$6(schema_, references_, value);
+        case 'Constructor':
+            return FromConstructor$2(schema_, references_, value);
+        case 'Import':
+            return FromImport$3(schema_, references_, value);
+        case 'Intersect':
+            return FromIntersect$8(schema_, references_, value);
+        case 'Never':
+            return FromNever(schema_);
+        case 'Object':
+            return FromObject$9(schema_, references_, value);
+        case 'Record':
+            return FromRecord$5(schema_, references_, value);
+        case 'Ref':
+            return FromRef$6(schema_, references_, value);
+        case 'This':
+            return FromThis$3(schema_, references_, value);
+        case 'Tuple':
+            return FromTuple$5(schema_, references_, value);
+        case 'Union':
+            return FromUnion$8(schema_, references_, value);
+        // --------------------------------------------------------------
+        // DefaultClone
+        // --------------------------------------------------------------
+        case 'Date':
+        case 'Symbol':
+        case 'Uint8Array':
+            return DefaultClone(schema, references, value);
+        // --------------------------------------------------------------
+        // Default
+        // --------------------------------------------------------------
+        default:
+            return Default$2(schema_, references_, value);
+    }
+}
+/** Casts a value into a given type. The return value will retain as much information of the original value as possible. */
+function Cast(...args) {
+    return args.length === 3 ? Visit$3(args[0], args[1], args[2]) : Visit$3(args[0], [], args[1]);
+}
+
+// ------------------------------------------------------------------
+// IsCheckable
+// ------------------------------------------------------------------
+function IsCheckable(schema) {
+    return IsKind$1(schema) && schema[Kind] !== 'Unsafe';
+}
+// ------------------------------------------------------------------
+// Types
+// ------------------------------------------------------------------
+function FromArray$5(schema, references, value) {
+    if (!IsArray$3(value))
+        return value;
+    return value.map((value) => Visit$2(schema.items, references, value));
+}
+function FromImport$2(schema, references, value) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    return Visit$2(target, [...references, ...definitions], value);
+}
+function FromIntersect$7(schema, references, value) {
+    const unevaluatedProperties = schema.unevaluatedProperties;
+    const intersections = schema.allOf.map((schema) => Visit$2(schema, references, Clone(value)));
+    const composite = intersections.reduce((acc, value) => (IsObject$3(value) ? { ...acc, ...value } : value), {});
+    if (!IsObject$3(value) || !IsObject$3(composite) || !IsKind$1(unevaluatedProperties))
+        return composite;
+    const knownkeys = KeyOfPropertyKeys(schema);
+    for (const key of Object.getOwnPropertyNames(value)) {
+        if (knownkeys.includes(key))
+            continue;
+        if (Check(unevaluatedProperties, references, value[key])) {
+            composite[key] = Visit$2(unevaluatedProperties, references, value[key]);
+        }
+    }
+    return composite;
+}
+function FromObject$8(schema, references, value) {
+    if (!IsObject$3(value) || IsArray$3(value))
+        return value; // Check IsArray for AllowArrayObject configuration
+    const additionalProperties = schema.additionalProperties;
+    for (const key of Object.getOwnPropertyNames(value)) {
+        if (HasPropertyKey(schema.properties, key)) {
+            value[key] = Visit$2(schema.properties[key], references, value[key]);
+            continue;
+        }
+        if (IsKind$1(additionalProperties) && Check(additionalProperties, references, value[key])) {
+            value[key] = Visit$2(additionalProperties, references, value[key]);
+            continue;
+        }
+        delete value[key];
+    }
+    return value;
+}
+function FromRecord$4(schema, references, value) {
+    if (!IsObject$3(value))
+        return value;
+    const additionalProperties = schema.additionalProperties;
+    const propertyKeys = Object.getOwnPropertyNames(value);
+    const [propertyKey, propertySchema] = Object.entries(schema.patternProperties)[0];
+    const propertyKeyTest = new RegExp(propertyKey);
+    for (const key of propertyKeys) {
+        if (propertyKeyTest.test(key)) {
+            value[key] = Visit$2(propertySchema, references, value[key]);
+            continue;
+        }
+        if (IsKind$1(additionalProperties) && Check(additionalProperties, references, value[key])) {
+            value[key] = Visit$2(additionalProperties, references, value[key]);
+            continue;
+        }
+        delete value[key];
+    }
+    return value;
+}
+function FromRef$5(schema, references, value) {
+    return Visit$2(Deref(schema, references), references, value);
+}
+function FromThis$2(schema, references, value) {
+    return Visit$2(Deref(schema, references), references, value);
+}
+function FromTuple$4(schema, references, value) {
+    if (!IsArray$3(value))
+        return value;
+    if (IsUndefined$3(schema.items))
+        return [];
+    const length = Math.min(value.length, schema.items.length);
+    for (let i = 0; i < length; i++) {
+        value[i] = Visit$2(schema.items[i], references, value[i]);
+    }
+    // prettier-ignore
+    return value.length > length
+        ? value.slice(0, length)
+        : value;
+}
+function FromUnion$7(schema, references, value) {
+    for (const inner of schema.anyOf) {
+        if (IsCheckable(inner) && Check(inner, references, value)) {
+            return Visit$2(inner, references, value);
+        }
+    }
+    return value;
+}
+function Visit$2(schema, references, value) {
+    const references_ = IsString$3(schema.$id) ? Pushref(schema, references) : references;
+    const schema_ = schema;
+    switch (schema_[Kind]) {
+        case 'Array':
+            return FromArray$5(schema_, references_, value);
+        case 'Import':
+            return FromImport$2(schema_, references_, value);
+        case 'Intersect':
+            return FromIntersect$7(schema_, references_, value);
+        case 'Object':
+            return FromObject$8(schema_, references_, value);
+        case 'Record':
+            return FromRecord$4(schema_, references_, value);
+        case 'Ref':
+            return FromRef$5(schema_, references_, value);
+        case 'This':
+            return FromThis$2(schema_, references_, value);
+        case 'Tuple':
+            return FromTuple$4(schema_, references_, value);
+        case 'Union':
+            return FromUnion$7(schema_, references_, value);
+        default:
+            return value;
+    }
+}
+/** `[Mutable]` Removes excess properties from a value and returns the result. This function does not check the value and returns an unknown type. You should Check the result before use. Clean is a mutable operation. To avoid mutation, Clone the value first. */
+function Clean(...args) {
+    return args.length === 3 ? Visit$2(args[0], args[1], args[2]) : Visit$2(args[0], [], args[1]);
+}
+
+// ------------------------------------------------------------------
+// Conversions
+// ------------------------------------------------------------------
+function IsStringNumeric(value) {
+    return IsString$3(value) && !isNaN(value) && !isNaN(parseFloat(value));
+}
+function IsValueToString(value) {
+    return IsBigInt$3(value) || IsBoolean$3(value) || IsNumber$3(value);
+}
+function IsValueTrue(value) {
+    return value === true || (IsNumber$3(value) && value === 1) || (IsBigInt$3(value) && value === BigInt('1')) || (IsString$3(value) && (value.toLowerCase() === 'true' || value === '1'));
+}
+function IsValueFalse(value) {
+    return value === false || (IsNumber$3(value) && (value === 0 || Object.is(value, -0))) || (IsBigInt$3(value) && value === BigInt('0')) || (IsString$3(value) && (value.toLowerCase() === 'false' || value === '0' || value === '-0'));
+}
+function IsTimeStringWithTimeZone(value) {
+    return IsString$3(value) && /^(?:[0-2]\d:[0-5]\d:[0-5]\d|23:59:60)(?:\.\d+)?(?:z|[+-]\d\d(?::?\d\d)?)$/i.test(value);
+}
+function IsTimeStringWithoutTimeZone(value) {
+    return IsString$3(value) && /^(?:[0-2]\d:[0-5]\d:[0-5]\d|23:59:60)?$/i.test(value);
+}
+function IsDateTimeStringWithTimeZone(value) {
+    return IsString$3(value) && /^\d\d\d\d-[0-1]\d-[0-3]\dt(?:[0-2]\d:[0-5]\d:[0-5]\d|23:59:60)(?:\.\d+)?(?:z|[+-]\d\d(?::?\d\d)?)$/i.test(value);
+}
+function IsDateTimeStringWithoutTimeZone(value) {
+    return IsString$3(value) && /^\d\d\d\d-[0-1]\d-[0-3]\dt(?:[0-2]\d:[0-5]\d:[0-5]\d|23:59:60)?$/i.test(value);
+}
+function IsDateString(value) {
+    return IsString$3(value) && /^\d\d\d\d-[0-1]\d-[0-3]\d$/i.test(value);
+}
+// ------------------------------------------------------------------
+// Convert
+// ------------------------------------------------------------------
+function TryConvertLiteralString(value, target) {
+    const conversion = TryConvertString(value);
+    return conversion === target ? conversion : value;
+}
+function TryConvertLiteralNumber(value, target) {
+    const conversion = TryConvertNumber(value);
+    return conversion === target ? conversion : value;
+}
+function TryConvertLiteralBoolean(value, target) {
+    const conversion = TryConvertBoolean(value);
+    return conversion === target ? conversion : value;
+}
+// prettier-ignore
+function TryConvertLiteral(schema, value) {
+    return (IsString$3(schema.const) ? TryConvertLiteralString(value, schema.const) :
+        IsNumber$3(schema.const) ? TryConvertLiteralNumber(value, schema.const) :
+            IsBoolean$3(schema.const) ? TryConvertLiteralBoolean(value, schema.const) :
+                value);
+}
+function TryConvertBoolean(value) {
+    return IsValueTrue(value) ? true : IsValueFalse(value) ? false : value;
+}
+function TryConvertBigInt(value) {
+    const truncateInteger = (value) => value.split('.')[0];
+    return IsStringNumeric(value) ? BigInt(truncateInteger(value)) : IsNumber$3(value) ? BigInt(Math.trunc(value)) : IsValueFalse(value) ? BigInt(0) : IsValueTrue(value) ? BigInt(1) : value;
+}
+function TryConvertString(value) {
+    return IsSymbol$3(value) && value.description !== undefined ? value.description.toString() : IsValueToString(value) ? value.toString() : value;
+}
+function TryConvertNumber(value) {
+    return IsStringNumeric(value) ? parseFloat(value) : IsValueTrue(value) ? 1 : IsValueFalse(value) ? 0 : value;
+}
+function TryConvertInteger(value) {
+    return IsStringNumeric(value) ? parseInt(value) : IsNumber$3(value) ? Math.trunc(value) : IsValueTrue(value) ? 1 : IsValueFalse(value) ? 0 : value;
+}
+function TryConvertNull(value) {
+    return IsString$3(value) && value.toLowerCase() === 'null' ? null : value;
+}
+function TryConvertUndefined(value) {
+    return IsString$3(value) && value === 'undefined' ? undefined : value;
+}
+// ------------------------------------------------------------------
+// note: this function may return an invalid dates for the regex
+// tests above. Invalid dates will however be checked during the
+// casting function and will return a epoch date if invalid.
+// Consider better string parsing for the iso dates in future
+// revisions.
+// ------------------------------------------------------------------
+// prettier-ignore
+function TryConvertDate(value) {
+    return (IsDate$3(value) ? value :
+        IsNumber$3(value) ? new Date(value) :
+            IsValueTrue(value) ? new Date(1) :
+                IsValueFalse(value) ? new Date(0) :
+                    IsStringNumeric(value) ? new Date(parseInt(value)) :
+                        IsTimeStringWithoutTimeZone(value) ? new Date(`1970-01-01T${value}.000Z`) :
+                            IsTimeStringWithTimeZone(value) ? new Date(`1970-01-01T${value}`) :
+                                IsDateTimeStringWithoutTimeZone(value) ? new Date(`${value}.000Z`) :
+                                    IsDateTimeStringWithTimeZone(value) ? new Date(value) :
+                                        IsDateString(value) ? new Date(`${value}T00:00:00.000Z`) :
+                                            value);
+}
+// ------------------------------------------------------------------
+// Default
+// ------------------------------------------------------------------
+function Default$1(value) {
+    return value;
+}
+// ------------------------------------------------------------------
+// Convert
+// ------------------------------------------------------------------
+function FromArray$4(schema, references, value) {
+    const elements = IsArray$3(value) ? value : [value];
+    return elements.map((element) => Visit$1(schema.items, references, element));
+}
+function FromBigInt(schema, references, value) {
+    return TryConvertBigInt(value);
+}
+function FromBoolean(schema, references, value) {
+    return TryConvertBoolean(value);
+}
+function FromDate$1(schema, references, value) {
+    return TryConvertDate(value);
+}
+function FromImport$1(schema, references, value) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    return Visit$1(target, [...references, ...definitions], value);
+}
+function FromInteger(schema, references, value) {
+    return TryConvertInteger(value);
+}
+function FromIntersect$6(schema, references, value) {
+    return schema.allOf.reduce((value, schema) => Visit$1(schema, references, value), value);
+}
+function FromLiteral(schema, references, value) {
+    return TryConvertLiteral(schema, value);
+}
+function FromNull(schema, references, value) {
+    return TryConvertNull(value);
+}
+function FromNumber(schema, references, value) {
+    return TryConvertNumber(value);
+}
+// prettier-ignore
+function FromObject$7(schema, references, value) {
+    if (!IsObject$3(value) || IsArray$3(value))
+        return value;
+    for (const propertyKey of Object.getOwnPropertyNames(schema.properties)) {
+        if (!HasPropertyKey(value, propertyKey))
+            continue;
+        value[propertyKey] = Visit$1(schema.properties[propertyKey], references, value[propertyKey]);
+    }
+    return value;
+}
+function FromRecord$3(schema, references, value) {
+    const isConvertable = IsObject$3(value) && !IsArray$3(value);
+    if (!isConvertable)
+        return value;
+    const propertyKey = Object.getOwnPropertyNames(schema.patternProperties)[0];
+    const property = schema.patternProperties[propertyKey];
+    for (const [propKey, propValue] of Object.entries(value)) {
+        value[propKey] = Visit$1(property, references, propValue);
+    }
+    return value;
+}
+function FromRef$4(schema, references, value) {
+    return Visit$1(Deref(schema, references), references, value);
+}
+function FromString(schema, references, value) {
+    return TryConvertString(value);
+}
+function FromSymbol(schema, references, value) {
+    return IsString$3(value) || IsNumber$3(value) ? Symbol(value) : value;
+}
+function FromThis$1(schema, references, value) {
+    return Visit$1(Deref(schema, references), references, value);
+}
+// prettier-ignore
+function FromTuple$3(schema, references, value) {
+    const isConvertable = IsArray$3(value) && !IsUndefined$3(schema.items);
+    if (!isConvertable)
+        return value;
+    return value.map((value, index) => {
+        return (index < schema.items.length)
+            ? Visit$1(schema.items[index], references, value)
+            : value;
+    });
+}
+function FromUndefined(schema, references, value) {
+    return TryConvertUndefined(value);
+}
+function FromUnion$6(schema, references, value) {
+    // Check if original value already matches one of the union variants
+    for (const subschema of schema.anyOf) {
+        if (Check(subschema, references, value)) {
+            return value;
+        }
+    }
+    // Attempt conversion for each variant
+    for (const subschema of schema.anyOf) {
+        const converted = Visit$1(subschema, references, Clone(value));
+        if (!Check(subschema, references, converted))
+            continue;
+        return converted;
+    }
+    return value;
+}
+function Visit$1(schema, references, value) {
+    const references_ = Pushref(schema, references);
+    const schema_ = schema;
+    switch (schema[Kind]) {
+        case 'Array':
+            return FromArray$4(schema_, references_, value);
+        case 'BigInt':
+            return FromBigInt(schema_, references_, value);
+        case 'Boolean':
+            return FromBoolean(schema_, references_, value);
+        case 'Date':
+            return FromDate$1(schema_, references_, value);
+        case 'Import':
+            return FromImport$1(schema_, references_, value);
+        case 'Integer':
+            return FromInteger(schema_, references_, value);
+        case 'Intersect':
+            return FromIntersect$6(schema_, references_, value);
+        case 'Literal':
+            return FromLiteral(schema_, references_, value);
+        case 'Null':
+            return FromNull(schema_, references_, value);
+        case 'Number':
+            return FromNumber(schema_, references_, value);
+        case 'Object':
+            return FromObject$7(schema_, references_, value);
+        case 'Record':
+            return FromRecord$3(schema_, references_, value);
+        case 'Ref':
+            return FromRef$4(schema_, references_, value);
+        case 'String':
+            return FromString(schema_, references_, value);
+        case 'Symbol':
+            return FromSymbol(schema_, references_, value);
+        case 'This':
+            return FromThis$1(schema_, references_, value);
+        case 'Tuple':
+            return FromTuple$3(schema_, references_, value);
+        case 'Undefined':
+            return FromUndefined(schema_, references_, value);
+        case 'Union':
+            return FromUnion$6(schema_, references_, value);
+        default:
+            return Default$1(value);
+    }
+}
+/** `[Mutable]` Converts any type mismatched values to their target type if a reasonable conversion is possible. */
+// prettier-ignore
+function Convert$1(...args) {
+    return args.length === 3 ? Visit$1(args[0], args[1], args[2]) : Visit$1(args[0], [], args[1]);
+}
+
+// ------------------------------------------------------------------
+// ValueOrDefault
+// ------------------------------------------------------------------
+function ValueOrDefault(schema, value) {
+    const defaultValue = HasPropertyKey(schema, 'default') ? schema.default : undefined;
+    const clone = IsFunction$3(defaultValue) ? defaultValue() : Clone(defaultValue);
+    return IsUndefined$3(value) ? clone : IsObject$3(value) && IsObject$3(clone) ? Object.assign(clone, value) : value;
+}
+// ------------------------------------------------------------------
+// HasDefaultProperty
+// ------------------------------------------------------------------
+function HasDefaultProperty(schema) {
+    return IsKind$1(schema) && 'default' in schema;
+}
+// ------------------------------------------------------------------
+// Types
+// ------------------------------------------------------------------
+function FromArray$3(schema, references, value) {
+    // if the value is an array, we attempt to initialize it's elements
+    if (IsArray$3(value)) {
+        for (let i = 0; i < value.length; i++) {
+            value[i] = Visit(schema.items, references, value[i]);
+        }
+        return value;
+    }
+    // ... otherwise use default initialization
+    const defaulted = ValueOrDefault(schema, value);
+    if (!IsArray$3(defaulted))
+        return defaulted;
+    for (let i = 0; i < defaulted.length; i++) {
+        defaulted[i] = Visit(schema.items, references, defaulted[i]);
+    }
+    return defaulted;
+}
+function FromDate(schema, references, value) {
+    // special case intercept for dates
+    return IsDate$3(value) ? value : ValueOrDefault(schema, value);
+}
+function FromImport(schema, references, value) {
+    const definitions = globalThis.Object.values(schema.$defs);
+    const target = schema.$defs[schema.$ref];
+    return Visit(target, [...references, ...definitions], value);
+}
+function FromIntersect$5(schema, references, value) {
+    const defaulted = ValueOrDefault(schema, value);
+    return schema.allOf.reduce((acc, schema) => {
+        const next = Visit(schema, references, defaulted);
+        return IsObject$3(next) ? { ...acc, ...next } : next;
+    }, {});
+}
+function FromObject$6(schema, references, value) {
+    const defaulted = ValueOrDefault(schema, value);
+    // return defaulted
+    if (!IsObject$3(defaulted))
+        return defaulted;
+    const knownPropertyKeys = Object.getOwnPropertyNames(schema.properties);
+    // properties
+    for (const key of knownPropertyKeys) {
+        // note: we need to traverse into the object and test if the return value
+        // yielded a non undefined result. Here we interpret an undefined result as
+        // a non assignable property and continue.
+        const propertyValue = Visit(schema.properties[key], references, defaulted[key]);
+        if (IsUndefined$3(propertyValue))
+            continue;
+        defaulted[key] = Visit(schema.properties[key], references, defaulted[key]);
+    }
+    // return if not additional properties
+    if (!HasDefaultProperty(schema.additionalProperties))
+        return defaulted;
+    // additional properties
+    for (const key of Object.getOwnPropertyNames(defaulted)) {
+        if (knownPropertyKeys.includes(key))
+            continue;
+        defaulted[key] = Visit(schema.additionalProperties, references, defaulted[key]);
+    }
+    return defaulted;
+}
+function FromRecord$2(schema, references, value) {
+    const defaulted = ValueOrDefault(schema, value);
+    if (!IsObject$3(defaulted))
+        return defaulted;
+    const additionalPropertiesSchema = schema.additionalProperties;
+    const [propertyKeyPattern, propertySchema] = Object.entries(schema.patternProperties)[0];
+    const knownPropertyKey = new RegExp(propertyKeyPattern);
+    // properties
+    for (const key of Object.getOwnPropertyNames(defaulted)) {
+        if (!(knownPropertyKey.test(key) && HasDefaultProperty(propertySchema)))
+            continue;
+        defaulted[key] = Visit(propertySchema, references, defaulted[key]);
+    }
+    // return if not additional properties
+    if (!HasDefaultProperty(additionalPropertiesSchema))
+        return defaulted;
+    // additional properties
+    for (const key of Object.getOwnPropertyNames(defaulted)) {
+        if (knownPropertyKey.test(key))
+            continue;
+        defaulted[key] = Visit(additionalPropertiesSchema, references, defaulted[key]);
+    }
+    return defaulted;
+}
+function FromRef$3(schema, references, value) {
+    return Visit(Deref(schema, references), references, ValueOrDefault(schema, value));
+}
+function FromThis(schema, references, value) {
+    return Visit(Deref(schema, references), references, value);
+}
+function FromTuple$2(schema, references, value) {
+    const defaulted = ValueOrDefault(schema, value);
+    if (!IsArray$3(defaulted) || IsUndefined$3(schema.items))
+        return defaulted;
+    const [items, max] = [schema.items, Math.max(schema.items.length, defaulted.length)];
+    for (let i = 0; i < max; i++) {
+        if (i < items.length)
+            defaulted[i] = Visit(items[i], references, defaulted[i]);
+    }
+    return defaulted;
+}
+function FromUnion$5(schema, references, value) {
+    const defaulted = ValueOrDefault(schema, value);
+    for (const inner of schema.anyOf) {
+        const result = Visit(inner, references, Clone(defaulted));
+        if (Check(inner, references, result)) {
+            return result;
+        }
+    }
+    return defaulted;
+}
+function Visit(schema, references, value) {
+    const references_ = Pushref(schema, references);
+    const schema_ = schema;
+    switch (schema_[Kind]) {
+        case 'Array':
+            return FromArray$3(schema_, references_, value);
+        case 'Date':
+            return FromDate(schema_, references_, value);
+        case 'Import':
+            return FromImport(schema_, references_, value);
+        case 'Intersect':
+            return FromIntersect$5(schema_, references_, value);
+        case 'Object':
+            return FromObject$6(schema_, references_, value);
+        case 'Record':
+            return FromRecord$2(schema_, references_, value);
+        case 'Ref':
+            return FromRef$3(schema_, references_, value);
+        case 'This':
+            return FromThis(schema_, references_, value);
+        case 'Tuple':
+            return FromTuple$2(schema_, references_, value);
+        case 'Union':
+            return FromUnion$5(schema_, references_, value);
+        default:
+            return ValueOrDefault(schema_, value);
+    }
+}
+/** `[Mutable]` Generates missing properties on a value using default schema annotations if available. This function does not check the value and returns an unknown type. You should Check the result before use. Default is a mutable operation. To avoid mutation, Clone the value first. */
+function Default(...args) {
+    return args.length === 3 ? Visit(args[0], args[1], args[2]) : Visit(args[0], [], args[1]);
+}
+
+// ------------------------------------------------------------------
+// Error
+// ------------------------------------------------------------------
+class ParseError extends TypeBoxError {
+    constructor(message) {
+        super(message);
+    }
+}
+// prettier-ignore
+var ParseRegistry;
+(function (ParseRegistry) {
+    const registry = new Map([
+        ['Assert', (type, references, value) => { Assert(type, references, value); return value; }],
+        ['Cast', (type, references, value) => Cast(type, references, value)],
+        ['Clean', (type, references, value) => Clean(type, references, value)],
+        ['Clone', (_type, _references, value) => Clone(value)],
+        ['Convert', (type, references, value) => Convert$1(type, references, value)],
+        ['Decode', (type, references, value) => (HasTransform(type, references) ? TransformDecode(type, references, value) : value)],
+        ['Default', (type, references, value) => Default(type, references, value)],
+        ['Encode', (type, references, value) => (HasTransform(type, references) ? TransformEncode(type, references, value) : value)],
+    ]);
+    // Deletes an entry from the registry
+    function Delete(key) {
+        registry.delete(key);
+    }
+    ParseRegistry.Delete = Delete;
+    // Sets an entry in the registry
+    function Set(key, callback) {
+        registry.set(key, callback);
+    }
+    ParseRegistry.Set = Set;
+    // Gets an entry in the registry
+    function Get(key) {
+        return registry.get(key);
+    }
+    ParseRegistry.Get = Get;
+})(ParseRegistry || (ParseRegistry = {}));
+// ------------------------------------------------------------------
+// Default Parse Pipeline
+// ------------------------------------------------------------------
+// prettier-ignore
+const ParseDefault = [
+    'Clone',
+    'Clean',
+    'Default',
+    'Convert',
+    'Assert',
+    'Decode'
+];
+// ------------------------------------------------------------------
+// ParseValue
+// ------------------------------------------------------------------
+function ParseValue(operations, type, references, value) {
+    return operations.reduce((value, operationKey) => {
+        const operation = ParseRegistry.Get(operationKey);
+        if (IsUndefined$3(operation))
+            throw new ParseError(`Unable to find Parse operation '${operationKey}'`);
+        return operation(type, references, value);
+    }, value);
+}
+/** Parses a value */
+function Parse(...args) {
+    // prettier-ignore
+    const [operations, schema, references, value] = (args.length === 4 ? [args[0], args[1], args[2], args[3]] :
+        args.length === 3 ? IsArray$3(args[0]) ? [args[0], args[1], [], args[2]] : [ParseDefault, args[0], args[1], args[2]] :
+            args.length === 2 ? [ParseDefault, args[0], [], args[1]] :
+                (() => { throw new ParseError('Invalid Arguments'); })());
+    return ParseValue(operations, schema, references, value);
+}
+
+class ConfigBase {
+  name;
+  core;
+  configPath;
+  configData = {};
+  configSchema;
+  validate;
+  constructor(name, core, configPath, ConfigSchema) {
+    this.name = name;
+    this.core = core;
+    this.configPath = configPath;
+    this.configSchema = ConfigSchema;
+    this.validate = TypeCompiler.Compile(ConfigSchema);
+    fs__default$1.mkdirSync(this.configPath, { recursive: true });
+    this.read();
+  }
+  getConfigPath(pathName) {
+    const filename = pathName ? `${this.name}_${pathName}.json` : `${this.name}.json`;
+    return path__default.join(this.configPath, filename);
+  }
+  read() {
+    const configPath = this.getConfigPath(this.core.selfInfo.uin);
+    const defaultConfigPath = this.getConfigPath();
+    if (!fs__default$1.existsSync(configPath)) {
+      if (fs__default$1.existsSync(defaultConfigPath)) {
+        this.configData = this.loadConfig(defaultConfigPath);
+      }
+      this.save();
+      return this.configData;
+    }
+    return this.loadConfig(configPath);
+  }
+  loadConfig(configPath) {
+    try {
+      const newConfigData = lib$2.parse(fs__default$1.readFileSync(configPath, "utf-8"));
+      let data = newConfigData;
+      data = Parse(this.configSchema, data);
+      if (!this.validate.Check(data)) {
+        throw new Error([...this.validate.Errors(data)].map((e) => e.message).join(", "));
+      }
+      this.configData = data;
+      this.core.context.logger.logDebug(`[Core] [Config] 配置文件${configPath}加载`, this.configData);
+      return this.configData;
+    } catch (e) {
+      this.handleError(e, "读取配置文件时发生错误");
+      return {};
+    }
+  }
+  save(newConfigData = this.configData) {
+    const configPath = this.getConfigPath(this.core.selfInfo.uin);
+    let data = newConfigData;
+    data = Parse(this.configSchema, data);
+    if (!this.validate.Check(data)) {
+      throw new Error([...this.validate.Errors(data)].map((e) => e.message).join(", "));
+    }
+    this.configData = data;
+    try {
+      fs__default$1.writeFileSync(configPath, JSON.stringify(this.configData, null, 2));
+    } catch (e) {
+      this.handleError(e, `保存配置文件 ${configPath} 时发生错误:`);
+    }
+  }
+  handleError(e, message) {
+    if (e instanceof SyntaxError) {
+      this.core.context.logger.logError("[Core] [Config] 操作配置文件格式错误，请检查配置文件:", e.message);
+    } else {
+      this.core.context.logger.logError(`[Core] [Config] ${message}:`, e.message);
+    }
+  }
+}
+
+/** Clones a Type */
+function CloneType(schema, options) {
+    return options === undefined ? Clone$1(schema) : Clone$1({ ...options, ...schema });
+}
+
+/** `[JavaScript]` Creates an Argument Type. */
+function Argument(index) {
+    return CreateType({ [Kind]: 'Argument', index });
+}
+
+// prettier-ignore
+function FromComputed$3(target, parameters) {
+    return Computed('Awaited', [Computed(target, parameters)]);
+}
+// prettier-ignore
+function FromRef$2($ref) {
+    return Computed('Awaited', [Ref($ref)]);
+}
+// prettier-ignore
+function FromIntersect$4(types) {
+    return Intersect$1(FromRest$3(types));
+}
+// prettier-ignore
+function FromUnion$4(types) {
+    return Union$1(FromRest$3(types));
+}
+// prettier-ignore
+function FromPromise$1(type) {
+    return Awaited(type);
+}
+// prettier-ignore
+function FromRest$3(types) {
+    return types.map(type => Awaited(type));
+}
+/** `[JavaScript]` Constructs a type by recursively unwrapping Promise types */
+function Awaited(type, options) {
+    return CreateType(IsComputed$1(type) ? FromComputed$3(type.target, type.parameters) : IsIntersect$1(type) ? FromIntersect$4(type.allOf) : IsUnion$1(type) ? FromUnion$4(type.anyOf) : IsPromise$1(type) ? FromPromise$1(type.item) : IsRef$1(type) ? FromRef$2(type.$ref) : type, options);
 }
 
 // prettier-ignore
@@ -61099,17 +59457,12 @@ function Uint8Array$1(options) {
     return CreateType({ [Kind]: 'Uint8Array', type: 'Uint8Array' }, options);
 }
 
-/** `[Json]` Creates an Unknown type */
-function Unknown(options) {
-    return CreateType({ [Kind]: 'Unknown' }, options);
-}
-
 // prettier-ignore
-function FromArray$3(T) {
+function FromArray$2(T) {
     return T.map(L => FromValue(L, false));
 }
 // prettier-ignore
-function FromProperties$c(value) {
+function FromProperties$b(value) {
     const Acc = {};
     for (const K of globalThis.Object.getOwnPropertyNames(value))
         Acc[K] = Readonly(FromValue(value[K], false));
@@ -61122,16 +59475,16 @@ function ConditionalReadonly(T, root) {
 function FromValue(value, root) {
     return (IsAsyncIterator$2(value) ? ConditionalReadonly(Any$1(), root) :
         IsIterator$2(value) ? ConditionalReadonly(Any$1(), root) :
-            IsArray$3(value) ? Readonly(Tuple(FromArray$3(value))) :
+            IsArray$2(value) ? Readonly(Tuple(FromArray$2(value))) :
                 IsUint8Array$2(value) ? Uint8Array$1() :
                     IsDate$2(value) ? Date$1() :
-                        IsObject$3(value) ? ConditionalReadonly(Object$1(FromProperties$c(value)), root) :
+                        IsObject$2(value) ? ConditionalReadonly(Object$1(FromProperties$b(value)), root) :
                             IsFunction$2(value) ? ConditionalReadonly(Function$1([], Unknown()), root) :
-                                IsUndefined$3(value) ? Undefined() :
+                                IsUndefined$2(value) ? Undefined() :
                                     IsNull$2(value) ? Null$1() :
                                         IsSymbol$2(value) ? Symbol$1() :
                                             IsBigInt$2(value) ? BigInt$1() :
-                                                IsNumber$3(value) ? Literal(value) :
+                                                IsNumber$2(value) ? Literal(value) :
                                                     IsBoolean$2(value) ? Literal(value) :
                                                         IsString$2(value) ? Literal(value) :
                                                             Object$1({}));
@@ -61148,694 +59501,14 @@ function ConstructorParameters(schema, options) {
 
 /** `[Json]` Creates a Enum type */
 function Enum(item, options) {
-    if (IsUndefined$3(item))
+    if (IsUndefined$2(item))
         throw new Error('Enum undefined or empty');
     const values1 = globalThis.Object.getOwnPropertyNames(item)
         .filter((key) => isNaN(key))
         .map((key) => item[key]);
     const values2 = [...new Set(values1)];
     const anyOf = values2.map((value) => Literal(value));
-    return Union(anyOf, { ...options, [Hint]: 'Enum' });
-}
-
-class ExtendsResolverError extends TypeBoxError {
-}
-var ExtendsResult;
-(function (ExtendsResult) {
-    ExtendsResult[ExtendsResult["Union"] = 0] = "Union";
-    ExtendsResult[ExtendsResult["True"] = 1] = "True";
-    ExtendsResult[ExtendsResult["False"] = 2] = "False";
-})(ExtendsResult || (ExtendsResult = {}));
-// ------------------------------------------------------------------
-// IntoBooleanResult
-// ------------------------------------------------------------------
-// prettier-ignore
-function IntoBooleanResult(result) {
-    return result === ExtendsResult.False ? result : ExtendsResult.True;
-}
-// ------------------------------------------------------------------
-// Throw
-// ------------------------------------------------------------------
-// prettier-ignore
-function Throw(message) {
-    throw new ExtendsResolverError(message);
-}
-// ------------------------------------------------------------------
-// StructuralRight
-// ------------------------------------------------------------------
-// prettier-ignore
-function IsStructuralRight(right) {
-    return (IsNever(right) ||
-        IsIntersect(right) ||
-        IsUnion(right) ||
-        IsUnknown(right) ||
-        IsAny(right));
-}
-// prettier-ignore
-function StructuralRight(left, right) {
-    return (IsNever(right) ? FromNeverRight() :
-        IsIntersect(right) ? FromIntersectRight(left, right) :
-            IsUnion(right) ? FromUnionRight(left, right) :
-                IsUnknown(right) ? FromUnknownRight() :
-                    IsAny(right) ? FromAnyRight() :
-                        Throw('StructuralRight'));
-}
-// ------------------------------------------------------------------
-// Any
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromAnyRight(left, right) {
-    return ExtendsResult.True;
-}
-// prettier-ignore
-function FromAny(left, right) {
-    return (IsIntersect(right) ? FromIntersectRight(left, right) :
-        (IsUnion(right) && right.anyOf.some((schema) => IsAny(schema) || IsUnknown(schema))) ? ExtendsResult.True :
-            IsUnion(right) ? ExtendsResult.Union :
-                IsUnknown(right) ? ExtendsResult.True :
-                    IsAny(right) ? ExtendsResult.True :
-                        ExtendsResult.Union);
-}
-// ------------------------------------------------------------------
-// Array
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromArrayRight(left, right) {
-    return (IsUnknown(left) ? ExtendsResult.False :
-        IsAny(left) ? ExtendsResult.Union :
-            IsNever(left) ? ExtendsResult.True :
-                ExtendsResult.False);
-}
-// prettier-ignore
-function FromArray$2(left, right) {
-    return (IsObject(right) && IsObjectArrayLike(right) ? ExtendsResult.True :
-        IsStructuralRight(right) ? StructuralRight(left, right) :
-            !IsArray(right) ? ExtendsResult.False :
-                IntoBooleanResult(Visit(left.items, right.items)));
-}
-// ------------------------------------------------------------------
-// AsyncIterator
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromAsyncIterator$2(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        !IsAsyncIterator(right) ? ExtendsResult.False :
-            IntoBooleanResult(Visit(left.items, right.items)));
-}
-// ------------------------------------------------------------------
-// BigInt
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromBigInt(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsBigInt(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Boolean
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromBooleanRight(left, right) {
-    return (IsLiteralBoolean(left) ? ExtendsResult.True :
-        IsBoolean(left) ? ExtendsResult.True :
-            ExtendsResult.False);
-}
-// prettier-ignore
-function FromBoolean(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsBoolean(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Constructor
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromConstructor$2(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            !IsConstructor(right) ? ExtendsResult.False :
-                left.parameters.length > right.parameters.length ? ExtendsResult.False :
-                    (!left.parameters.every((schema, index) => IntoBooleanResult(Visit(right.parameters[index], schema)) === ExtendsResult.True)) ? ExtendsResult.False :
-                        IntoBooleanResult(Visit(left.returns, right.returns)));
-}
-// ------------------------------------------------------------------
-// Date
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromDate(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsDate(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Function
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromFunction$2(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            !IsFunction(right) ? ExtendsResult.False :
-                left.parameters.length > right.parameters.length ? ExtendsResult.False :
-                    (!left.parameters.every((schema, index) => IntoBooleanResult(Visit(right.parameters[index], schema)) === ExtendsResult.True)) ? ExtendsResult.False :
-                        IntoBooleanResult(Visit(left.returns, right.returns)));
-}
-// ------------------------------------------------------------------
-// Integer
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromIntegerRight(left, right) {
-    return (IsLiteral(left) && IsNumber$3(left.const) ? ExtendsResult.True :
-        IsNumber(left) || IsInteger(left) ? ExtendsResult.True :
-            ExtendsResult.False);
-}
-// prettier-ignore
-function FromInteger(left, right) {
-    return (IsInteger(right) || IsNumber(right) ? ExtendsResult.True :
-        IsStructuralRight(right) ? StructuralRight(left, right) :
-            IsObject(right) ? FromObjectRight(left, right) :
-                IsRecord(right) ? FromRecordRight(left, right) :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Intersect
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromIntersectRight(left, right) {
-    return right.allOf.every((schema) => Visit(left, schema) === ExtendsResult.True)
-        ? ExtendsResult.True
-        : ExtendsResult.False;
-}
-// prettier-ignore
-function FromIntersect$4(left, right) {
-    return left.allOf.some((schema) => Visit(schema, right) === ExtendsResult.True)
-        ? ExtendsResult.True
-        : ExtendsResult.False;
-}
-// ------------------------------------------------------------------
-// Iterator
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromIterator$2(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        !IsIterator(right) ? ExtendsResult.False :
-            IntoBooleanResult(Visit(left.items, right.items)));
-}
-// ------------------------------------------------------------------
-// Literal
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromLiteral(left, right) {
-    return (IsLiteral(right) && right.const === left.const ? ExtendsResult.True :
-        IsStructuralRight(right) ? StructuralRight(left, right) :
-            IsObject(right) ? FromObjectRight(left, right) :
-                IsRecord(right) ? FromRecordRight(left, right) :
-                    IsString(right) ? FromStringRight(left) :
-                        IsNumber(right) ? FromNumberRight(left) :
-                            IsInteger(right) ? FromIntegerRight(left) :
-                                IsBoolean(right) ? FromBooleanRight(left) :
-                                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Never
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromNeverRight(left, right) {
-    return ExtendsResult.False;
-}
-// prettier-ignore
-function FromNever(left, right) {
-    return ExtendsResult.True;
-}
-// ------------------------------------------------------------------
-// Not
-// ------------------------------------------------------------------
-// prettier-ignore
-function UnwrapTNot(schema) {
-    let [current, depth] = [schema, 0];
-    while (true) {
-        if (!IsNot(current))
-            break;
-        current = current.not;
-        depth += 1;
-    }
-    return depth % 2 === 0 ? current : Unknown();
-}
-// prettier-ignore
-function FromNot(left, right) {
-    // TypeScript has no concept of negated types, and attempts to correctly check the negated
-    // type at runtime would put TypeBox at odds with TypeScripts ability to statically infer
-    // the type. Instead we unwrap to either unknown or T and continue evaluating.
-    // prettier-ignore
-    return (IsNot(left) ? Visit(UnwrapTNot(left), right) :
-        IsNot(right) ? Visit(left, UnwrapTNot(right)) :
-            Throw('Invalid fallthrough for Not'));
-}
-// ------------------------------------------------------------------
-// Null
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromNull(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsNull(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Number
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromNumberRight(left, right) {
-    return (IsLiteralNumber(left) ? ExtendsResult.True :
-        IsNumber(left) || IsInteger(left) ? ExtendsResult.True :
-            ExtendsResult.False);
-}
-// prettier-ignore
-function FromNumber(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsInteger(right) || IsNumber(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Object
-// ------------------------------------------------------------------
-// prettier-ignore
-function IsObjectPropertyCount(schema, count) {
-    return Object.getOwnPropertyNames(schema.properties).length === count;
-}
-// prettier-ignore
-function IsObjectStringLike(schema) {
-    return IsObjectArrayLike(schema);
-}
-// prettier-ignore
-function IsObjectSymbolLike(schema) {
-    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'description' in schema.properties && IsUnion(schema.properties.description) && schema.properties.description.anyOf.length === 2 && ((IsString(schema.properties.description.anyOf[0]) &&
-        IsUndefined(schema.properties.description.anyOf[1])) || (IsString(schema.properties.description.anyOf[1]) &&
-        IsUndefined(schema.properties.description.anyOf[0]))));
-}
-// prettier-ignore
-function IsObjectNumberLike(schema) {
-    return IsObjectPropertyCount(schema, 0);
-}
-// prettier-ignore
-function IsObjectBooleanLike(schema) {
-    return IsObjectPropertyCount(schema, 0);
-}
-// prettier-ignore
-function IsObjectBigIntLike(schema) {
-    return IsObjectPropertyCount(schema, 0);
-}
-// prettier-ignore
-function IsObjectDateLike(schema) {
-    return IsObjectPropertyCount(schema, 0);
-}
-// prettier-ignore
-function IsObjectUint8ArrayLike(schema) {
-    return IsObjectArrayLike(schema);
-}
-// prettier-ignore
-function IsObjectFunctionLike(schema) {
-    const length = Number$1();
-    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'length' in schema.properties && IntoBooleanResult(Visit(schema.properties['length'], length)) === ExtendsResult.True);
-}
-// prettier-ignore
-function IsObjectConstructorLike(schema) {
-    return IsObjectPropertyCount(schema, 0);
-}
-// prettier-ignore
-function IsObjectArrayLike(schema) {
-    const length = Number$1();
-    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'length' in schema.properties && IntoBooleanResult(Visit(schema.properties['length'], length)) === ExtendsResult.True);
-}
-// prettier-ignore
-function IsObjectPromiseLike(schema) {
-    const then = Function$1([Any$1()], Any$1());
-    return IsObjectPropertyCount(schema, 0) || (IsObjectPropertyCount(schema, 1) && 'then' in schema.properties && IntoBooleanResult(Visit(schema.properties['then'], then)) === ExtendsResult.True);
-}
-// ------------------------------------------------------------------
-// Property
-// ------------------------------------------------------------------
-// prettier-ignore
-function Property(left, right) {
-    return (Visit(left, right) === ExtendsResult.False ? ExtendsResult.False :
-        IsOptional(left) && !IsOptional(right) ? ExtendsResult.False :
-            ExtendsResult.True);
-}
-// prettier-ignore
-function FromObjectRight(left, right) {
-    return (IsUnknown(left) ? ExtendsResult.False :
-        IsAny(left) ? ExtendsResult.Union : (IsNever(left) ||
-            (IsLiteralString(left) && IsObjectStringLike(right)) ||
-            (IsLiteralNumber(left) && IsObjectNumberLike(right)) ||
-            (IsLiteralBoolean(left) && IsObjectBooleanLike(right)) ||
-            (IsSymbol(left) && IsObjectSymbolLike(right)) ||
-            (IsBigInt(left) && IsObjectBigIntLike(right)) ||
-            (IsString(left) && IsObjectStringLike(right)) ||
-            (IsSymbol(left) && IsObjectSymbolLike(right)) ||
-            (IsNumber(left) && IsObjectNumberLike(right)) ||
-            (IsInteger(left) && IsObjectNumberLike(right)) ||
-            (IsBoolean(left) && IsObjectBooleanLike(right)) ||
-            (IsUint8Array(left) && IsObjectUint8ArrayLike(right)) ||
-            (IsDate(left) && IsObjectDateLike(right)) ||
-            (IsConstructor(left) && IsObjectConstructorLike(right)) ||
-            (IsFunction(left) && IsObjectFunctionLike(right))) ? ExtendsResult.True :
-            (IsRecord(left) && IsString(RecordKey$1(left))) ? (() => {
-                // When expressing a Record with literal key values, the Record is converted into a Object with
-                // the Hint assigned as `Record`. This is used to invert the extends logic.
-                return right[Hint] === 'Record' ? ExtendsResult.True : ExtendsResult.False;
-            })() :
-                (IsRecord(left) && IsNumber(RecordKey$1(left))) ? (() => {
-                    return IsObjectPropertyCount(right, 0) ? ExtendsResult.True : ExtendsResult.False;
-                })() :
-                    ExtendsResult.False);
-}
-// prettier-ignore
-function FromObject$6(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsRecord(right) ? FromRecordRight(left, right) :
-            !IsObject(right) ? ExtendsResult.False :
-                (() => {
-                    for (const key of Object.getOwnPropertyNames(right.properties)) {
-                        if (!(key in left.properties) && !IsOptional(right.properties[key])) {
-                            return ExtendsResult.False;
-                        }
-                        if (IsOptional(right.properties[key])) {
-                            return ExtendsResult.True;
-                        }
-                        if (Property(left.properties[key], right.properties[key]) === ExtendsResult.False) {
-                            return ExtendsResult.False;
-                        }
-                    }
-                    return ExtendsResult.True;
-                })());
-}
-// ------------------------------------------------------------------
-// Promise
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromPromise$1(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) && IsObjectPromiseLike(right) ? ExtendsResult.True :
-            !IsPromise(right) ? ExtendsResult.False :
-                IntoBooleanResult(Visit(left.item, right.item)));
-}
-// ------------------------------------------------------------------
-// Record
-// ------------------------------------------------------------------
-// prettier-ignore
-function RecordKey$1(schema) {
-    return (PatternNumberExact in schema.patternProperties ? Number$1() :
-        PatternStringExact in schema.patternProperties ? String$1() :
-            Throw('Unknown record key pattern'));
-}
-// prettier-ignore
-function RecordValue$1(schema) {
-    return (PatternNumberExact in schema.patternProperties ? schema.patternProperties[PatternNumberExact] :
-        PatternStringExact in schema.patternProperties ? schema.patternProperties[PatternStringExact] :
-            Throw('Unable to get record value schema'));
-}
-// prettier-ignore
-function FromRecordRight(left, right) {
-    const [Key, Value] = [RecordKey$1(right), RecordValue$1(right)];
-    return ((IsLiteralString(left) && IsNumber(Key) && IntoBooleanResult(Visit(left, Value)) === ExtendsResult.True) ? ExtendsResult.True :
-        IsUint8Array(left) && IsNumber(Key) ? Visit(left, Value) :
-            IsString(left) && IsNumber(Key) ? Visit(left, Value) :
-                IsArray(left) && IsNumber(Key) ? Visit(left, Value) :
-                    IsObject(left) ? (() => {
-                        for (const key of Object.getOwnPropertyNames(left.properties)) {
-                            if (Property(Value, left.properties[key]) === ExtendsResult.False) {
-                                return ExtendsResult.False;
-                            }
-                        }
-                        return ExtendsResult.True;
-                    })() :
-                        ExtendsResult.False);
-}
-// prettier-ignore
-function FromRecord$2(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            !IsRecord(right) ? ExtendsResult.False :
-                Visit(RecordValue$1(left), RecordValue$1(right)));
-}
-// ------------------------------------------------------------------
-// RegExp
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromRegExp(left, right) {
-    // Note: RegExp types evaluate as strings, not RegExp objects.
-    // Here we remap either into string and continue evaluating.
-    const L = IsRegExp(left) ? String$1() : left;
-    const R = IsRegExp(right) ? String$1() : right;
-    return Visit(L, R);
-}
-// ------------------------------------------------------------------
-// String
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromStringRight(left, right) {
-    return (IsLiteral(left) && IsString$2(left.const) ? ExtendsResult.True :
-        IsString(left) ? ExtendsResult.True :
-            ExtendsResult.False);
-}
-// prettier-ignore
-function FromString(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsString(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Symbol
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromSymbol(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsSymbol(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// TemplateLiteral
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromTemplateLiteral$1(left, right) {
-    // TemplateLiteral types are resolved to either unions for finite expressions or string
-    // for infinite expressions. Here we call to TemplateLiteralResolver to resolve for
-    // either type and continue evaluating.
-    return (IsTemplateLiteral(left) ? Visit(TemplateLiteralToUnion(left), right) :
-        IsTemplateLiteral(right) ? Visit(left, TemplateLiteralToUnion(right)) :
-            Throw('Invalid fallthrough for TemplateLiteral'));
-}
-// ------------------------------------------------------------------
-// Tuple
-// ------------------------------------------------------------------
-// prettier-ignore
-function IsArrayOfTuple(left, right) {
-    return (IsArray(right) &&
-        left.items !== undefined &&
-        left.items.every((schema) => Visit(schema, right.items) === ExtendsResult.True));
-}
-// prettier-ignore
-function FromTupleRight(left, right) {
-    return (IsNever(left) ? ExtendsResult.True :
-        IsUnknown(left) ? ExtendsResult.False :
-            IsAny(left) ? ExtendsResult.Union :
-                ExtendsResult.False);
-}
-// prettier-ignore
-function FromTuple$2(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) && IsObjectArrayLike(right) ? ExtendsResult.True :
-            IsArray(right) && IsArrayOfTuple(left, right) ? ExtendsResult.True :
-                !IsTuple(right) ? ExtendsResult.False :
-                    (IsUndefined$3(left.items) && !IsUndefined$3(right.items)) || (!IsUndefined$3(left.items) && IsUndefined$3(right.items)) ? ExtendsResult.False :
-                        (IsUndefined$3(left.items) && !IsUndefined$3(right.items)) ? ExtendsResult.True :
-                            left.items.every((schema, index) => Visit(schema, right.items[index]) === ExtendsResult.True) ? ExtendsResult.True :
-                                ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Uint8Array
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromUint8Array(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsUint8Array(right) ? ExtendsResult.True :
-                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Undefined
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromUndefined(left, right) {
-    return (IsStructuralRight(right) ? StructuralRight(left, right) :
-        IsObject(right) ? FromObjectRight(left, right) :
-            IsRecord(right) ? FromRecordRight(left, right) :
-                IsVoid(right) ? FromVoidRight(left) :
-                    IsUndefined(right) ? ExtendsResult.True :
-                        ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Union
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromUnionRight(left, right) {
-    return right.anyOf.some((schema) => Visit(left, schema) === ExtendsResult.True)
-        ? ExtendsResult.True
-        : ExtendsResult.False;
-}
-// prettier-ignore
-function FromUnion$4(left, right) {
-    return left.anyOf.every((schema) => Visit(schema, right) === ExtendsResult.True)
-        ? ExtendsResult.True
-        : ExtendsResult.False;
-}
-// ------------------------------------------------------------------
-// Unknown
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromUnknownRight(left, right) {
-    return ExtendsResult.True;
-}
-// prettier-ignore
-function FromUnknown(left, right) {
-    return (IsNever(right) ? FromNeverRight() :
-        IsIntersect(right) ? FromIntersectRight(left, right) :
-            IsUnion(right) ? FromUnionRight(left, right) :
-                IsAny(right) ? FromAnyRight() :
-                    IsString(right) ? FromStringRight(left) :
-                        IsNumber(right) ? FromNumberRight(left) :
-                            IsInteger(right) ? FromIntegerRight(left) :
-                                IsBoolean(right) ? FromBooleanRight(left) :
-                                    IsArray(right) ? FromArrayRight(left) :
-                                        IsTuple(right) ? FromTupleRight(left) :
-                                            IsObject(right) ? FromObjectRight(left, right) :
-                                                IsUnknown(right) ? ExtendsResult.True :
-                                                    ExtendsResult.False);
-}
-// ------------------------------------------------------------------
-// Void
-// ------------------------------------------------------------------
-// prettier-ignore
-function FromVoidRight(left, right) {
-    return (IsUndefined(left) ? ExtendsResult.True :
-        IsUndefined(left) ? ExtendsResult.True :
-            ExtendsResult.False);
-}
-// prettier-ignore
-function FromVoid(left, right) {
-    return (IsIntersect(right) ? FromIntersectRight(left, right) :
-        IsUnion(right) ? FromUnionRight(left, right) :
-            IsUnknown(right) ? FromUnknownRight() :
-                IsAny(right) ? FromAnyRight() :
-                    IsObject(right) ? FromObjectRight(left, right) :
-                        IsVoid(right) ? ExtendsResult.True :
-                            ExtendsResult.False);
-}
-// prettier-ignore
-function Visit(left, right) {
-    return (
-    // resolvable
-    (IsTemplateLiteral(left) || IsTemplateLiteral(right)) ? FromTemplateLiteral$1(left, right) :
-        (IsRegExp(left) || IsRegExp(right)) ? FromRegExp(left, right) :
-            (IsNot(left) || IsNot(right)) ? FromNot(left, right) :
-                // standard
-                IsAny(left) ? FromAny(left, right) :
-                    IsArray(left) ? FromArray$2(left, right) :
-                        IsBigInt(left) ? FromBigInt(left, right) :
-                            IsBoolean(left) ? FromBoolean(left, right) :
-                                IsAsyncIterator(left) ? FromAsyncIterator$2(left, right) :
-                                    IsConstructor(left) ? FromConstructor$2(left, right) :
-                                        IsDate(left) ? FromDate(left, right) :
-                                            IsFunction(left) ? FromFunction$2(left, right) :
-                                                IsInteger(left) ? FromInteger(left, right) :
-                                                    IsIntersect(left) ? FromIntersect$4(left, right) :
-                                                        IsIterator(left) ? FromIterator$2(left, right) :
-                                                            IsLiteral(left) ? FromLiteral(left, right) :
-                                                                IsNever(left) ? FromNever() :
-                                                                    IsNull(left) ? FromNull(left, right) :
-                                                                        IsNumber(left) ? FromNumber(left, right) :
-                                                                            IsObject(left) ? FromObject$6(left, right) :
-                                                                                IsRecord(left) ? FromRecord$2(left, right) :
-                                                                                    IsString(left) ? FromString(left, right) :
-                                                                                        IsSymbol(left) ? FromSymbol(left, right) :
-                                                                                            IsTuple(left) ? FromTuple$2(left, right) :
-                                                                                                IsPromise(left) ? FromPromise$1(left, right) :
-                                                                                                    IsUint8Array(left) ? FromUint8Array(left, right) :
-                                                                                                        IsUndefined(left) ? FromUndefined(left, right) :
-                                                                                                            IsUnion(left) ? FromUnion$4(left, right) :
-                                                                                                                IsUnknown(left) ? FromUnknown(left, right) :
-                                                                                                                    IsVoid(left) ? FromVoid(left, right) :
-                                                                                                                        Throw(`Unknown left type operand '${left[Kind]}'`));
-}
-function ExtendsCheck(left, right) {
-    return Visit(left, right);
-}
-
-// prettier-ignore
-function FromProperties$b(P, Right, True, False, options) {
-    const Acc = {};
-    for (const K2 of globalThis.Object.getOwnPropertyNames(P))
-        Acc[K2] = Extends(P[K2], Right, True, False, Clone(options));
-    return Acc;
-}
-// prettier-ignore
-function FromMappedResult$6(Left, Right, True, False, options) {
-    return FromProperties$b(Left.properties, Right, True, False, options);
-}
-// prettier-ignore
-function ExtendsFromMappedResult(Left, Right, True, False, options) {
-    const P = FromMappedResult$6(Left, Right, True, False, options);
-    return MappedResult(P);
-}
-
-// prettier-ignore
-function ExtendsResolve(left, right, trueType, falseType) {
-    const R = ExtendsCheck(left, right);
-    return (R === ExtendsResult.Union ? Union([trueType, falseType]) :
-        R === ExtendsResult.True ? trueType :
-            falseType);
-}
-/** `[Json]` Creates a Conditional type */
-function Extends(L, R, T, F, options) {
-    // prettier-ignore
-    return (IsMappedResult$1(L) ? ExtendsFromMappedResult(L, R, T, F, options) :
-        IsMappedKey$1(L) ? CreateType(ExtendsFromMappedKey(L, R, T, F, options)) :
-            CreateType(ExtendsResolve(L, R, T, F), options));
-}
-
-// prettier-ignore
-function FromPropertyKey$2(K, U, L, R, options) {
-    return {
-        [K]: Extends(Literal(K), U, L, R, Clone(options))
-    };
-}
-// prettier-ignore
-function FromPropertyKeys$2(K, U, L, R, options) {
-    return K.reduce((Acc, LK) => {
-        return { ...Acc, ...FromPropertyKey$2(LK, U, L, R, options) };
-    }, {});
-}
-// prettier-ignore
-function FromMappedKey$2(K, U, L, R, options) {
-    return FromPropertyKeys$2(K.keys, U, L, R, options);
-}
-// prettier-ignore
-function ExtendsFromMappedKey(T, U, L, R, options) {
-    const P = FromMappedKey$2(T, U, L, R, options);
-    return MappedResult(P);
+    return Union$1(anyOf, { ...options, [Hint]: 'Enum' });
 }
 
 function ExcludeFromTemplateLiteral(L, R) {
@@ -61844,7 +59517,7 @@ function ExcludeFromTemplateLiteral(L, R) {
 
 function ExcludeRest(L, R) {
     const excluded = L.filter((inner) => ExtendsCheck(inner, R) === ExtendsResult.False);
-    return excluded.length === 1 ? excluded[0] : Union(excluded);
+    return excluded.length === 1 ? excluded[0] : Union$1(excluded);
 }
 /** `[Json]` Constructs a type by excluding from unionType all union members that are assignable to excludedMembers */
 function Exclude(L, R, options = {}) {
@@ -61881,7 +59554,7 @@ function ExtractFromTemplateLiteral(L, R) {
 
 function ExtractRest(L, R) {
     const extracted = L.filter((inner) => ExtendsCheck(inner, R) !== ExtendsResult.False);
-    return extracted.length === 1 ? extracted[0] : Union(extracted);
+    return extracted.length === 1 ? extracted[0] : Union$1(extracted);
 }
 /** `[Json]` Constructs a type by extracting from type all union members that are assignable to union */
 function Extract(L, R, options) {
@@ -61947,7 +59620,7 @@ function FromTemplateLiteralKey(K, T, options) {
 }
 // prettier-ignore
 function FromUnionKey(key, type, options) {
-    return RecordCreateFromKeys(IndexPropertyKeys(Union(key)), type, options);
+    return RecordCreateFromKeys(IndexPropertyKeys(Union$1(key)), type, options);
 }
 // prettier-ignore
 function FromLiteralKey(key, type, options) {
@@ -61959,7 +59632,7 @@ function FromRegExpKey(key, type, options) {
 }
 // prettier-ignore
 function FromStringKey(key, type, options) {
-    const pattern = IsUndefined$3(key.pattern) ? PatternStringExact : key.pattern;
+    const pattern = IsUndefined$2(key.pattern) ? PatternStringExact : key.pattern;
     return RecordCreateFromPattern(pattern, type, options);
 }
 // prettier-ignore
@@ -62045,7 +59718,7 @@ function FromUnion$3(args, type) {
 }
 // prettier-ignore
 function FromTuple$1(args, type) {
-    if (IsUndefined$3(type.items))
+    if (IsUndefined$2(type.items))
         return type;
     type.items = FromTypes$1(args, type.items);
     return type;
@@ -62136,7 +59809,7 @@ function Integer$1(options) {
 // prettier-ignore
 function MappedIntrinsicPropertyKey(K, M, options) {
     return {
-        [K]: Intrinsic(Literal(K), M, Clone(options))
+        [K]: Intrinsic(Literal(K), M, Clone$1(options))
     };
 }
 // prettier-ignore
@@ -62183,7 +59856,7 @@ function FromTemplateLiteral(schema, mode, options) {
     const strings = [...TemplateLiteralExpressionGenerate(expression)];
     const literals = strings.map((value) => Literal(value));
     const mapped = FromRest$2(literals, mode);
-    const union = Union(mapped);
+    const union = Union$1(mapped);
     return TemplateLiteral([union], options);
 }
 // prettier-ignore
@@ -62206,7 +59879,7 @@ function Intrinsic(schema, mode, options = {}) {
     IsMappedKey$1(schema) ? IntrinsicFromMappedKey(schema, mode, options) :
         // Standard-Inference
         IsTemplateLiteral$1(schema) ? FromTemplateLiteral(schema, mode, options) :
-            IsUnion$1(schema) ? Union(FromRest$2(schema.anyOf, mode), options) :
+            IsUnion$1(schema) ? Union$1(FromRest$2(schema.anyOf, mode), options) :
                 IsLiteral$1(schema) ? Literal(FromLiteralValue(schema.const, mode), options) :
                     // Default Type
                     CreateType(schema, options));
@@ -62236,7 +59909,7 @@ function Uppercase(T, options = {}) {
 function FromProperties$7(properties, propertyKeys, options) {
     const result = {};
     for (const K2 of globalThis.Object.getOwnPropertyNames(properties))
-        result[K2] = Omit(properties[K2], propertyKeys, Clone(options));
+        result[K2] = Omit(properties[K2], propertyKeys, Clone$1(options));
     return result;
 }
 // prettier-ignore
@@ -62278,19 +59951,19 @@ function FromObject$4(properties, propertyKeys) {
 // prettier-ignore
 function UnionFromPropertyKeys$1(propertyKeys) {
     const result = propertyKeys.reduce((result, key) => IsLiteralValue$1(key) ? [...result, Literal(key)] : result, []);
-    return Union(result);
+    return Union$1(result);
 }
 // prettier-ignore
 function OmitResolve(properties, propertyKeys) {
-    return (IsIntersect$1(properties) ? Intersect(FromIntersect$2(properties.allOf, propertyKeys)) :
-        IsUnion$1(properties) ? Union(FromUnion$2(properties.anyOf, propertyKeys)) :
+    return (IsIntersect$1(properties) ? Intersect$1(FromIntersect$2(properties.allOf, propertyKeys)) :
+        IsUnion$1(properties) ? Union$1(FromUnion$2(properties.anyOf, propertyKeys)) :
             IsObject$1(properties) ? FromObject$4(properties, propertyKeys) :
                 Object$1({}));
 }
 /** `[Json]` Constructs a type whose keys are picked from the given type */
 // prettier-ignore
 function Omit(type, key, options) {
-    const typeKey = IsArray$3(key) ? UnionFromPropertyKeys$1(key) : key;
+    const typeKey = IsArray$2(key) ? UnionFromPropertyKeys$1(key) : key;
     const propertyKeys = IsSchema$1(key) ? IndexPropertyKeys(key) : key;
     const isTypeRef = IsRef$1(type);
     const isKeyRef = IsRef$1(key);
@@ -62304,7 +59977,7 @@ function Omit(type, key, options) {
 
 // prettier-ignore
 function FromPropertyKey$1(type, key, options) {
-    return { [key]: Omit(type, [key], Clone(options)) };
+    return { [key]: Omit(type, [key], Clone$1(options)) };
 }
 // prettier-ignore
 function FromPropertyKeys$1(type, propertyKeys, options) {
@@ -62326,7 +59999,7 @@ function OmitFromMappedKey(type, mappedKey, options) {
 function FromProperties$5(properties, propertyKeys, options) {
     const result = {};
     for (const K2 of globalThis.Object.getOwnPropertyNames(properties))
-        result[K2] = Pick(properties[K2], propertyKeys, Clone(options));
+        result[K2] = Pick(properties[K2], propertyKeys, Clone$1(options));
     return result;
 }
 // prettier-ignore
@@ -62363,19 +60036,19 @@ function FromObject$3(T, K) {
 // prettier-ignore
 function UnionFromPropertyKeys(propertyKeys) {
     const result = propertyKeys.reduce((result, key) => IsLiteralValue$1(key) ? [...result, Literal(key)] : result, []);
-    return Union(result);
+    return Union$1(result);
 }
 // prettier-ignore
 function PickResolve(properties, propertyKeys) {
-    return (IsIntersect$1(properties) ? Intersect(FromIntersect$1(properties.allOf, propertyKeys)) :
-        IsUnion$1(properties) ? Union(FromUnion$1(properties.anyOf, propertyKeys)) :
+    return (IsIntersect$1(properties) ? Intersect$1(FromIntersect$1(properties.allOf, propertyKeys)) :
+        IsUnion$1(properties) ? Union$1(FromUnion$1(properties.anyOf, propertyKeys)) :
             IsObject$1(properties) ? FromObject$3(properties, propertyKeys) :
                 Object$1({}));
 }
 /** `[Json]` Constructs a type whose keys are picked from the given type */
 // prettier-ignore
 function Pick(type, key, options) {
-    const typeKey = IsArray$3(key) ? UnionFromPropertyKeys(key) : key;
+    const typeKey = IsArray$2(key) ? UnionFromPropertyKeys(key) : key;
     const propertyKeys = IsSchema$1(key) ? IndexPropertyKeys(key) : key;
     const isTypeRef = IsRef$1(type);
     const isKeyRef = IsRef$1(key);
@@ -62390,7 +60063,7 @@ function Pick(type, key, options) {
 // prettier-ignore
 function FromPropertyKey(type, key, options) {
     return {
-        [key]: Pick(type, [key], Clone(options))
+        [key]: Pick(type, [key], Clone$1(options))
     };
 }
 // prettier-ignore
@@ -62443,8 +60116,8 @@ function PartialResolve(type) {
     // Mappable
     IsComputed$1(type) ? FromComputed$2(type.target, type.parameters) :
         IsRef$1(type) ? FromRef$1(type.$ref) :
-            IsIntersect$1(type) ? Intersect(FromRest$1(type.allOf)) :
-                IsUnion$1(type) ? Union(FromRest$1(type.anyOf)) :
+            IsIntersect$1(type) ? Intersect$1(FromRest$1(type.allOf)) :
+                IsUnion$1(type) ? Union$1(FromRest$1(type.anyOf)) :
                     IsObject$1(type) ? FromObject$2(type) :
                         // Intrinsic
                         IsBigInt$1(type) ? type :
@@ -62474,7 +60147,7 @@ function Partial(type, options) {
 function FromProperties$2(K, options) {
     const Acc = {};
     for (const K2 of globalThis.Object.getOwnPropertyNames(K))
-        Acc[K2] = Partial(K[K2], Clone(options));
+        Acc[K2] = Partial(K[K2], Clone$1(options));
     return Acc;
 }
 // prettier-ignore
@@ -62521,8 +60194,8 @@ function RequiredResolve(type) {
     // Mappable
     IsComputed$1(type) ? FromComputed$1(type.target, type.parameters) :
         IsRef$1(type) ? FromRef(type.$ref) :
-            IsIntersect$1(type) ? Intersect(FromRest(type.allOf)) :
-                IsUnion$1(type) ? Union(FromRest(type.anyOf)) :
+            IsIntersect$1(type) ? Intersect$1(FromRest(type.allOf)) :
+                IsUnion$1(type) ? Union$1(FromRest(type.anyOf)) :
                     IsObject$1(type) ? FromObject$1(type) :
                         // Intrinsic
                         IsBigInt$1(type) ? type :
@@ -62636,7 +60309,7 @@ function FromFunction(moduleProperties, parameters, returnType) {
     return Function$1(FromTypes(moduleProperties, parameters), FromType(moduleProperties, returnType));
 }
 function FromIntersect(moduleProperties, types) {
-    return Intersect(FromTypes(moduleProperties, types));
+    return Intersect$1(FromTypes(moduleProperties, types));
 }
 function FromIterator(moduleProperties, type) {
     return Iterator$1(FromType(moduleProperties, type));
@@ -62663,7 +60336,7 @@ function FromTuple(moduleProperties, types) {
     return Tuple(FromTypes(moduleProperties, types));
 }
 function FromUnion(moduleProperties, types) {
-    return Union(FromTypes(moduleProperties, types));
+    return Union$1(FromTypes(moduleProperties, types));
 }
 function FromTypes(moduleProperties, types) {
     return types.map((type) => FromType(moduleProperties, type));
@@ -62744,7 +60417,7 @@ function Parameters(schema, options) {
 let Ordinal = 0;
 /** `[Json]` Creates a Recursive type */
 function Recursive(callback, options = {}) {
-    if (IsUndefined$3(options.$id))
+    if (IsUndefined$2(options.$id))
         options.$id = `T${Ordinal++}`;
     const thisType = CloneType(callback({ [Kind]: 'This', $ref: `${options.$id}` }));
     thisType.$id = options.$id;
@@ -62814,11 +60487,6 @@ function Transform(schema) {
     return new TransformDecodeBuilder(schema);
 }
 
-/** `[Json]` Creates a Unsafe type that will infers as the generic argument T */
-function Unsafe(options = {}) {
-    return CreateType({ [Kind]: options[Kind] ?? 'Unsafe' }, options);
-}
-
 /** `[JavaScript]` Creates a Void type */
 function Void(options) {
     return CreateType({ [Kind]: 'Void', type: 'void' }, options);
@@ -62852,7 +60520,7 @@ const TypeBuilder = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
     InstanceType,
     Instantiate,
     Integer: Integer$1,
-    Intersect,
+    Intersect: Intersect$1,
     Iterator: Iterator$1,
     KeyOf,
     Literal,
@@ -62887,7 +60555,7 @@ const TypeBuilder = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
     Uint8Array: Uint8Array$1,
     Uncapitalize,
     Undefined,
-    Union,
+    Union: Union$1,
     Unknown,
     Unsafe,
     Uppercase,
@@ -62900,6 +60568,14 @@ const TypeBuilder = /*#__PURE__*/Object.freeze(/*#__PURE__*/Object.definePropert
 /** JavaScript Type Builder with Static Resolution for TypeScript */
 const Type = TypeBuilder;
 
+const BypassOptionsSchema = Type.Object({
+  hook: Type.Boolean({ default: true }),
+  window: Type.Boolean({ default: true }),
+  module: Type.Boolean({ default: true }),
+  process: Type.Boolean({ default: true }),
+  container: Type.Boolean({ default: true }),
+  js: Type.Boolean({ default: true })
+});
 const NapcatConfigSchema = Type.Object({
   fileLog: Type.Boolean({ default: false }),
   consoleLog: Type.Boolean({ default: true }),
@@ -62907,8 +60583,22 @@ const NapcatConfigSchema = Type.Object({
   consoleLogLevel: Type.String({ default: "info" }),
   packetBackend: Type.String({ default: "auto" }),
   packetServer: Type.String({ default: "" }),
-  o3HookMode: Type.Number({ default: 0 })
+  o3HookMode: Type.Number({ default: 0 }),
+  autoTimeSync: Type.Boolean({ default: true }),
+  bypass: Type.Optional(BypassOptionsSchema)
 });
+function loadNapcatConfig(configPath) {
+  let data = {};
+  try {
+    const configFile = path__default.join(configPath, "napcat.json");
+    if (fs__default$1.existsSync(configFile)) {
+      data = lib$2.parse(fs__default$1.readFileSync(configFile, "utf-8"));
+    }
+  } catch {
+  }
+  data = Parse(NapcatConfigSchema, data);
+  return data;
+}
 class NapCatConfigLoader extends ConfigBase {
   constructor(core, configPath, schema) {
     super("napcat", core, configPath, schema);
@@ -63277,6 +60967,22 @@ class TypedEventEmitter {
 
 const appEvent = new TypedEventEmitter();
 
+const OriginalDateNow = Date.now.bind(Date);
+function hookGlobalDateNow(getServerTimeFn) {
+  const start = OriginalDateNow();
+  const serverTimeStr = getServerTimeFn();
+  const end = OriginalDateNow();
+  const serverTimeMs = parseInt(serverTimeStr, 10);
+  if (isNaN(serverTimeMs) || serverTimeMs <= 0) {
+    return 0;
+  }
+  const offsetMs = Math.round(serverTimeMs - (start + end) / 2);
+  if (Math.abs(offsetMs) > 5e3) {
+    Date.now = () => OriginalDateNow() + offsetMs;
+  }
+  return offsetMs;
+}
+
 const AppidTable = {
   "9.9.15-28060": {"appid":537246092,"qua":"V1_WIN_NQ_9.9.15_28060_GW_B"},
   "9.9.15-28131": {"appid":537246092,"qua":"V1_WIN_NQ_9.9.15_28131_GW_B"},
@@ -63412,6 +61118,16 @@ const AppidTable = {
   "6.9.88-44725": {"appid":537337594,"qua":"V1_MAC_NQ_6.9.88_44725_GW_B"},
   "3.2.25-45758": {"appid":537340249,"qua":"V1_LNX_NQ_3.2.25_45758_GW_B"},
   "9.9.27-45758": {"appid":537340213,"qua":"V1_WIN_NQ_9.9.27_45758_GW_B"},
+  "3.2.26-46494": {"appid":537345891,"qua":"V1_LNX_NQ_3.2.26_46494_GW_B"},
+  "9.9.28-46494": {"appid":537345855,"qua":"V1_WIN_NQ_9.9.28_46494_GW_B"},
+  "6.9.90-46494": {"appid":537345879,"qua":"V1_MAC_NQ_6.9.90_46494_GW_B"},
+  "3.2.26-46928": {"appid":537345994,"qua":"V1_LNX_NQ_3.2.26_46928_GW_B"},
+  "9.9.28-46928": {"appid":537345957,"qua":"V1_WIN_NQ_9.9.28_46928_GW_B"},
+  "3.2.27-47354": {"appid":537346908,"qua":"V1_LNX_NQ_3.2.27_47354_GW_B"},
+  "9.9.29-47354": {"appid":537346872,"qua":"V1_WIN_NQ_9.9.29_47354_GW_B"},
+  "6.9.93-47354": {"appid":537346896,"qua":"V1_MAC_NQ_6.9.93_47354_GW_B"},
+  "9.9.30-48517": {"appid":537352474,"qua":"V1_WIN_NQ_9.9.30_48517_GW_B"},
+  "3.2.28-48517": {"appid":537352510,"qua":"V1_LNX_NQ_3.2.28_48517_GW_B"},
 };
 
 class QQBasicInfoWrapper {
@@ -63571,6 +61287,8 @@ class NapCatCore {
   selfInfo;
   util;
   configLoader;
+  /** 数据库 passphrase，由 OidbSvcTrpcTcp.0xcde_2 包获取 */
+  dbPassphrase;
   // 通过构造器递过去的 runtime info 应该尽量少
   constructor(context, selfInfo) {
     this.selfInfo = selfInfo;
@@ -63597,7 +61315,8 @@ class NapCatCore {
       UserApi: new NTQQUserApi(this.context, this),
       GroupApi: new NTQQGroupApi(this.context, this),
       FlashApi: new NTQQFlashApi(this.context, this),
-      OnlineApi: new NTQQOnlineApi(this.context, this)
+      OnlineApi: new NTQQOnlineApi(this.context, this),
+      DatabaseApi: new NTQQDatabaseApi(this.context, this)
     };
     container.bind(NapCatCore).toConstantValue(this);
     container.bind(TypedEventEmitter).toConstantValue(this.event);
@@ -63615,6 +61334,25 @@ class NapCatCore {
     this.NapCatTempPath = path__default.join(this.NapCatDataPath, "temp");
     if (!fs__default$1.existsSync(this.NapCatTempPath)) {
       fs__default$1.mkdirSync(this.NapCatTempPath, { recursive: true });
+    }
+    if (process.env["NAPCAT_DISABLE_TIME_SYNC"] === "1" || !this.configLoader.configData.autoTimeSync) {
+      this.context.logger.log("[ServerTime] 自动对时已禁用");
+    } else {
+      const doTimeSync = () => {
+        try {
+          const offsetMs = hookGlobalDateNow(() => this.context.session.getMSFService().getServerTime());
+          if (Math.abs(offsetMs) > 5e3) {
+            this.context.logger.logWarn(`[ServerTime] 本地时间与服务器时间偏差 ${(offsetMs / 1e3).toFixed(1)}s，已自动矫正`);
+          } else {
+            this.context.logger.log(`[ServerTime] 时间同步完成，偏差 ${offsetMs}ms`);
+          }
+        } catch (e) {
+          this.context.logger.logError("[ServerTime] 时间矫正失败", e);
+        }
+      };
+      doTimeSync();
+      const syncTimer = setInterval(doTimeSync, 36e5);
+      syncTimer.unref();
     }
     for (const apiKey in this.apis) {
       const api = this.apis[apiKey];
@@ -63817,6 +61555,8 @@ const ActionName = {
   UploadImageToQunAlbum: "upload_image_to_qun_album",
   GetQunAlbumList: "get_qun_album_list",
   SetGroupTodo: "set_group_todo",
+  CompleteGroupTodo: "complete_group_todo",
+  CancelGroupTodo: "cancel_group_todo",
   SetGroupKickMembers: "set_group_kick_members",
   SetGroupRobotAddOption: "set_group_robot_add_option",
   SetGroupAddOption: "set_group_add_option",
@@ -63928,6 +61668,7 @@ const ActionName = {
   ForwardFriendSingleMsg: "forward_friend_single_msg",
   ForwardGroupSingleMsg: "forward_group_single_msg",
   TranslateEnWordToZn: "translate_en2zh",
+  FetchPttText: "fetch_ptt_text",
   SetMsgEmojiLike: "set_msg_emoji_like",
   GoCQHTTP_SendForwardMsg: "send_forward_msg",
   MarkPrivateMsgAsRead: "mark_private_msg_as_read",
@@ -64046,15 +61787,23 @@ class OneBotAction {
     this.core = core;
   }
   async check(payload) {
-    if (this.payloadSchema) {
-      this.validate = new Ajv({ allowUnionTypes: true, useDefaults: true, coerceTypes: true }).compile(this.payloadSchema);
+    if (!this.payloadSchema) return { valid: true };
+    try {
+      this.validate = TypeCompiler.Compile(this.payloadSchema);
+      let data = payload;
+      data = Parse(this.payloadSchema, data);
+      if (typeof payload === "object" && payload !== null && data !== null) {
+        Object.assign(payload, data);
+      }
+    } catch (e) {
+      return { valid: false, message: `Schema compilation error: ${e.message}` };
     }
-    if (this.validate && !this.validate(payload)) {
-      const errors = this.validate.errors;
-      const errorMessages = errors.map((e) => `Key: ${e.instancePath.split("/").slice(1).join(".")}, Message: ${e.message}`);
+    if (this.validate && !this.validate.Check(payload)) {
+      const errors = [...this.validate.Errors(payload)];
+      const errorMessages = errors.map((e) => `Key: ${e.path.split("/").slice(1).join(".")}, Message: ${e.message}`);
       return {
         valid: false,
-        message: errorMessages.join("\n") ?? "未知错误"
+        message: errorMessages.length > 0 ? errorMessages.join("\n") : "未知错误"
       };
     }
     return { valid: true };
@@ -65270,7 +63019,8 @@ const WebsocketClientConfigSchema$2 = Type.Object({
   reconnectInterval: Type.Number({ default: 5e3 }),
   token: Type.String({ default: "" }),
   debug: Type.Boolean({ default: false }),
-  heartInterval: Type.Number({ default: 3e4 })
+  heartInterval: Type.Number({ default: 3e4 }),
+  verifyCertificate: Type.Optional(Type.Boolean({ default: true }))
 });
 const PluginConfigSchema$1 = Type.Object({
   name: Type.String({ default: "plugin" }),
@@ -65287,13 +63037,29 @@ const NetworkConfigSchema$2 = Type.Object({
   websocketClients: Type.Array(WebsocketClientConfigSchema$2, { default: [] }),
   plugins: Type.Array(PluginConfigSchema$1, { default: [] })
 }, { default: {} });
+const TimeoutConfigSchema$1 = Type.Object({
+  baseTimeout: Type.Number({ default: 1e4 }),
+  uploadSpeedKBps: Type.Number({ default: 256 }),
+  downloadSpeedKBps: Type.Number({ default: 256 }),
+  maxTimeout: Type.Number({ default: 18e5 })
+}, { default: {} });
 const OneBotConfigSchema$1 = Type.Object({
   network: NetworkConfigSchema$2,
   musicSignUrl: Type.String({ default: "" }),
   enableLocalFile2Url: Type.Boolean({ default: false }),
   parseMultMsg: Type.Boolean({ default: false }),
-  imageDownloadProxy: Type.String({ default: "" })
+  imageDownloadProxy: Type.String({ default: "" }),
+  timeout: TimeoutConfigSchema$1
 });
+function calculateTimeout(config, dataSizeBytes, speedKBps) {
+  return Math.min(
+    config.baseTimeout + dataSizeBytes / 1024 / Math.max(speedKBps, 1) * 1e3,
+    config.maxTimeout
+  );
+}
+function capTimeout(config, timeoutMs) {
+  return Math.min(timeoutMs, config.maxTimeout);
+}
 
 class OB11ConfigLoader extends ConfigBase {
   constructor(core, configPath, schema) {
@@ -65616,11 +63382,14 @@ const WebUiConfigSchema = Type.Object({
 class WebUiConfigWrapper {
   WebUiConfigData = void 0;
   validateAndApplyDefaults(config) {
-    new Ajv({ coerceTypes: true, useDefaults: true }).compile(WebUiConfigSchema)(config);
-    return config;
+    let data = config;
+    data = Parse(WebUiConfigSchema, data);
+    const validate = TypeCompiler.Compile(WebUiConfigSchema);
+    if (!validate.Check(data)) ;
+    return data;
   }
   async ensureConfigFileExists(configPath) {
-    const configExists = await fs$2.access(configPath, constants$1.F_OK).then(() => true).catch(() => false);
+    const configExists = await fs$2.access(configPath, constants.F_OK).then(() => true).catch(() => false);
     if (!configExists) {
       await fs$2.writeFile(configPath, JSON.stringify(this.validateAndApplyDefaults({}), null, 4));
     }
@@ -65630,7 +63399,7 @@ class WebUiConfigWrapper {
     return this.validateAndApplyDefaults(JSON.parse(fileContent));
   }
   async writeConfig(configPath, config) {
-    const hasWritePermission = await fs$2.access(configPath, constants$1.W_OK).then(() => true).catch(() => false);
+    const hasWritePermission = await fs$2.access(configPath, constants.W_OK).then(() => true).catch(() => false);
     if (hasWritePermission) {
       await fs$2.writeFile(configPath, JSON.stringify(config, null, 4));
     } else {
@@ -65642,7 +63411,7 @@ class WebUiConfigWrapper {
       return this.WebUiConfigData;
     }
     try {
-      const configPath = resolve$1(webUiPathWrapper.configPath, "./webui.json");
+      const configPath = resolve(webUiPathWrapper.configPath, "./webui.json");
       await this.ensureConfigFileExists(configPath);
       const parsedConfig = await this.readAndValidateConfig(configPath);
       this.WebUiConfigData = {
@@ -65662,7 +63431,7 @@ class WebUiConfigWrapper {
     }
   }
   async UpdateWebUIConfig(newConfig) {
-    const configPath = resolve$1(webUiPathWrapper.configPath, "./webui.json");
+    const configPath = resolve(webUiPathWrapper.configPath, "./webui.json");
     const currentConfig = await this.GetRawWebUIConfig();
     const mergedConfig = deepMerge({ ...currentConfig }, newConfig);
     const updatedConfig = this.validateAndApplyDefaults(mergedConfig);
@@ -65678,7 +63447,7 @@ class WebUiConfigWrapper {
       return this.WebUiConfigData;
     }
     try {
-      const configPath = resolve$1(webUiPathWrapper.configPath, "./webui.json");
+      const configPath = resolve(webUiPathWrapper.configPath, "./webui.json");
       await this.ensureConfigFileExists(configPath);
       const parsedConfig = await this.readAndValidateConfig(configPath);
       this.WebUiConfigData = parsedConfig;
@@ -65698,12 +63467,12 @@ class WebUiConfigWrapper {
   }
   // 获取日志文件夹路径
   async GetLogsPath() {
-    return resolve$1(webUiPathWrapper.logsPath);
+    return resolve(webUiPathWrapper.logsPath);
   }
   // 获取日志列表
   async GetLogsList() {
-    const logsPath = resolve$1(webUiPathWrapper.logsPath);
-    const logsExist = await fs$2.access(logsPath, constants$1.F_OK).then(() => true).catch(() => false);
+    const logsPath = resolve(webUiPathWrapper.logsPath);
+    const logsExist = await fs$2.access(logsPath, constants.F_OK).then(() => true).catch(() => false);
     if (logsExist) {
       return (await fs$2.readdir(logsPath)).filter((file) => file.endsWith(".log")).map((file) => file.replace(".log", ""));
     }
@@ -65711,8 +63480,8 @@ class WebUiConfigWrapper {
   }
   // 获取指定日志文件内容
   async GetLogContent(filename) {
-    const logPath = resolve$1(webUiPathWrapper.logsPath, `${filename}.log`);
-    const logExists = await fs$2.access(logPath, constants$1.R_OK).then(() => true).catch(() => false);
+    const logPath = resolve(webUiPathWrapper.logsPath, `${filename}.log`);
+    const logExists = await fs$2.access(logPath, constants.R_OK).then(() => true).catch(() => false);
     if (logExists) {
       return await fs$2.readFile(logPath, "utf-8");
     }
@@ -65720,8 +63489,8 @@ class WebUiConfigWrapper {
   }
   // 获取字体文件夹内的字体列表
   async GetFontList() {
-    const fontsPath = resolve$1(webUiPathWrapper.configPath, "./fonts");
-    const fontsExist = await fs$2.access(fontsPath, constants$1.F_OK).then(() => true).catch(() => false);
+    const fontsPath = resolve(webUiPathWrapper.configPath, "./fonts");
+    const fontsExist = await fs$2.access(fontsPath, constants.F_OK).then(() => true).catch(() => false);
     if (fontsExist) {
       return (await fs$2.readdir(fontsPath)).filter((file) => file.endsWith(".ttf"));
     }
@@ -65731,15 +63500,15 @@ class WebUiConfigWrapper {
   async CheckWebUIFontExist() {
     const fontPath = await this.GetWebUIFontPath();
     if (!fontPath) return false;
-    return await fs$2.access(fontPath, constants$1.F_OK).then(() => true).catch(() => false);
+    return await fs$2.access(fontPath, constants.F_OK).then(() => true).catch(() => false);
   }
   // 获取webui字体文件路径（支持多种格式）
   async GetWebUIFontPath() {
-    const fontsPath = resolve$1(webUiPathWrapper.configPath, "./fonts");
+    const fontsPath = resolve(webUiPathWrapper.configPath, "./fonts");
     const extensions = [".woff", ".woff2", ".ttf", ".otf"];
     for (const ext of extensions) {
-      const fontPath = resolve$1(fontsPath, `webui${ext}`);
-      const exists = await fs$2.access(fontPath, constants$1.F_OK).then(() => true).catch(() => false);
+      const fontPath = resolve(fontsPath, `webui${ext}`);
+      const exists = await fs$2.access(fontPath, constants.F_OK).then(() => true).catch(() => false);
       if (exists) {
         return fontPath;
       }
@@ -65748,7 +63517,7 @@ class WebUiConfigWrapper {
   }
   // 同步版本，用于 multer 配置
   GetWebUIFontPathSync() {
-    return resolve$1(webUiPathWrapper.configPath, "./fonts/webui.woff");
+    return resolve(webUiPathWrapper.configPath, "./fonts/webui.woff");
   }
   getAutoLoginAccount() {
     return this.WebUiConfigData?.autoLoginAccount;
@@ -72573,7 +70342,7 @@ const HttpServerConfigSchema$1 = Type.Object({
   port: Type.Number({ default: 3e3 }),
   host: Type.String({ default: "127.0.0.1" }),
   enableCors: Type.Boolean({ default: true }),
-  enableWebsocket: Type.Boolean({ default: true }),
+  enableWebsocket: Type.Boolean({ default: false }),
   messagePostFormat: Type.String({ default: "array" }),
   token: Type.String({ default: "" }),
   debug: Type.Boolean({ default: false })
@@ -72584,7 +70353,7 @@ const HttpSseServerConfigSchema = Type.Object({
   port: Type.Number({ default: 3e3 }),
   host: Type.String({ default: "127.0.0.1" }),
   enableCors: Type.Boolean({ default: true }),
-  enableWebsocket: Type.Boolean({ default: true }),
+  enableWebsocket: Type.Boolean({ default: false }),
   messagePostFormat: Type.String({ default: "array" }),
   token: Type.String({ default: "" }),
   debug: Type.Boolean({ default: false }),
@@ -72637,21 +70406,30 @@ const NetworkConfigSchema$1 = Type.Object({
   websocketClients: Type.Array(WebsocketClientConfigSchema$1, { default: [] }),
   plugins: Type.Array(PluginConfigSchema, { default: [] })
 }, { default: {} });
+const TimeoutConfigSchema = Type.Object({
+  baseTimeout: Type.Number({ default: 1e4 }),
+  uploadSpeedKBps: Type.Number({ default: 256 }),
+  downloadSpeedKBps: Type.Number({ default: 256 }),
+  maxTimeout: Type.Number({ default: 18e5 })
+}, { default: {} });
 const OneBotConfigSchema = Type.Object({
   network: NetworkConfigSchema$1,
   musicSignUrl: Type.String({ default: "" }),
   enableLocalFile2Url: Type.Boolean({ default: false }),
   parseMultMsg: Type.Boolean({ default: false }),
-  imageDownloadProxy: Type.String({ default: "" })
+  imageDownloadProxy: Type.String({ default: "" }),
+  timeout: TimeoutConfigSchema
 });
 function loadConfig(config) {
-  const ajv = new Ajv({ useDefaults: true, coerceTypes: true });
-  const validate = ajv.compile(OneBotConfigSchema);
-  const valid = validate(config);
+  let data = config;
+  data = Parse(OneBotConfigSchema, data);
+  const validate = TypeCompiler.Compile(OneBotConfigSchema);
+  const valid = validate.Check(data);
   if (!valid) {
-    throw new Error(ajv.errorsText(validate.errors));
+    const errorMsg = [...validate.Errors(data)].map((e) => e.message).join(", ");
+    throw new Error(errorMsg);
   }
-  return config;
+  return data;
 }
 
 class Store {
@@ -72710,6 +70488,12 @@ const LoginRuntime = {
     },
     onPasswordLoginRequested: async () => {
       return { result: false, message: "密码登录功能未初始化" };
+    },
+    onCaptchaLoginRequested: async () => {
+      return { result: false, message: "验证码登录功能未初始化" };
+    },
+    onNewDeviceLoginRequested: async () => {
+      return { result: false, message: "新设备登录功能未初始化" };
     },
     onRestartProcessRequested: async () => {
       return { result: false, message: "重启功能未初始化" };
@@ -72798,6 +70582,18 @@ const WebUiDataRuntime = {
   },
   requestPasswordLogin: function(uin, passwordMd5) {
     return LoginRuntime.NapCatHelper.onPasswordLoginRequested(uin, passwordMd5);
+  },
+  setCaptchaLoginCall(func) {
+    LoginRuntime.NapCatHelper.onCaptchaLoginRequested = func;
+  },
+  requestCaptchaLogin: function(uin, passwordMd5, ticket, randstr, sid) {
+    return LoginRuntime.NapCatHelper.onCaptchaLoginRequested(uin, passwordMd5, ticket, randstr, sid);
+  },
+  setNewDeviceLoginCall(func) {
+    LoginRuntime.NapCatHelper.onNewDeviceLoginRequested = func;
+  },
+  requestNewDeviceLogin: function(uin, passwordMd5, newDevicePullQrCodeSig) {
+    return LoginRuntime.NapCatHelper.onNewDeviceLoginRequested(uin, passwordMd5, newDevicePullQrCodeSig);
   },
   setOnOB11ConfigChanged(func) {
     LoginRuntime.NapCatHelper.onOB11ConfigChanged = func;
@@ -72903,9 +70699,9 @@ const OB11GetConfigHandler = (_, res) => {
     return sendError(res, "Not Login");
   }
   const uin = WebUiDataRuntime.getQQLoginUin();
-  const configFilePath = resolve$1(webUiPathWrapper.configPath, `./onebot11_${uin}.json`);
+  const configFilePath = resolve(webUiPathWrapper.configPath, `./onebot11_${uin}.json`);
   try {
-    const configFileContent = existsSync(configFilePath) ? readFileSync(configFilePath).toString() : readFileSync(resolve$1(webUiPathWrapper.configPath, "./onebot11.json")).toString();
+    const configFileContent = existsSync(configFilePath) ? readFileSync(configFilePath).toString() : readFileSync(resolve(webUiPathWrapper.configPath, "./onebot11.json")).toString();
     const data = loadConfig(lib$2.parse(configFileContent));
     return sendSuccess(res, data);
   } catch (_e) {
@@ -73036,17 +70832,18 @@ const BackupImportConfigHandler = async (req, res) => {
   }
 };
 
-const router$c = Router();
-const upload$1 = multer({
+const router$d = Router();
+const upload = multer({
   storage: multer.memoryStorage()
 });
-router$c.post("/GetConfig", OB11GetConfigHandler);
-router$c.post("/SetConfig", OB11SetConfigHandler);
-router$c.get("/ExportConfig", BackupExportConfigHandler);
-router$c.post("/ImportConfig", upload$1.single("configFile"), BackupImportConfigHandler);
+router$d.post("/GetConfig", OB11GetConfigHandler);
+router$d.post("/SetConfig", OB11SetConfigHandler);
+router$d.get("/ExportConfig", BackupExportConfigHandler);
+router$d.post("/ImportConfig", upload.single("configFile"), BackupImportConfigHandler);
 
 class AuthHelper {
   static secretKey = process.env["NAPCAT_WEBUI_JWT_SECRET_KEY"] || Math.random().toString(36).slice(2);
+  static MAX_CREDENTIAL_VALID_SECONDS = 3600;
   static getSecretKey() {
     return AuthHelper.secretKey;
   }
@@ -73057,7 +70854,8 @@ class AuthHelper {
      */
   static signCredential(hash) {
     const innerJson = {
-      CreatedTime: Date.now(),
+      // 统一使用秒级时间戳，避免与校验逻辑出现单位不一致
+      CreatedTime: Math.floor(Date.now() / 1e3),
       HashEncoded: hash
     };
     const jsonString = JSON.stringify(innerJson);
@@ -73092,10 +70890,11 @@ class AuthHelper {
     if (AuthHelper.isCredentialRevoked(credentialJson)) {
       return false;
     }
-    const currentTime = Date.now() / 1e3;
-    const createdTime = credentialJson.Data.CreatedTime;
-    const timeDifference = currentTime - createdTime;
-    return timeDifference <= 3600 && credentialJson.Data.HashEncoded === AuthHelper.generatePasswordHash(token);
+    const currentTimeSeconds = Math.floor(Date.now() / 1e3);
+    const createdTimeSeconds = Math.floor(Number(credentialJson.Data.CreatedTime));
+    const timeDifferenceSeconds = currentTimeSeconds - createdTimeSeconds;
+    const isWithinOneHour = timeDifferenceSeconds >= 0 && timeDifferenceSeconds <= AuthHelper.MAX_CREDENTIAL_VALID_SECONDS;
+    return isWithinOneHour && credentialJson.Data.HashEncoded === AuthHelper.generatePasswordHash(token);
   }
   /**
      * 注销指定的Token凭证
@@ -73289,7 +71088,151 @@ class Registry20Utils {
     }
   }
 }
+function rot13(s) {
+  return s.replace(/[a-zA-Z]/g, (c) => {
+    const base = c <= "Z" ? 65 : 97;
+    return String.fromCharCode((c.charCodeAt(0) - base + 13) % 26 + base);
+  });
+}
+class MachineInfoUtils {
+  /**
+   * 获取 machine-info 文件路径
+   */
+  static getMachineInfoPath(dataPath) {
+    return path__default.join(dataPath, "nt_qq", "global", "nt_data", "msf", "machine-info");
+  }
+  /**
+   * 从 machine-info 文件读取 MAC 地址
+   */
+  static readMac(machineInfoPath) {
+    if (!fs__default$1.existsSync(machineInfoPath)) {
+      throw new Error("machine-info file not found");
+    }
+    const data = fs__default$1.readFileSync(machineInfoPath);
+    if (data.length < 4) {
+      throw new Error(`machine-info data too short: ${data.length} < 4 bytes`);
+    }
+    const length = data.readUInt32BE(0);
+    if (length >= 18) {
+      throw new Error(`MAC string length abnormal: ${length} >= 18`);
+    }
+    if (data.length < 4 + length) {
+      throw new Error(`machine-info data incomplete: need ${4 + length} bytes, got ${data.length}`);
+    }
+    const rot13Str = data.subarray(4, 4 + length).toString("ascii");
+    return rot13(rot13Str);
+  }
+  /**
+   * 将 MAC 地址写入 machine-info 文件
+   */
+  static writeMac(machineInfoPath, mac) {
+    mac = mac.trim().toLowerCase();
+    if (!/^[0-9a-f]{2}(-[0-9a-f]{2}){5}$/.test(mac)) {
+      throw new Error("Invalid MAC format, must be xx-xx-xx-xx-xx-xx");
+    }
+    const encoded = rot13(mac);
+    const length = encoded.length;
+    const buf = Buffer.alloc(4 + length);
+    buf.writeUInt32BE(length, 0);
+    buf.write(encoded, 4, "ascii");
+    const dir = path__default.dirname(machineInfoPath);
+    if (!fs__default$1.existsSync(dir)) {
+      fs__default$1.mkdirSync(dir, { recursive: true });
+    }
+    fs__default$1.writeFileSync(machineInfoPath, buf);
+  }
+  /**
+   * 读取 /etc/machine-id
+   */
+  static readMachineId() {
+    const machineIdPath = "/etc/machine-id";
+    if (!fs__default$1.existsSync(machineIdPath)) {
+      throw new Error("/etc/machine-id not found");
+    }
+    return fs__default$1.readFileSync(machineIdPath, "utf-8").trim();
+  }
+  /**
+   * 计算 Linux GUID = MD5(machine-id + MAC)
+   */
+  static computeGuid(machineId, mac) {
+    const md5 = crypto__default$1.createHash("md5");
+    md5.update(machineId, "ascii");
+    md5.update(mac, "ascii");
+    return md5.digest("hex");
+  }
+  /**
+   * 获取备份列表
+   */
+  static getBackups(machineInfoPath) {
+    const dir = path__default.dirname(machineInfoPath);
+    const baseName = path__default.basename(machineInfoPath);
+    if (!fs__default$1.existsSync(dir)) return [];
+    return fs__default$1.readdirSync(dir).filter((f) => f.startsWith(`${baseName}.bak.`)).sort().reverse();
+  }
+  /**
+   * 创建备份
+   */
+  static backup(machineInfoPath) {
+    if (!fs__default$1.existsSync(machineInfoPath)) {
+      throw new Error("machine-info file does not exist");
+    }
+    const timestamp = (/* @__PURE__ */ new Date()).toISOString().replace(/[-:T.]/g, "").slice(0, 14);
+    const backupPath = `${machineInfoPath}.bak.${timestamp}`;
+    fs__default$1.copyFileSync(machineInfoPath, backupPath);
+    return backupPath;
+  }
+  /**
+   * 恢复备份
+   */
+  static restore(machineInfoPath, backupFileName) {
+    const dir = path__default.dirname(machineInfoPath);
+    const backupPath = path__default.join(dir, backupFileName);
+    if (!fs__default$1.existsSync(backupPath)) {
+      throw new Error("Backup file not found");
+    }
+    fs__default$1.copyFileSync(backupPath, machineInfoPath);
+  }
+  /**
+   * 删除 machine-info
+   */
+  static delete(machineInfoPath) {
+    if (fs__default$1.existsSync(machineInfoPath)) {
+      fs__default$1.unlinkSync(machineInfoPath);
+    }
+  }
+}
 
+function oidbRequest(uid, body) {
+  return new Promise((resolve, reject) => {
+    const postData = JSON.stringify(body);
+    const req = https__default.request({
+      hostname: "oidb.tim.qq.com",
+      path: `/v3/oidbinterface/oidb_0xc9e_8?uid=${encodeURIComponent(uid)}&getqrcode=1&sdkappid=39998&actype=2`,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(postData),
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/138.0.0.0 Safari/537.36",
+        Accept: "application/json, text/plain, */*"
+      }
+    }, (res) => {
+      let data = "";
+      res.on("data", (chunk) => {
+        data += chunk;
+      });
+      res.on("end", () => {
+        try {
+          resolve(JSON.parse(data));
+        } catch {
+          reject(new Error("Failed to parse oidb response"));
+        }
+      });
+    });
+    req.on("error", reject);
+    req.write(postData);
+    req.end();
+  });
+}
 const getRegistryPath = () => {
   let dataPath = WebUiDataRuntime.getQQDataPath();
   if (!dataPath) {
@@ -73300,6 +71243,17 @@ const getRegistryPath = () => {
     throw new Error("QQ data path not available yet");
   }
   return Registry20Utils.getRegistryPath(dataPath);
+};
+const getMachineInfoPath = () => {
+  let dataPath = WebUiDataRuntime.getQQDataPath();
+  if (!dataPath) {
+    const oneBotContext = WebUiDataRuntime.getOneBotContext();
+    dataPath = oneBotContext?.core?.dataPath;
+  }
+  if (!dataPath) {
+    throw new Error("QQ data path not available yet");
+  }
+  return MachineInfoUtils.getMachineInfoPath(dataPath);
 };
 const QQGetQRcodeHandler = async (_, res) => {
   if (WebUiDataRuntime.getQQLoginStatus()) {
@@ -73393,8 +71347,56 @@ const QQPasswordLoginHandler = async (req, res) => {
   if (isEmpty(passwordMd5)) {
     return sendError(res, "passwordMd5 is empty");
   }
-  const { result, message } = await WebUiDataRuntime.requestPasswordLogin(uin, passwordMd5);
+  const { result, message, needCaptcha, proofWaterUrl, needNewDevice, jumpUrl, newDevicePullQrCodeSig } = await WebUiDataRuntime.requestPasswordLogin(uin, passwordMd5);
   if (!result) {
+    if (needCaptcha && proofWaterUrl) {
+      return sendSuccess(res, { needCaptcha: true, proofWaterUrl });
+    }
+    if (needNewDevice && jumpUrl) {
+      return sendSuccess(res, { needNewDevice: true, jumpUrl, newDevicePullQrCodeSig });
+    }
+    return sendError(res, message);
+  }
+  return sendSuccess(res, null);
+};
+const QQCaptchaLoginHandler = async (req, res) => {
+  const { uin, passwordMd5, ticket, randstr, sid } = req.body;
+  const isLogin = WebUiDataRuntime.getQQLoginStatus();
+  if (isLogin) {
+    return sendError(res, "QQ Is Logined");
+  }
+  if (isEmpty(uin) || isEmpty(passwordMd5)) {
+    return sendError(res, "uin or passwordMd5 is empty");
+  }
+  if (isEmpty(ticket) || isEmpty(randstr)) {
+    return sendError(res, "captcha ticket or randstr is empty");
+  }
+  const { result, message, needNewDevice, jumpUrl, newDevicePullQrCodeSig: sig } = await WebUiDataRuntime.requestCaptchaLogin(uin, passwordMd5, ticket, randstr, sid || "");
+  if (!result) {
+    if (needNewDevice && jumpUrl) {
+      return sendSuccess(res, { needNewDevice: true, jumpUrl, newDevicePullQrCodeSig: sig });
+    }
+    return sendError(res, message);
+  }
+  return sendSuccess(res, null);
+};
+const QQNewDeviceLoginHandler = async (req, res) => {
+  const { uin, passwordMd5, newDevicePullQrCodeSig } = req.body;
+  const isLogin = WebUiDataRuntime.getQQLoginStatus();
+  if (isLogin) {
+    return sendError(res, "QQ Is Logined");
+  }
+  if (isEmpty(uin) || isEmpty(passwordMd5)) {
+    return sendError(res, "uin or passwordMd5 is empty");
+  }
+  if (isEmpty(newDevicePullQrCodeSig)) {
+    return sendError(res, "newDevicePullQrCodeSig is empty");
+  }
+  const { result, message, needNewDevice, jumpUrl, newDevicePullQrCodeSig: sig } = await WebUiDataRuntime.requestNewDeviceLogin(uin, passwordMd5, newDevicePullQrCodeSig);
+  if (!result) {
+    if (needNewDevice && jumpUrl) {
+      return sendSuccess(res, { needNewDevice: true, jumpUrl, newDevicePullQrCodeSig: sig });
+    }
     return sendError(res, message);
   }
   return sendSuccess(res, null);
@@ -73404,7 +71406,7 @@ const QQResetDeviceIDHandler = async (_, res) => {
     const registryPath = getRegistryPath();
     try {
       await Registry20Utils.backup(registryPath);
-    } catch (e) {
+    } catch (_e) {
     }
     await Registry20Utils.delete(registryPath);
     return sendSuccess(res, { message: "Device ID reset successfully (Registry20 deleted)" });
@@ -73481,25 +71483,184 @@ const QQRestartNapCatHandler = async (_, res) => {
     return sendError(res, `Restart error: ${e.message}`);
   }
 };
+const QQGetPlatformInfoHandler = async (_, res) => {
+  return sendSuccess(res, { platform: os$1.platform() });
+};
+const QQGetLinuxMACHandler = async (_, res) => {
+  try {
+    const machineInfoPath = getMachineInfoPath();
+    const mac = MachineInfoUtils.readMac(machineInfoPath);
+    return sendSuccess(res, { mac });
+  } catch (e) {
+    return sendError(res, `Failed to get MAC: ${e.message}`);
+  }
+};
+const QQSetLinuxMACHandler = async (req, res) => {
+  const { mac } = req.body;
+  if (!mac || typeof mac !== "string") {
+    return sendError(res, "MAC address is required");
+  }
+  try {
+    const machineInfoPath = getMachineInfoPath();
+    try {
+      MachineInfoUtils.backup(machineInfoPath);
+    } catch {
+    }
+    MachineInfoUtils.writeMac(machineInfoPath, mac);
+    return sendSuccess(res, { message: "MAC set successfully" });
+  } catch (e) {
+    return sendError(res, `Failed to set MAC: ${e.message}`);
+  }
+};
+const QQGetLinuxMachineIdHandler = async (_, res) => {
+  try {
+    const machineId = MachineInfoUtils.readMachineId();
+    return sendSuccess(res, { machineId });
+  } catch (e) {
+    return sendError(res, `Failed to read machine-id: ${e.message}`);
+  }
+};
+const QQComputeLinuxGUIDHandler = async (req, res) => {
+  const { mac, machineId } = req.body;
+  try {
+    let mid = machineId;
+    if (!mid || typeof mid !== "string") {
+      try {
+        mid = MachineInfoUtils.readMachineId();
+      } catch {
+        mid = "";
+      }
+    }
+    let macStr = mac;
+    if (!macStr || typeof macStr !== "string") {
+      try {
+        const machineInfoPath = getMachineInfoPath();
+        macStr = MachineInfoUtils.readMac(machineInfoPath);
+      } catch {
+        macStr = "";
+      }
+    }
+    const guid = MachineInfoUtils.computeGuid(mid, macStr);
+    return sendSuccess(res, { guid, machineId: mid, mac: macStr });
+  } catch (e) {
+    return sendError(res, `Failed to compute GUID: ${e.message}`);
+  }
+};
+const QQGetLinuxMachineInfoBackupsHandler = async (_, res) => {
+  try {
+    const machineInfoPath = getMachineInfoPath();
+    const backups = MachineInfoUtils.getBackups(machineInfoPath);
+    return sendSuccess(res, backups);
+  } catch (e) {
+    return sendError(res, `Failed to get backups: ${e.message}`);
+  }
+};
+const QQCreateLinuxMachineInfoBackupHandler = async (_, res) => {
+  try {
+    const machineInfoPath = getMachineInfoPath();
+    const backupPath = MachineInfoUtils.backup(machineInfoPath);
+    return sendSuccess(res, { message: "Backup created", path: backupPath });
+  } catch (e) {
+    return sendError(res, `Failed to backup: ${e.message}`);
+  }
+};
+const QQRestoreLinuxMachineInfoBackupHandler = async (req, res) => {
+  const { backupName } = req.body;
+  if (!backupName) {
+    return sendError(res, "Backup name is required");
+  }
+  try {
+    const machineInfoPath = getMachineInfoPath();
+    MachineInfoUtils.restore(machineInfoPath, backupName);
+    return sendSuccess(res, { message: "Restored successfully" });
+  } catch (e) {
+    return sendError(res, `Failed to restore: ${e.message}`);
+  }
+};
+const QQResetLinuxDeviceIDHandler = async (_, res) => {
+  try {
+    const machineInfoPath = getMachineInfoPath();
+    try {
+      MachineInfoUtils.backup(machineInfoPath);
+    } catch {
+    }
+    MachineInfoUtils.delete(machineInfoPath);
+    return sendSuccess(res, { message: "Device ID reset successfully (machine-info deleted)" });
+  } catch (e) {
+    return sendError(res, `Failed to reset Device ID: ${e.message}`);
+  }
+};
+const QQGetNewDeviceQRCodeHandler = async (req, res) => {
+  const { uin, jumpUrl } = req.body;
+  if (!uin || !jumpUrl) {
+    return sendError(res, "uin and jumpUrl are required");
+  }
+  const url = new URL(jumpUrl);
+  const strDevAuthToken = url.searchParams.get("sig") || "";
+  const strUinToken = url.searchParams.get("uin-token") || "";
+  if (!strDevAuthToken || !strUinToken) {
+    return sendError(res, "Failed to get new device QR code: unable to extract sig/uin-token from jumpUrl");
+  }
+  const body = {
+    str_dev_auth_token: strDevAuthToken,
+    uint32_flag: 1,
+    uint32_url_type: 0,
+    str_uin_token: strUinToken,
+    str_dev_type: "Windows",
+    str_dev_name: os$1.hostname() || "DESKTOP-NAPCAT"
+  };
+  const result = await oidbRequest(uin, body);
+  return sendSuccess(res, result);
+};
+const QQPollNewDeviceQRHandler = async (req, res) => {
+  const { uin, bytesToken } = req.body;
+  if (!uin || !bytesToken) {
+    return sendError(res, "uin and bytesToken are required");
+  }
+  try {
+    const body = {
+      uint32_flag: 0,
+      bytes_token: bytesToken
+      // base64 编码的 token
+    };
+    const result = await oidbRequest(uin, body);
+    return sendSuccess(res, result);
+  } catch (e) {
+    return sendError(res, `Failed to poll QR status: ${e.message}`);
+  }
+};
 
-const router$b = Router();
-router$b.all("/GetQuickLoginList", QQGetQuickLoginListHandler);
-router$b.all("/GetQuickLoginListNew", QQGetLoginListNewHandler);
-router$b.post("/CheckLoginStatus", QQCheckLoginStatusHandler);
-router$b.post("/GetQQLoginQrcode", QQGetQRcodeHandler);
-router$b.post("/SetQuickLogin", QQSetQuickLoginHandler);
-router$b.post("/GetQQLoginInfo", getQQLoginInfoHandler);
-router$b.post("/GetQuickLoginQQ", getAutoLoginAccountHandler);
-router$b.post("/SetQuickLoginQQ", setAutoLoginAccountHandler);
-router$b.post("/RefreshQRcode", QQRefreshQRcodeHandler);
-router$b.post("/PasswordLogin", QQPasswordLoginHandler);
-router$b.post("/ResetDeviceID", QQResetDeviceIDHandler);
-router$b.post("/RestartNapCat", QQRestartNapCatHandler);
-router$b.post("/GetDeviceGUID", QQGetDeviceGUIDHandler);
-router$b.post("/SetDeviceGUID", QQSetDeviceGUIDHandler);
-router$b.post("/GetGUIDBackups", QQGetGUIDBackupsHandler);
-router$b.post("/RestoreGUIDBackup", QQRestoreGUIDBackupHandler);
-router$b.post("/CreateGUIDBackup", QQCreateGUIDBackupHandler);
+const router$c = Router();
+router$c.all("/GetQuickLoginList", QQGetQuickLoginListHandler);
+router$c.all("/GetQuickLoginListNew", QQGetLoginListNewHandler);
+router$c.post("/CheckLoginStatus", QQCheckLoginStatusHandler);
+router$c.post("/GetQQLoginQrcode", QQGetQRcodeHandler);
+router$c.post("/SetQuickLogin", QQSetQuickLoginHandler);
+router$c.post("/GetQQLoginInfo", getQQLoginInfoHandler);
+router$c.post("/GetQuickLoginQQ", getAutoLoginAccountHandler);
+router$c.post("/SetQuickLoginQQ", setAutoLoginAccountHandler);
+router$c.post("/RefreshQRcode", QQRefreshQRcodeHandler);
+router$c.post("/PasswordLogin", QQPasswordLoginHandler);
+router$c.post("/CaptchaLogin", QQCaptchaLoginHandler);
+router$c.post("/NewDeviceLogin", QQNewDeviceLoginHandler);
+router$c.post("/GetNewDeviceQRCode", QQGetNewDeviceQRCodeHandler);
+router$c.post("/PollNewDeviceQR", QQPollNewDeviceQRHandler);
+router$c.post("/ResetDeviceID", QQResetDeviceIDHandler);
+router$c.post("/RestartNapCat", QQRestartNapCatHandler);
+router$c.post("/GetDeviceGUID", QQGetDeviceGUIDHandler);
+router$c.post("/SetDeviceGUID", QQSetDeviceGUIDHandler);
+router$c.post("/GetGUIDBackups", QQGetGUIDBackupsHandler);
+router$c.post("/RestoreGUIDBackup", QQRestoreGUIDBackupHandler);
+router$c.post("/CreateGUIDBackup", QQCreateGUIDBackupHandler);
+router$c.post("/GetPlatformInfo", QQGetPlatformInfoHandler);
+router$c.post("/GetLinuxMAC", QQGetLinuxMACHandler);
+router$c.post("/SetLinuxMAC", QQSetLinuxMACHandler);
+router$c.post("/GetLinuxMachineId", QQGetLinuxMachineIdHandler);
+router$c.post("/ComputeLinuxGUID", QQComputeLinuxGUIDHandler);
+router$c.post("/GetLinuxMachineInfoBackups", QQGetLinuxMachineInfoBackupsHandler);
+router$c.post("/CreateLinuxMachineInfoBackup", QQCreateLinuxMachineInfoBackupHandler);
+router$c.post("/RestoreLinuxMachineInfoBackup", QQRestoreLinuxMachineInfoBackupHandler);
+router$c.post("/ResetLinuxDeviceID", QQResetLinuxDeviceIDHandler);
 
 /* ------------------------------------------------------------------------------------
 
@@ -79967,7 +78128,7 @@ const {
     __propKey,
     __setFunctionName,
     __metadata: __metadata$1,
-    __awaiter: __awaiter$3,
+    __awaiter: __awaiter$1,
     __generator: __generator$1,
     __exportStar: __exportStar$1,
     __createBinding: __createBinding$1,
@@ -91099,15 +89260,15 @@ const VerifyPasskeyAuthenticationHandler = async (req, res) => {
   }
 };
 
-const router$a = Router();
-router$a.post("/login", LoginHandler);
-router$a.post("/check", checkHandler);
-router$a.post("/logout", LogoutHandler);
-router$a.post("/update_token", UpdateTokenHandler);
-router$a.post("/passkey/generate-registration-options", GeneratePasskeyRegistrationOptionsHandler);
-router$a.post("/passkey/verify-registration", VerifyPasskeyRegistrationHandler);
-router$a.post("/passkey/generate-authentication-options", GeneratePasskeyAuthenticationOptionsHandler);
-router$a.post("/passkey/verify-authentication", VerifyPasskeyAuthenticationHandler);
+const router$b = Router();
+router$b.post("/login", LoginHandler);
+router$b.post("/check", checkHandler);
+router$b.post("/logout", LogoutHandler);
+router$b.post("/update_token", UpdateTokenHandler);
+router$b.post("/passkey/generate-registration-options", GeneratePasskeyRegistrationOptionsHandler);
+router$b.post("/passkey/verify-registration", VerifyPasskeyRegistrationHandler);
+router$b.post("/passkey/generate-authentication-options", GeneratePasskeyAuthenticationOptionsHandler);
+router$b.post("/passkey/verify-authentication", VerifyPasskeyAuthenticationHandler);
 
 class EventEmitter2 {
   _listeners = [];
@@ -92027,7 +90188,13 @@ class TerminalManager {
         }
         ws.on("message", (data) => {
           if (instance) {
-            const result = JSON.parse(data.toString());
+            let text;
+            if (Array.isArray(data)) {
+              text = Buffer.concat(data).toString();
+            } else {
+              text = data.toString();
+            }
+            const result = JSON.parse(text);
             if (result.type === "input") {
               instance.pty.write(result.data);
             }
@@ -92183,13 +90350,13 @@ const CloseTerminalHandler = (req, res) => {
   return sendSuccess(res, {});
 };
 
-const router$9 = Router();
-router$9.get("/GetLog", LogHandler);
-router$9.get("/GetLogList", LogListHandler);
-router$9.get("/GetLogRealTime", LogRealTimeHandler);
-router$9.get("/terminal/list", GetTerminalListHandler);
-router$9.post("/terminal/create", CreateTerminalHandler);
-router$9.post("/terminal/:id/close", CloseTerminalHandler);
+const router$a = Router();
+router$a.get("/GetLog", LogHandler);
+router$a.get("/GetLogList", LogListHandler);
+router$a.get("/GetLogRealTime", LogRealTimeHandler);
+router$a.get("/terminal/list", GetTerminalListHandler);
+router$a.post("/terminal/create", CreateTerminalHandler);
+router$a.post("/terminal/:id/close", CloseTerminalHandler);
 
 const GetNapCatVersion = (_, res) => {
   const data = WebUiDataRuntime.GetNapCatVersion();
@@ -92285,7 +90452,7 @@ const getAllReleasesHandler = async (req, res) => {
       },
       mirror: usedMirror
     });
-  } catch (error) {
+  } catch (_error) {
     res.status(500).json({ error: "Failed to fetch releases" });
   }
 };
@@ -92305,6 +90472,16 @@ const SetThemeConfigHandler = async (req, res) => {
 const GetMirrorsHandler = (_, res) => {
   const config = getMirrorConfig();
   sendSuccess(res, { mirrors: config.fileMirrors });
+};
+const GetNapCatFileHashHandler = (_, res) => {
+  try {
+    const filePath = path__default$1.join(webUiPathWrapper.binaryPath, "napcat.mjs");
+    const fileBuffer = fs__default.readFileSync(filePath);
+    const hash = crypto__default.createHash("sha512").update(fileBuffer).digest("hex");
+    sendSuccess(res, { hash, file: "napcat.mjs", algorithm: "sha512" });
+  } catch (error) {
+    sendError(res, `无法计算 napcat.mjs 的 hash：${error.message}`);
+  }
 };
 
 const StatusRealTimeHandler = async (req, res) => {
@@ -92337,16 +90514,17 @@ const GetProxyHandler = async (req, res) => {
   }
 };
 
-const router$8 = Router();
-router$8.get("/QQVersion", QQVersionHandler);
-router$8.get("/GetNapCatVersion", GetNapCatVersion);
-router$8.get("/getLatestTag", getLatestTagHandler);
-router$8.get("/getAllReleases", getAllReleasesHandler);
-router$8.get("/getMirrors", GetMirrorsHandler);
-router$8.get("/GetSysStatusRealTime", StatusRealTimeHandler);
-router$8.get("/proxy", GetProxyHandler);
-router$8.get("/Theme", GetThemeConfigHandler);
-router$8.post("/SetTheme", SetThemeConfigHandler);
+const router$9 = Router();
+router$9.get("/QQVersion", QQVersionHandler);
+router$9.get("/GetNapCatVersion", GetNapCatVersion);
+router$9.get("/getLatestTag", getLatestTagHandler);
+router$9.get("/getAllReleases", getAllReleasesHandler);
+router$9.get("/getMirrors", GetMirrorsHandler);
+router$9.get("/GetSysStatusRealTime", StatusRealTimeHandler);
+router$9.get("/proxy", GetProxyHandler);
+router$9.get("/Theme", GetThemeConfigHandler);
+router$9.post("/SetTheme", SetThemeConfigHandler);
+router$9.get("/GetNapCatFileHash", GetNapCatFileHashHandler);
 
 // source/headers.ts
 var SUPPORTED_DRAFT_VERSIONS = [
@@ -93786,7 +91964,7 @@ const CheckWebUIFontExistHandler = async (_req, res) => {
   }
 };
 
-const router$7 = Router();
+const router$8 = Router();
 const apiLimiter = lib_default({
   windowMs: 1 * 60 * 1e3,
   // 1分钟内
@@ -93796,23 +91974,23 @@ const apiLimiter = lib_default({
     xForwardedForHeader: false
   }
 });
-router$7.use(apiLimiter);
-router$7.get("/list", ListFilesHandler);
-router$7.post("/mkdir", CreateDirHandler);
-router$7.post("/delete", DeleteHandler);
-router$7.get("/read", ReadFileHandler);
-router$7.post("/write", WriteFileHandler);
-router$7.post("/create", CreateFileHandler);
-router$7.post("/batchDelete", BatchDeleteHandler);
-router$7.post("/rename", RenameHandler);
-router$7.post("/move", MoveHandler);
-router$7.post("/batchMove", BatchMoveHandler);
-router$7.post("/download", DownloadHandler);
-router$7.post("/batchDownload", BatchDownloadHandler);
-router$7.post("/upload", UploadHandler);
-router$7.post("/font/upload/webui", UploadWebUIFontHandler);
-router$7.post("/font/delete/webui", DeleteWebUIFontHandler);
-router$7.get("/font/exists/webui", CheckWebUIFontExistHandler);
+router$8.use(apiLimiter);
+router$8.get("/list", ListFilesHandler);
+router$8.post("/mkdir", CreateDirHandler);
+router$8.post("/delete", DeleteHandler);
+router$8.get("/read", ReadFileHandler);
+router$8.post("/write", WriteFileHandler);
+router$8.post("/create", CreateFileHandler);
+router$8.post("/batchDelete", BatchDeleteHandler);
+router$8.post("/rename", RenameHandler);
+router$8.post("/move", MoveHandler);
+router$8.post("/batchMove", BatchMoveHandler);
+router$8.post("/download", DownloadHandler);
+router$8.post("/batchDownload", BatchDownloadHandler);
+router$8.post("/upload", UploadHandler);
+router$8.post("/font/upload/webui", UploadWebUIFontHandler);
+router$8.post("/font/delete/webui", DeleteWebUIFontHandler);
+router$8.get("/font/exists/webui", CheckWebUIFontExistHandler);
 
 const GetWebUIConfigHandler = async (_, res) => {
   try {
@@ -94007,28 +92185,33 @@ const DeleteSSLCertHandler = async (_, res) => {
   }
 };
 
-const router$6 = Router();
-router$6.get("/GetConfig", GetWebUIConfigHandler);
-router$6.post("/UpdateConfig", UpdateWebUIConfigHandler);
-router$6.get("/GetDisableWebUI", GetDisableWebUIHandler);
-router$6.post("/UpdateDisableWebUI", UpdateDisableWebUIHandler);
-router$6.get("/GetClientIP", GetClientIPHandler);
-router$6.get("/GetSSLStatus", GetSSLStatusHandler);
-router$6.post("/UploadSSLCert", UploadSSLCertHandler);
-router$6.post("/DeleteSSLCert", DeleteSSLCertHandler);
+const router$7 = Router();
+router$7.get("/GetConfig", GetWebUIConfigHandler);
+router$7.post("/UpdateConfig", UpdateWebUIConfigHandler);
+router$7.get("/GetDisableWebUI", GetDisableWebUIHandler);
+router$7.post("/UpdateDisableWebUI", UpdateDisableWebUIHandler);
+router$7.get("/GetClientIP", GetClientIPHandler);
+router$7.get("/GetSSLStatus", GetSSLStatusHandler);
+router$7.post("/UploadSSLCert", UploadSSLCertHandler);
+router$7.post("/DeleteSSLCert", DeleteSSLCertHandler);
 
 const SKIP_UPDATE_FILES = [
   "NapCatWinBootMain.exe",
   "NapCatWinBootHook.dll"
 ];
+const PRESERVE_USER_CONFIG_RELATIVE_PATHS = /* @__PURE__ */ new Set([
+  path.normalize("config/napcat.json")
+]);
 function scanFilesRecursively(dirPath, basePath = dirPath) {
   const files = [];
   const items = fs.readdirSync(dirPath);
   for (const item of items) {
     const fullPath = path.join(dirPath, item);
     const relativePath = path.relative(basePath, fullPath);
-    const stat = fs.statSync(fullPath);
-    if (stat.isDirectory()) {
+    const stat = fs.lstatSync(fullPath);
+    if (stat.isSymbolicLink()) {
+      continue;
+    } else if (stat.isDirectory()) {
       files.push(...scanFilesRecursively(fullPath, basePath));
     } else if (stat.isFile()) {
       files.push({
@@ -94104,8 +92287,8 @@ const UpdateNapCatHandler = async (req, res) => {
           customMirror: mirror
         });
         webUiLogger?.log(`[NapCat Update] Using download URL: ${downloadUrl}`);
-      } catch (error) {
-        webUiLogger?.logWarn(`[NapCat Update] All nightly.link mirrors failed, using original URL`);
+      } catch (_error) {
+        webUiLogger?.logWarn("[NapCat Update] All nightly.link mirrors failed, using original URL");
         downloadUrl = baseUrl;
       }
     } else {
@@ -94163,10 +92346,20 @@ const UpdateNapCatHandler = async (req, res) => {
     try {
       const allFiles = scanFilesRecursively(sourcePath);
       const failedFiles = [];
+      const resolvedBinaryPath = path.resolve(webUiPathWrapper.binaryPath);
       for (const fileInfo of allFiles) {
-        const targetFilePath = path.join(webUiPathWrapper.binaryPath, fileInfo.relativePath);
+        const targetFilePath = path.resolve(webUiPathWrapper.binaryPath, fileInfo.relativePath);
+        if (!targetFilePath.startsWith(resolvedBinaryPath + path.sep)) {
+          webUiLogger?.logWarn(`[NapCat Update] Skipping suspicious path: ${fileInfo.relativePath}`);
+          continue;
+        }
+        const normalizedRelativePath = path.normalize(fileInfo.relativePath);
         if (SKIP_UPDATE_FILES.includes(path.basename(fileInfo.relativePath))) {
           webUiLogger?.log(`[NapCat Update] Skipping update for ${fileInfo.relativePath}`);
+          continue;
+        }
+        if (PRESERVE_USER_CONFIG_RELATIVE_PATHS.has(normalizedRelativePath) && fs.existsSync(targetFilePath)) {
+          webUiLogger?.log(`[NapCat Update] Preserving existing user config: ${fileInfo.relativePath}`);
           continue;
         }
         try {
@@ -94258,8 +92451,8 @@ async function applyPendingUpdates(webUiPathWrapper2, logger) {
   }
 }
 
-const router$5 = Router();
-router$5.post("/update", UpdateNapCatHandler);
+const router$6 = Router();
+router$6.post("/update", UpdateNapCatHandler);
 
 var EventType = /* @__PURE__ */ ((EventType2) => {
   EventType2["META"] = "meta_event";
@@ -94432,7 +92625,7 @@ class OB11WebSocketClientAdapter extends IOB11NetworkAdapter {
   async tryConnect() {
     if (!this.connection && this.isEnable) {
       let isClosedByError = false;
-      this.connection = new WebSocket(this.config.url, {
+      const wsOptions = {
         maxPayload: 50 * 1024 * 1024,
         // 50 MB
         handshakeTimeout: 2e3,
@@ -94444,10 +92637,11 @@ class OB11WebSocketClientAdapter extends IOB11NetworkAdapter {
           // 为koishi adpter适配
           "User-Agent": "OneBot/11"
         }
-      });
-      this.connection.on("ping", () => {
-        this.connection?.pong();
-      });
+      };
+      if (this.config.verifyCertificate !== void 0) {
+        wsOptions.rejectUnauthorized = this.config.verifyCertificate;
+      }
+      this.connection = new WebSocket(this.config.url, wsOptions);
       this.connection.on("pong", () => {
       });
       this.connection.on("open", () => {
@@ -95308,207 +93502,28 @@ var onFinishedExports = requireOnFinished();
 var typeIsExports = requireTypeIs();
 const typeis = /*@__PURE__*/getDefaultExportFromCjs(typeIsExports);
 
-const E_CANCELED = new Error('request for lock canceled');
-
-var __awaiter$2 = function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-class Semaphore {
-    constructor(_value, _cancelError = E_CANCELED) {
-        this._value = _value;
-        this._cancelError = _cancelError;
-        this._queue = [];
-        this._weightedWaiters = [];
-    }
-    acquire(weight = 1, priority = 0) {
-        if (weight <= 0)
-            throw new Error(`invalid weight ${weight}: must be positive`);
-        return new Promise((resolve, reject) => {
-            const task = { resolve, reject, weight, priority };
-            const i = findIndexFromEnd(this._queue, (other) => priority <= other.priority);
-            if (i === -1 && weight <= this._value) {
-                // Needs immediate dispatch, skip the queue
-                this._dispatchItem(task);
-            }
-            else {
-                this._queue.splice(i + 1, 0, task);
-            }
-        });
-    }
-    runExclusive(callback_1) {
-        return __awaiter$2(this, arguments, void 0, function* (callback, weight = 1, priority = 0) {
-            const [value, release] = yield this.acquire(weight, priority);
-            try {
-                return yield callback(value);
-            }
-            finally {
-                release();
-            }
-        });
-    }
-    waitForUnlock(weight = 1, priority = 0) {
-        if (weight <= 0)
-            throw new Error(`invalid weight ${weight}: must be positive`);
-        if (this._couldLockImmediately(weight, priority)) {
-            return Promise.resolve();
-        }
-        else {
-            return new Promise((resolve) => {
-                if (!this._weightedWaiters[weight - 1])
-                    this._weightedWaiters[weight - 1] = [];
-                insertSorted(this._weightedWaiters[weight - 1], { resolve, priority });
-            });
-        }
-    }
-    isLocked() {
-        return this._value <= 0;
-    }
-    getValue() {
-        return this._value;
-    }
-    setValue(value) {
-        this._value = value;
-        this._dispatchQueue();
-    }
-    release(weight = 1) {
-        if (weight <= 0)
-            throw new Error(`invalid weight ${weight}: must be positive`);
-        this._value += weight;
-        this._dispatchQueue();
-    }
-    cancel() {
-        this._queue.forEach((entry) => entry.reject(this._cancelError));
-        this._queue = [];
-    }
-    _dispatchQueue() {
-        this._drainUnlockWaiters();
-        while (this._queue.length > 0 && this._queue[0].weight <= this._value) {
-            this._dispatchItem(this._queue.shift());
-            this._drainUnlockWaiters();
-        }
-    }
-    _dispatchItem(item) {
-        const previousValue = this._value;
-        this._value -= item.weight;
-        item.resolve([previousValue, this._newReleaser(item.weight)]);
-    }
-    _newReleaser(weight) {
-        let called = false;
-        return () => {
-            if (called)
-                return;
-            called = true;
-            this.release(weight);
-        };
-    }
-    _drainUnlockWaiters() {
-        if (this._queue.length === 0) {
-            for (let weight = this._value; weight > 0; weight--) {
-                const waiters = this._weightedWaiters[weight - 1];
-                if (!waiters)
-                    continue;
-                waiters.forEach((waiter) => waiter.resolve());
-                this._weightedWaiters[weight - 1] = [];
-            }
-        }
-        else {
-            const queuedPriority = this._queue[0].priority;
-            for (let weight = this._value; weight > 0; weight--) {
-                const waiters = this._weightedWaiters[weight - 1];
-                if (!waiters)
-                    continue;
-                const i = waiters.findIndex((waiter) => waiter.priority <= queuedPriority);
-                (i === -1 ? waiters : waiters.splice(0, i))
-                    .forEach((waiter => waiter.resolve()));
-            }
-        }
-    }
-    _couldLockImmediately(weight, priority) {
-        return (this._queue.length === 0 || this._queue[0].priority < priority) &&
-            weight <= this._value;
-    }
-}
-function insertSorted(a, v) {
-    const i = findIndexFromEnd(a, (other) => v.priority <= other.priority);
-    a.splice(i + 1, 0, v);
-}
-function findIndexFromEnd(a, predicate) {
-    for (let i = a.length - 1; i >= 0; i--) {
-        if (predicate(a[i])) {
-            return i;
-        }
-    }
-    return -1;
-}
-
-var __awaiter$1 = function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-class Mutex {
-    constructor(cancelError) {
-        this._semaphore = new Semaphore(1, cancelError);
-    }
-    acquire() {
-        return __awaiter$1(this, arguments, void 0, function* (priority = 0) {
-            const [, releaser] = yield this._semaphore.acquire(1, priority);
-            return releaser;
-        });
-    }
-    runExclusive(callback, priority = 0) {
-        return this._semaphore.runExclusive(() => callback(), 1, priority);
-    }
-    isLocked() {
-        return this._semaphore.isLocked();
-    }
-    waitForUnlock(priority = 0) {
-        return this._semaphore.waitForUnlock(1, priority);
-    }
-    release() {
-        if (this._semaphore.isLocked())
-            this._semaphore.release();
-    }
-    cancel() {
-        return this._semaphore.cancel();
-    }
-}
-
 class OB11HttpServerAdapter extends IOB11NetworkAdapter {
   app;
   server;
   wsServer;
   wsClients = [];
-  wsClientsMutex = new Mutex();
   heartbeatIntervalId = null;
   wsClientWithEvent = [];
   get isActive() {
     return this.isEnable && this.wsClientWithEvent.length > 0;
   }
   async onEvent(event) {
-    this.wsClientsMutex.runExclusive(async () => {
-      const promises = this.wsClientWithEvent.map((wsClient) => {
-        return new Promise((resolve, reject) => {
-          if (wsClient.readyState === WebSocket.OPEN) {
-            wsClient.send(JSON.stringify(event));
-            resolve();
-          } else {
-            reject(new Error("WebSocket is not open"));
-          }
-        });
+    const promises = this.wsClientWithEvent.map((wsClient) => {
+      return new Promise((resolve, reject) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify(event));
+          resolve();
+        } else {
+          reject(new Error("WebSocket is not open"));
+        }
       });
-      await Promise.allSettled(promises);
     });
+    await Promise.allSettled(promises);
   }
   open() {
     try {
@@ -95529,13 +93544,9 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
     this.server?.close();
     this.app = void 0;
     this.stopHeartbeat();
-    await this.wsClientsMutex.runExclusive(async () => {
-      this.wsClients.forEach((wsClient) => {
-        wsClient.close();
-      });
-      this.wsClients = [];
-      this.wsClientWithEvent = [];
-    });
+    this.wsClients.forEach((wsClient) => wsClient.close());
+    this.wsClients = [];
+    this.wsClientWithEvent = [];
     this.wsServer?.close();
   }
   initializeServer() {
@@ -95610,35 +93621,28 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
       wsClient.on("message", (message) => {
         this.handleWSMessage(wsClient, message).then().catch((e) => this.logger.logError(e));
       });
-      wsClient.on("ping", () => {
-        wsClient.pong();
-      });
       wsClient.on("pong", () => {
       });
       wsClient.once("close", () => {
-        this.wsClientsMutex.runExclusive(async () => {
-          const NormolIndex = this.wsClients.indexOf(wsClient);
-          if (NormolIndex !== -1) {
-            this.wsClients.splice(NormolIndex, 1);
-          }
-          const EventIndex = this.wsClientWithEvent.indexOf(wsClient);
-          if (EventIndex !== -1) {
-            this.wsClientWithEvent.splice(EventIndex, 1);
-          }
-          if (this.wsClientWithEvent.length === 0) {
-            this.stopHeartbeat();
-          }
-        });
-      });
-      await this.wsClientsMutex.runExclusive(async () => {
-        if (!isApiConnect) {
-          this.wsClientWithEvent.push(wsClient);
+        const NormolIndex = this.wsClients.indexOf(wsClient);
+        if (NormolIndex !== -1) {
+          this.wsClients.splice(NormolIndex, 1);
         }
-        this.wsClients.push(wsClient);
-        if (this.wsClientWithEvent.length > 0) {
-          this.startHeartbeat();
+        const EventIndex = this.wsClientWithEvent.indexOf(wsClient);
+        if (EventIndex !== -1) {
+          this.wsClientWithEvent.splice(EventIndex, 1);
+        }
+        if (this.wsClientWithEvent.length === 0) {
+          this.stopHeartbeat();
         }
       });
+      if (!isApiConnect) {
+        this.wsClientWithEvent.push(wsClient);
+      }
+      this.wsClients.push(wsClient);
+      if (this.wsClientWithEvent.length > 0) {
+        this.startHeartbeat();
+      }
     }).on("error", (err) => this.logger.log("[OneBot] [HTTP WebSocket] Server Error:", err.message));
   }
   connectEvent(core, wsClient) {
@@ -95651,12 +93655,10 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
   startHeartbeat() {
     if (this.heartbeatIntervalId) return;
     this.heartbeatIntervalId = setInterval(() => {
-      this.wsClientsMutex.runExclusive(async () => {
-        this.wsClientWithEvent.forEach((wsClient) => {
-          if (wsClient.readyState === WebSocket.OPEN) {
-            wsClient.send(JSON.stringify(new OB11HeartbeatEvent(this.core, 3e4, this.core.selfInfo.online ?? true, true)));
-          }
-        });
+      this.wsClientWithEvent.forEach((wsClient) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify(new OB11HeartbeatEvent(this.core, 3e4, this.core.selfInfo.online ?? true, true)));
+        }
       });
     }, 3e4);
   }
@@ -95790,7 +93792,6 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
 class OB11WebSocketServerAdapter extends IOB11NetworkAdapter {
   wsServer;
   wsClients = [];
-  wsClientsMutex = new Mutex();
   heartbeatIntervalId = null;
   wsClientWithEvent = [];
   get isActive() {
@@ -95824,35 +93825,28 @@ class OB11WebSocketServerAdapter extends IOB11NetworkAdapter {
       wsClient.on("message", (message) => {
         this.handleMessage(wsClient, message).then().catch((e) => this.logger.logError(e));
       });
-      wsClient.on("ping", () => {
-        wsClient.pong();
-      });
       wsClient.on("pong", () => {
       });
       wsClient.once("close", () => {
-        this.wsClientsMutex.runExclusive(async () => {
-          const NormolIndex = this.wsClients.indexOf(wsClient);
-          if (NormolIndex !== -1) {
-            this.wsClients.splice(NormolIndex, 1);
-          }
-          const EventIndex = this.wsClientWithEvent.indexOf(wsClient);
-          if (EventIndex !== -1) {
-            this.wsClientWithEvent.splice(EventIndex, 1);
-          }
-          if (this.wsClientWithEvent.length === 0) {
-            this.stopHeartbeat();
-          }
-        });
-      });
-      await this.wsClientsMutex.runExclusive(async () => {
-        if (!isApiConnect) {
-          this.wsClientWithEvent.push(wsClient);
+        const NormolIndex = this.wsClients.indexOf(wsClient);
+        if (NormolIndex !== -1) {
+          this.wsClients.splice(NormolIndex, 1);
         }
-        this.wsClients.push(wsClient);
-        if (this.wsClientWithEvent.length > 0) {
-          this.startHeartbeat();
+        const EventIndex = this.wsClientWithEvent.indexOf(wsClient);
+        if (EventIndex !== -1) {
+          this.wsClientWithEvent.splice(EventIndex, 1);
+        }
+        if (this.wsClientWithEvent.length === 0) {
+          this.stopHeartbeat();
         }
       });
+      if (!isApiConnect) {
+        this.wsClientWithEvent.push(wsClient);
+      }
+      this.wsClients.push(wsClient);
+      if (this.wsClientWithEvent.length > 0) {
+        this.startHeartbeat();
+      }
     }).on("error", (err) => this.logger.log("[OneBot] [WebSocket Server] Server Error:", err.message));
   }
   connectEvent(core, wsClient) {
@@ -95863,19 +93857,17 @@ class OB11WebSocketServerAdapter extends IOB11NetworkAdapter {
     }
   }
   async onEvent(event) {
-    this.wsClientsMutex.runExclusive(async () => {
-      const promises = this.wsClientWithEvent.map((wsClient) => {
-        return new Promise((resolve, reject) => {
-          if (wsClient.readyState === WebSocket.OPEN) {
-            wsClient.send(JSON.stringify(event));
-            resolve();
-          } else {
-            reject(new Error("WebSocket is not open"));
-          }
-        });
+    const promises = this.wsClientWithEvent.map((wsClient) => {
+      return new Promise((resolve, reject) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify(event));
+          resolve();
+        } else {
+          reject(new Error("WebSocket is not open"));
+        }
       });
-      await Promise.allSettled(promises);
     });
+    await Promise.allSettled(promises);
   }
   open() {
     if (this.isEnable) {
@@ -95896,23 +93888,17 @@ class OB11WebSocketServerAdapter extends IOB11NetworkAdapter {
       }
     });
     this.stopHeartbeat();
-    await this.wsClientsMutex.runExclusive(async () => {
-      this.wsClients.forEach((wsClient) => {
-        wsClient.close();
-      });
-      this.wsClients = [];
-      this.wsClientWithEvent = [];
-    });
+    this.wsClients.forEach((wsClient) => wsClient.close());
+    this.wsClients = [];
+    this.wsClientWithEvent = [];
   }
   startHeartbeat() {
     if (this.heartbeatIntervalId || this.config.heartInterval <= 0) return;
     this.heartbeatIntervalId = setInterval(() => {
-      this.wsClientsMutex.runExclusive(async () => {
-        this.wsClientWithEvent.forEach((wsClient) => {
-          if (wsClient.readyState === WebSocket.OPEN) {
-            wsClient.send(JSON.stringify(new OB11HeartbeatEvent(this.core, this.config.heartInterval, this.core.selfInfo.online ?? true, true)));
-          }
-        });
+      this.wsClientWithEvent.forEach((wsClient) => {
+        if (wsClient.readyState === WebSocket.OPEN) {
+          wsClient.send(JSON.stringify(new OB11HeartbeatEvent(this.core, this.config.heartInterval, this.core.selfInfo.online ?? true, true)));
+        }
       });
     }, this.config.heartInterval);
   }
@@ -96095,9 +94081,9 @@ class OB11NetworkManager {
   }
 }
 
-const router$4 = Router();
+const router$5 = Router();
 const DEFAULT_ADAPTER_NAME = "debug-primary";
-router$4.get("/schemas", async (_req, res) => {
+router$5.get("/schemas", async (_req, res) => {
   try {
     const obContext = WebUiDataRuntime.getOneBotContext();
     if (!obContext) {
@@ -96212,7 +94198,7 @@ class DebugAdapter extends IOB11NetworkAdapter {
       action: ActionName.Unknown,
       params: {}
     };
-    let echo = void 0;
+    let echo;
     try {
       receiveData = lib$2.parse(message.toString());
       echo = receiveData.echo;
@@ -96326,7 +94312,7 @@ class DebugAdapterManager {
   }
 }
 const debugAdapterManager = new DebugAdapterManager();
-router$4.post("/create", async (_req, res) => {
+router$5.post("/create", async (_req, res) => {
   try {
     const adapter = debugAdapterManager.getOrCreateAdapter();
     sendSuccess(res, {
@@ -96341,7 +94327,7 @@ router$4.post("/create", async (_req, res) => {
 });
 const handleCallApi = async (req, res) => {
   try {
-    let adapterName = req.params["adapterName"] || req.body.adapterName || DEFAULT_ADAPTER_NAME;
+    const adapterName = req.params["adapterName"] || req.body.adapterName || DEFAULT_ADAPTER_NAME;
     let adapter = debugAdapterManager.getAdapter(adapterName);
     if (!adapter && adapterName === DEFAULT_ADAPTER_NAME) {
       adapter = debugAdapterManager.getOrCreateAdapter();
@@ -96357,9 +94343,9 @@ const handleCallApi = async (req, res) => {
     sendError(res, err.message);
   }
 };
-router$4.post("/call/:adapterName", handleCallApi);
-router$4.post("/call", handleCallApi);
-router$4.post("/close/:adapterName", async (req, res) => {
+router$5.post("/call/:adapterName", handleCallApi);
+router$5.post("/call", handleCallApi);
+router$5.post("/close/:adapterName", async (req, res) => {
   try {
     const { adapterName } = req.params;
     if (!adapterName) {
@@ -96438,8 +94424,8 @@ async function RestartProcessHandler(_req, res) {
   }
 }
 
-const router$3 = Router();
-router$3.post("/Restart", RestartProcessHandler);
+const router$4 = Router();
+router$4.post("/Restart", RestartProcessHandler);
 
 class NapCatConfig {
   static text(key, label, defaultValue, description, reactive) {
@@ -96695,7 +94681,7 @@ class PluginLoader {
           if (pkg.name === pluginId) {
             return item.name;
           }
-        } catch (e) {
+        } catch (_e) {
         }
       }
       if (item.name === pluginId) {
@@ -97084,8 +95070,11 @@ class OB11PluginMangerAdapter extends IOB11NetworkAdapter {
    * 创建插件上下文
    */
   createPluginContext(entry) {
-    const dataPath = path__default$1.join(entry.pluginPath, "data");
+    const dataPath = path__default$1.join(this.core.context.pathWrapper.configPath, "plugins", entry.id);
     const configPath = path__default$1.join(dataPath, "config.json");
+    if (!fs__default.existsSync(dataPath)) {
+      fs__default.mkdirSync(dataPath, { recursive: true });
+    }
     const pluginPrefix = `[Plugin: ${entry.id}]`;
     const coreLogger = this.logger;
     const pluginLogger = {
@@ -97216,7 +95205,7 @@ class OB11PluginMangerAdapter extends IOB11NetworkAdapter {
       throw new Error(`Plugin ${pluginId} not found`);
     }
     const pluginPath = entry.pluginPath;
-    const dataPath = path__default$1.join(pluginPath, "data");
+    const dataPath = path__default$1.join(this.core.context.pathWrapper.configPath, "plugins", pluginId);
     if (entry.loaded) {
       await this.unloadPlugin(entry);
     }
@@ -97275,11 +95264,7 @@ class OB11PluginMangerAdapter extends IOB11NetworkAdapter {
    * 获取插件数据目录路径
    */
   getPluginDataPath(pluginId) {
-    const entry = this.plugins.get(pluginId);
-    if (!entry) {
-      throw new Error(`Plugin ${pluginId} not found`);
-    }
-    return path__default$1.join(entry.pluginPath, "data");
+    return path__default$1.join(this.core.context.pathWrapper.configPath, "plugins", pluginId);
   }
   /**
    * 获取插件配置文件路径
@@ -97353,6 +95338,32 @@ class OB11PluginMangerAdapter extends IOB11NetworkAdapter {
   }
 }
 
+function getPluginIconUrl(pluginId, pluginPath, iconField) {
+  if (iconField) {
+    const iconPath = path__default$1.join(pluginPath, iconField);
+    if (fs__default.existsSync(iconPath)) {
+      return `/api/Plugin/Icon/${encodeURIComponent(pluginId)}`;
+    }
+  }
+  const cachedIcon = path__default$1.join(webUiPathWrapper.configPath, "plugins", pluginId, "icon.png");
+  if (fs__default.existsSync(cachedIcon)) {
+    return `/api/Plugin/Icon/${encodeURIComponent(pluginId)}`;
+  }
+  return void 0;
+}
+function findPluginIconPath(pluginId, pluginPath, iconField) {
+  if (iconField) {
+    const iconPath = path__default$1.join(pluginPath, iconField);
+    if (fs__default.existsSync(iconPath)) {
+      return iconPath;
+    }
+  }
+  const cachedIcon = path__default$1.join(webUiPathWrapper.configPath, "plugins", pluginId, "icon.png");
+  if (fs__default.existsSync(cachedIcon)) {
+    return cachedIcon;
+  }
+  return void 0;
+}
 const getPluginManager$1 = () => {
   const ob11 = WebUiDataRuntime.getOneBotContext();
   if (!ob11) return null;
@@ -97393,7 +95404,7 @@ const GetPluginListHandler = async (_req, res) => {
     return sendSuccess(res, { plugins: [], pluginManagerNotFound: true, extensionPages: [] });
   }
   const loadedPlugins = pluginManager.getAllPlugins();
-  const AllPlugins = new Array();
+  const AllPlugins = [];
   const extensionPages = [];
   for (const p of loadedPlugins) {
     let status;
@@ -97418,7 +95429,8 @@ const GetPluginListHandler = async (_req, res) => {
       hasConfig: !!(p.runtime.module?.plugin_config_schema || p.runtime.module?.plugin_config_ui),
       hasPages,
       homepage: p.packageJson?.homepage,
-      repository: typeof p.packageJson?.repository === "string" ? p.packageJson.repository : p.packageJson?.repository?.url
+      repository: typeof p.packageJson?.repository === "string" ? p.packageJson.repository : p.packageJson?.repository?.url,
+      icon: getPluginIconUrl(p.id, p.pluginPath, p.packageJson?.icon)
     });
     if (hasPages && pluginRouter) {
       const pages = pluginRouter.getPages();
@@ -97481,7 +95493,7 @@ const GetPluginConfigHandler = async (req, res) => {
   if (plugin.runtime.module?.plugin_get_config && plugin.runtime.context) {
     try {
       config = await plugin.runtime.module?.plugin_get_config(plugin.runtime.context);
-    } catch (e) {
+    } catch (_e) {
     }
   } else {
     try {
@@ -97489,7 +95501,7 @@ const GetPluginConfigHandler = async (req, res) => {
       if (fs__default.existsSync(configPath)) {
         config = JSON.parse(fs__default.readFileSync(configPath, "utf-8"));
       }
-    } catch (e) {
+    } catch (_e) {
     }
   }
   const schema = plugin.runtime.module?.plugin_config_schema || plugin.runtime.module?.plugin_config_ui || [];
@@ -97524,7 +95536,7 @@ const PluginConfigSSEHandler = (req, res) => {
   if (initialConfigStr) {
     try {
       currentConfig = JSON.parse(initialConfigStr);
-    } catch (e) {
+    } catch (_e) {
     }
   }
   const sendSSE = (event, data) => {
@@ -97587,7 +95599,7 @@ const PluginConfigSSEHandler = (req, res) => {
     if (session?.cleanup) {
       try {
         session.cleanup();
-      } catch (e) {
+      } catch (_e) {
       }
     }
     activeConfigSessions.delete(sessionId);
@@ -97610,43 +95622,37 @@ const PluginConfigChangeHandler = async (req, res) => {
   if (plugin.runtime.module?.plugin_on_config_change) {
     const uiController = {
       updateSchema: (schema) => {
-        session.res.write(`event: schema
-`);
+        session.res.write("event: schema\n");
         session.res.write(`data: ${JSON.stringify({ type: "full", schema })}
 
 `);
       },
       updateField: (fieldKey, field) => {
-        session.res.write(`event: schema
-`);
+        session.res.write("event: schema\n");
         session.res.write(`data: ${JSON.stringify({ type: "updateField", key: fieldKey, field })}
 
 `);
       },
       removeField: (fieldKey) => {
-        session.res.write(`event: schema
-`);
+        session.res.write("event: schema\n");
         session.res.write(`data: ${JSON.stringify({ type: "removeField", key: fieldKey })}
 
 `);
       },
       addField: (field, afterKey) => {
-        session.res.write(`event: schema
-`);
+        session.res.write("event: schema\n");
         session.res.write(`data: ${JSON.stringify({ type: "addField", field, afterKey })}
 
 `);
       },
       showField: (fieldKey) => {
-        session.res.write(`event: schema
-`);
+        session.res.write("event: schema\n");
         session.res.write(`data: ${JSON.stringify({ type: "showField", key: fieldKey })}
 
 `);
       },
       hideField: (fieldKey) => {
-        session.res.write(`event: schema
-`);
+        session.res.write("event: schema\n");
         session.res.write(`data: ${JSON.stringify({ type: "hideField", key: fieldKey })}
 
 `);
@@ -97664,8 +95670,7 @@ const PluginConfigChangeHandler = async (req, res) => {
         );
       }
     } catch (e) {
-      session.res.write(`event: error
-`);
+      session.res.write("event: error\n");
       session.res.write(`data: ${JSON.stringify({ message: e.message })}
 
 `);
@@ -97704,100 +95709,18 @@ const SetPluginConfigHandler = async (req, res) => {
     return sendError(res, "Plugin does not support config update");
   }
 };
-const ImportLocalPluginHandler = async (req, res) => {
+const GetPluginIconHandler = async (req, res) => {
+  const pluginId = req.params["pluginId"];
+  if (!pluginId) return sendError(res, "Plugin ID is required");
   const pluginManager = getPluginManager$1();
-  if (!pluginManager) {
-    return sendError(res, "Plugin Manager not found");
+  if (!pluginManager) return sendError(res, "Plugin Manager not found");
+  const plugin = pluginManager.getPluginInfo(pluginId);
+  if (!plugin) return sendError(res, "Plugin not found");
+  const iconPath = findPluginIconPath(pluginId, plugin.pluginPath, plugin.packageJson?.icon);
+  if (!iconPath) {
+    return res.status(404).json({ code: -1, message: "Icon not found" });
   }
-  const file = req.file;
-  if (!file) {
-    return sendError(res, "No file uploaded");
-  }
-  const PLUGINS_DIR = webUiPathWrapper.pluginPath;
-  if (!fs__default.existsSync(PLUGINS_DIR)) {
-    fs__default.mkdirSync(PLUGINS_DIR, { recursive: true });
-  }
-  const tempZipPath = file.path;
-  try {
-    const tempExtractDir = path__default$1.join(PLUGINS_DIR, `_temp_extract_${Date.now()}`);
-    fs__default.mkdirSync(tempExtractDir, { recursive: true });
-    await compressing.zip.uncompress(tempZipPath, tempExtractDir);
-    const extractedItems = fs__default.readdirSync(tempExtractDir);
-    let pluginSourceDir;
-    let pluginId;
-    const hasPackageJson = extractedItems.includes("package.json");
-    const hasIndexFile = extractedItems.some(
-      (item) => ["index.js", "index.mjs", "main.js", "main.mjs"].includes(item)
-    );
-    if (hasPackageJson || hasIndexFile) {
-      pluginSourceDir = tempExtractDir;
-      const packageJsonPath = path__default$1.join(tempExtractDir, "package.json");
-      if (fs__default.existsSync(packageJsonPath)) {
-        try {
-          const pkg = JSON.parse(fs__default.readFileSync(packageJsonPath, "utf-8"));
-          pluginId = pkg.name || path__default$1.basename(file.originalname, ".zip");
-        } catch {
-          pluginId = path__default$1.basename(file.originalname, ".zip");
-        }
-      } else {
-        pluginId = path__default$1.basename(file.originalname, ".zip");
-      }
-    } else if (extractedItems.length === 1 && fs__default.statSync(path__default$1.join(tempExtractDir, extractedItems[0])).isDirectory()) {
-      const subDir = extractedItems[0];
-      pluginSourceDir = path__default$1.join(tempExtractDir, subDir);
-      const packageJsonPath = path__default$1.join(pluginSourceDir, "package.json");
-      if (fs__default.existsSync(packageJsonPath)) {
-        try {
-          const pkg = JSON.parse(fs__default.readFileSync(packageJsonPath, "utf-8"));
-          pluginId = pkg.name || subDir;
-        } catch {
-          pluginId = subDir;
-        }
-      } else {
-        pluginId = subDir;
-      }
-    } else {
-      fs__default.rmSync(tempExtractDir, { recursive: true, force: true });
-      fs__default.unlinkSync(tempZipPath);
-      return sendError(res, "Invalid plugin package structure");
-    }
-    const targetPluginDir = path__default$1.join(PLUGINS_DIR, pluginId);
-    if (fs__default.existsSync(targetPluginDir)) {
-      const existingPlugin = pluginManager.getPluginInfo(pluginId);
-      if (existingPlugin && existingPlugin.loaded) {
-        await pluginManager.unregisterPlugin(pluginId);
-      }
-      fs__default.rmSync(targetPluginDir, { recursive: true, force: true });
-    }
-    if (pluginSourceDir === tempExtractDir) {
-      fs__default.renameSync(tempExtractDir, targetPluginDir);
-    } else {
-      fs__default.renameSync(pluginSourceDir, targetPluginDir);
-      fs__default.rmSync(tempExtractDir, { recursive: true, force: true });
-    }
-    if (fs__default.existsSync(tempZipPath)) {
-      fs__default.unlinkSync(tempZipPath);
-    }
-    const loaded = await pluginManager.loadPluginById(pluginId);
-    if (loaded) {
-      return sendSuccess(res, {
-        message: "Plugin imported and loaded successfully",
-        pluginId,
-        installPath: targetPluginDir
-      });
-    } else {
-      return sendSuccess(res, {
-        message: "Plugin imported but failed to load (check plugin structure)",
-        pluginId,
-        installPath: targetPluginDir
-      });
-    }
-  } catch (e) {
-    if (fs__default.existsSync(tempZipPath)) {
-      fs__default.unlinkSync(tempZipPath);
-    }
-    return sendError(res, "Failed to import plugin: " + e.message);
-  }
+  return res.sendFile(iconPath);
 };
 
 const getPluginManager = () => {
@@ -97986,6 +95909,70 @@ async function extractPlugin(zipPath, pluginId) {
   const files = fs.readdirSync(pluginDir);
   console.log("[extractPlugin] Extracted files:", files);
 }
+async function cachePluginIcon(pluginId, storePlugin) {
+  const PLUGINS_DIR = getPluginsDir();
+  const pluginDir = path.join(PLUGINS_DIR, pluginId);
+  const configDir = path.join(webUiPathWrapper.configPath, "plugins", pluginId);
+  const packageJsonPath = path.join(pluginDir, "package.json");
+  if (fs.existsSync(packageJsonPath)) {
+    try {
+      const pkg = JSON.parse(fs.readFileSync(packageJsonPath, "utf-8"));
+      if (pkg.icon) {
+        const iconPath = path.join(pluginDir, pkg.icon);
+        if (fs.existsSync(iconPath)) {
+          return;
+        }
+      }
+    } catch {
+    }
+  }
+  if (fs.existsSync(path.join(configDir, "icon.png"))) {
+    return;
+  }
+  let avatarUrl;
+  if (storePlugin.downloadUrl) {
+    try {
+      const url = new URL(storePlugin.downloadUrl);
+      if (url.hostname === "github.com" || url.hostname === "www.github.com") {
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (parts.length >= 1) {
+          avatarUrl = `https://github.com/${parts[0]}.png?size=128`;
+        }
+      }
+    } catch {
+    }
+  }
+  if (!avatarUrl && storePlugin.homepage) {
+    try {
+      const url = new URL(storePlugin.homepage);
+      if (url.hostname === "github.com" || url.hostname === "www.github.com") {
+        const parts = url.pathname.split("/").filter(Boolean);
+        if (parts.length >= 1) {
+          avatarUrl = `https://github.com/${parts[0]}.png?size=128`;
+        }
+      }
+    } catch {
+    }
+  }
+  if (!avatarUrl) return;
+  try {
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    const response = await fetch(avatarUrl, {
+      headers: { "User-Agent": "NapCat-WebUI" },
+      signal: AbortSignal.timeout(15e3),
+      redirect: "follow"
+    });
+    if (!response.ok || !response.body) return;
+    const iconPath = path.join(configDir, "icon.png");
+    const fileStream = createWriteStream(iconPath);
+    await pipeline$1(response.body, fileStream);
+    console.log(`[cachePluginIcon] Cached icon for ${pluginId} at ${iconPath}`);
+  } catch (e) {
+    console.warn(`[cachePluginIcon] Failed to cache icon for ${pluginId}:`, e.message);
+  }
+}
 const GetPluginStoreListHandler = async (req, res) => {
   try {
     const forceRefresh = req.query["forceRefresh"] === "true";
@@ -98040,6 +96027,11 @@ const InstallPluginFromStoreHandler = async (req, res) => {
         } else {
           await pluginManager.loadPluginById(id);
         }
+      }
+      try {
+        await cachePluginIcon(id, plugin);
+      } catch (e) {
+        console.warn(`[InstallPlugin] Failed to cache icon for ${id}, skipping:`, e.message);
       }
       return sendSuccess(res, {
         message: "Plugin installed successfully",
@@ -98142,6 +96134,9 @@ const InstallPluginFromStoreSSEHandler = async (req, res) => {
         }
       }
       sendProgress("安装成功！", 100);
+      cachePluginIcon(id, plugin).catch((e) => {
+        console.warn(`[cachePluginIcon] Failed to cache icon for ${id}:`, e.message);
+      });
       res.write(`data: ${JSON.stringify({
         success: true,
         message: "Plugin installed successfully",
@@ -98174,44 +96169,21 @@ const uploadDir = path__default$1.join(os__default.tmpdir(), "napcat-plugin-uplo
 if (!fs__default.existsSync(uploadDir)) {
   fs__default.mkdirSync(uploadDir, { recursive: true });
 }
-const storage = multer.diskStorage({
-  destination: (_req, _file, cb) => {
-    cb(null, uploadDir);
-  },
-  filename: (_req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
-  }
-});
-const upload = multer({
-  storage,
-  limits: {
-    fileSize: 50 * 1024 * 1024
-    // 50MB 限制
-  },
-  fileFilter: (_req, file, cb) => {
-    if (file.mimetype === "application/zip" || file.mimetype === "application/x-zip-compressed" || file.originalname.endsWith(".zip")) {
-      cb(null, true);
-    } else {
-      cb(new Error("Only .zip files are allowed"));
-    }
-  }
-});
-const router$2 = Router();
-router$2.get("/List", GetPluginListHandler);
-router$2.post("/SetStatus", SetPluginStatusHandler);
-router$2.post("/Uninstall", UninstallPluginHandler);
-router$2.get("/Config", GetPluginConfigHandler);
-router$2.post("/Config", SetPluginConfigHandler);
-router$2.get("/Config/SSE", PluginConfigSSEHandler);
-router$2.post("/Config/Change", PluginConfigChangeHandler);
-router$2.post("/RegisterManager", RegisterPluginManagerHandler);
-router$2.post("/Import", upload.single("plugin"), ImportLocalPluginHandler);
-router$2.get("/Store/List", GetPluginStoreListHandler);
-router$2.get("/Store/Detail/:id", GetPluginStoreDetailHandler);
-router$2.post("/Store/Install", InstallPluginFromStoreHandler);
-router$2.get("/Store/Install/SSE", InstallPluginFromStoreSSEHandler);
-router$2.use("/ext/:pluginId", (req, res, next) => {
+const router$3 = Router();
+router$3.get("/List", GetPluginListHandler);
+router$3.post("/SetStatus", SetPluginStatusHandler);
+router$3.post("/Uninstall", UninstallPluginHandler);
+router$3.get("/Config", GetPluginConfigHandler);
+router$3.post("/Config", SetPluginConfigHandler);
+router$3.get("/Config/SSE", PluginConfigSSEHandler);
+router$3.post("/Config/Change", PluginConfigChangeHandler);
+router$3.post("/RegisterManager", RegisterPluginManagerHandler);
+router$3.get("/Icon/:pluginId", GetPluginIconHandler);
+router$3.get("/Store/List", GetPluginStoreListHandler);
+router$3.get("/Store/Detail/:id", GetPluginStoreDetailHandler);
+router$3.post("/Store/Install", InstallPluginFromStoreHandler);
+router$3.get("/Store/Install/SSE", InstallPluginFromStoreSSEHandler);
+router$3.use("/ext/:pluginId", (req, res, next) => {
   const { pluginId } = req.params;
   if (!pluginId) {
     res.status(400).json({ code: -1, message: "Plugin ID is required" });
@@ -98235,7 +96207,7 @@ router$2.use("/ext/:pluginId", (req, res, next) => {
   const pluginRouter = routerRegistry.buildApiRouter();
   pluginRouter(req, res, next);
 });
-router$2.get("/page/:pluginId/:pagePath", (req, res) => {
+router$3.get("/page/:pluginId/:pagePath", (req, res) => {
   const { pluginId, pagePath } = req.params;
   if (!pluginId) {
     res.status(400).json({ code: -1, message: "Plugin ID is required" });
@@ -98439,29 +96411,136 @@ const TestSingleMirrorHandler = async (req, res) => {
   }
 };
 
+const router$2 = Router();
+router$2.get("/List", GetMirrorListHandler);
+router$2.post("/SetCustom", SetCustomMirrorHandler);
+router$2.get("/Test/SSE", TestMirrorsSSEHandler);
+router$2.post("/Test", TestSingleMirrorHandler);
+
+function getDefaultNapcatConfig() {
+  const data = {};
+  return Parse(NapcatConfigSchema, data);
+}
+function getNapcatConfigPath() {
+  return resolve(webUiPathWrapper.configPath, "./napcat.json");
+}
+function readNapcatConfig() {
+  const configPath = getNapcatConfigPath();
+  try {
+    if (existsSync(configPath)) {
+      const content = readFileSync(configPath, "utf-8");
+      return { ...getDefaultNapcatConfig(), ...lib$2.parse(content) };
+    }
+  } catch (_e) {
+  }
+  return { ...getDefaultNapcatConfig() };
+}
+function writeNapcatConfig(config) {
+  const configPath = resolve(webUiPathWrapper.configPath, "./napcat.json");
+  mkdirSync$1(webUiPathWrapper.configPath, { recursive: true });
+  writeFileSync$1(configPath, JSON.stringify(config, null, 2), "utf-8");
+}
+const NapCatGetConfigHandler = (_, res) => {
+  try {
+    const config = readNapcatConfig();
+    return sendSuccess(res, config);
+  } catch (e) {
+    return sendError(res, "Config Get Error: " + e.message);
+  }
+};
+const NapCatSetConfigHandler = (req, res) => {
+  try {
+    const newConfig = req.body;
+    if (!newConfig || typeof newConfig !== "object") {
+      return sendError(res, "config is empty or invalid");
+    }
+    const currentConfig = readNapcatConfig();
+    const mergedConfig = { ...currentConfig, ...newConfig };
+    if (mergedConfig.bypass && typeof mergedConfig.bypass === "object") {
+      const bypass = mergedConfig.bypass;
+      const validKeys = ["hook", "window", "module", "process", "container", "js"];
+      for (const key of validKeys) {
+        if (key in bypass && typeof bypass[key] !== "boolean") {
+          return sendError(res, `bypass.${key} must be boolean`);
+        }
+      }
+    }
+    writeNapcatConfig(mergedConfig);
+    return sendSuccess(res, null);
+  } catch (e) {
+    return sendError(res, "Config Set Error: " + e.message);
+  }
+};
+function readUinConfig(uin) {
+  const uinPath = resolve(webUiPathWrapper.configPath, `./napcat_${uin}.json`);
+  const fallbackPath = resolve(webUiPathWrapper.configPath, "./napcat.json");
+  const configPath = existsSync(uinPath) ? uinPath : fallbackPath;
+  try {
+    if (existsSync(configPath)) {
+      const content = readFileSync(configPath, "utf-8");
+      return { ...getDefaultNapcatConfig(), ...lib$2.parse(content) };
+    }
+  } catch (_e) {
+  }
+  return { ...getDefaultNapcatConfig() };
+}
+function writeUinConfig(uin, config) {
+  const configPath = resolve(webUiPathWrapper.configPath, `./napcat_${uin}.json`);
+  mkdirSync$1(webUiPathWrapper.configPath, { recursive: true });
+  writeFileSync$1(configPath, JSON.stringify(config, null, 2), "utf-8");
+}
+const NapCatGetUinConfigHandler = (_, res) => {
+  try {
+    const isLogin = WebUiDataRuntime.getQQLoginStatus();
+    if (!isLogin) return sendError(res, "Not Login");
+    const uin = WebUiDataRuntime.getQQLoginUin();
+    return sendSuccess(res, readUinConfig(uin));
+  } catch (e) {
+    return sendError(res, "Config Get Error: " + e.message);
+  }
+};
+const NapCatSetUinConfigHandler = (req, res) => {
+  try {
+    const isLogin = WebUiDataRuntime.getQQLoginStatus();
+    if (!isLogin) return sendError(res, "Not Login");
+    const uin = WebUiDataRuntime.getQQLoginUin();
+    const newConfig = req.body;
+    if (!newConfig || typeof newConfig !== "object") {
+      return sendError(res, "config is empty or invalid");
+    }
+    const currentConfig = readUinConfig(uin);
+    const mergedConfig = { ...currentConfig, ...newConfig };
+    writeUinConfig(uin, mergedConfig);
+    return sendSuccess(res, null);
+  } catch (e) {
+    return sendError(res, "Config Set Error: " + e.message);
+  }
+};
+
 const router$1 = Router();
-router$1.get("/List", GetMirrorListHandler);
-router$1.post("/SetCustom", SetCustomMirrorHandler);
-router$1.get("/Test/SSE", TestMirrorsSSEHandler);
-router$1.post("/Test", TestSingleMirrorHandler);
+router$1.get("/GetConfig", NapCatGetConfigHandler);
+router$1.post("/SetConfig", NapCatSetConfigHandler);
+router$1.get("/GetUinConfig", NapCatGetUinConfigHandler);
+router$1.post("/SetUinConfig", NapCatSetUinConfigHandler);
 
 const router = Router();
 router.use(auth);
 router.all("/test", (_, res) => {
   return sendSuccess(res);
 });
-router.use("/base", router$8);
-router.use("/auth", router$a);
-router.use("/QQLogin", router$b);
-router.use("/OB11Config", router$c);
-router.use("/Log", router$9);
-router.use("/File", router$7);
-router.use("/WebUIConfig", router$6);
-router.use("/UpdateNapCat", router$5);
-router.use("/Debug", router$4);
-router.use("/Process", router$3);
-router.use("/Plugin", router$2);
-router.use("/Mirror", router$1);
+router.use("/base", router$9);
+router.use("/auth", router$b);
+router.use("/QQLogin", router$c);
+router.use("/OB11Config", router$d);
+router.use("/Log", router$a);
+router.use("/File", router$8);
+router.use("/WebUIConfig", router$7);
+router.use("/UpdateNapCat", router$6);
+router.use("/Debug", router$5);
+router.use("/Process", router$4);
+router.use("/Plugin", router$3);
+router.use("/Mirror", router$2);
+router.use("/NapCatConfig", router$1);
 
 function normalizeIP(ip) {
   if (ip.startsWith("::ffff:")) {
@@ -98542,7 +96621,7 @@ function matchIPv6CIDR(ip, cidr) {
       }
     }
     return true;
-  } catch (error) {
+  } catch (_error) {
     return false;
   }
 }
@@ -98576,7 +96655,7 @@ function expandIPv6(ip) {
     const segments = addr.split(":");
     if (segments.length !== 8) return null;
     return segments.map((s) => parseInt(s || "0", 16));
-  } catch (error) {
+  } catch (_error) {
     return null;
   }
 }
@@ -103570,16 +101649,56 @@ async function InitWebUi(logger, pathWrapper, Subscription, statusSubscription) 
   WebUiDataRuntime.setWebUiConfigQuickFunction(
     async () => {
       const autoLoginAccount = process.env["NAPCAT_QUICK_ACCOUNT"] || WebUiConfig.getAutoLoginAccount();
-      if (autoLoginAccount) {
-        try {
-          const { result, message } = await WebUiDataRuntime.requestQuickLogin(autoLoginAccount);
-          if (!result) {
-            throw new Error(message);
+      const resolveQuickPasswordMd5 = () => {
+        const quickPasswordMd5FromEnv = process.env["NAPCAT_QUICK_PASSWORD_MD5"]?.trim();
+        if (quickPasswordMd5FromEnv) {
+          if (/^[a-fA-F0-9]{32}$/.test(quickPasswordMd5FromEnv)) {
+            return quickPasswordMd5FromEnv.toLowerCase();
           }
-          console.log(`[NapCat] [WebUi] Auto login account: ${autoLoginAccount}`);
-        } catch (error) {
-          console.log("[NapCat] [WebUi] Auto login account failed." + error);
+          console.log("[NapCat] [WebUi] NAPCAT_QUICK_PASSWORD_MD5 格式无效（需为 32 位 MD5）");
         }
+        const quickPassword = process.env["NAPCAT_QUICK_PASSWORD"];
+        if (typeof quickPassword === "string" && quickPassword.length > 0) {
+          console.log("[NapCat] [WebUi] 检测到 NAPCAT_QUICK_PASSWORD，已在内存中计算 MD5 用于回退登录");
+          return createHash("md5").update(quickPassword, "utf8").digest("hex");
+        }
+        return void 0;
+      };
+      if (!autoLoginAccount) {
+        return;
+      }
+      const quickPasswordMd5 = resolveQuickPasswordMd5();
+      try {
+        const { result, message } = await WebUiDataRuntime.requestQuickLogin(autoLoginAccount);
+        if (result) {
+          console.log(`[NapCat] [WebUi] 自动快速登录成功: ${autoLoginAccount}`);
+          return;
+        }
+        console.log(`[NapCat] [WebUi] 自动快速登录失败: ${message || "未知错误"}`);
+      } catch (error) {
+        console.log("[NapCat] [WebUi] 自动快速登录异常:" + error);
+      }
+      if (!quickPasswordMd5) {
+        console.log(`[NapCat] [WebUi] QQ ${autoLoginAccount} 未配置回退密码环境变量，建议优先使用 ACCOUNT + NAPCAT_QUICK_PASSWORD（NAPCAT_QUICK_PASSWORD_MD5 作为备用），保持二维码登录兜底`);
+        return;
+      }
+      try {
+        const { result, message, needCaptcha, needNewDevice } = await WebUiDataRuntime.requestPasswordLogin(autoLoginAccount, quickPasswordMd5);
+        if (result) {
+          console.log(`[NapCat] [WebUi] 自动密码回退登录成功: ${autoLoginAccount}`);
+          return;
+        }
+        if (needCaptcha) {
+          console.log(`[NapCat] [WebUi] 自动密码回退登录需要验证码，请在登录页面继续完成: ${autoLoginAccount}`);
+          return;
+        }
+        if (needNewDevice) {
+          console.log(`[NapCat] [WebUi] 自动密码回退登录需要新设备验证，请在登录页面继续完成: ${autoLoginAccount}`);
+          return;
+        }
+        console.log(`[NapCat] [WebUi] 自动密码回退登录失败: ${message || "未知错误"}`);
+      } catch (error) {
+        console.log("[NapCat] [WebUi] 自动密码回退登录异常:" + error);
       }
     }
   );
@@ -103660,9 +101779,9 @@ async function InitWebUi(logger, pathWrapper, Subscription, statusSubscription) 
   });
   app.get("/webui/sw.js", async (_req, res) => {
     try {
-      let templatePath = resolve$1(__dirname$2, "static", "sw_template.js");
+      let templatePath = resolve(__dirname$2, "static", "sw_template.js");
       if (!existsSync(templatePath)) {
-        templatePath = resolve$1(__dirname$2, "src", "assets", "sw_template.js");
+        templatePath = resolve(__dirname$2, "src", "assets", "sw_template.js");
       }
       let swContent = readFileSync(templatePath, "utf-8");
       swContent = swContent.replace("{{VERSION}}", napCatVersion);
@@ -106815,7 +104934,7 @@ Type.Object({
 const OB11MessageImageSchema = Type.Object({
   type: Type.Literal("image" /* image */),
   data: Type.Intersect([
-    FileBaseDataSchema,
+    Type.Omit(FileBaseDataSchema, []),
     Type.Object({
       summary: Type.Optional(Type.String({ description: "图片摘要" })),
       sub_type: Type.Optional(Type.Number({ description: "图片子类型" }))
@@ -107988,6 +106107,21 @@ class OneBotMsgApi {
         }
         this.core.context.logger.logError("所有查找方法均失败，获取不到旧客户端的引用消息", element.replayMsgSeq);
       }
+      if (this.core.apis.PacketApi.packetStatus) {
+        try {
+          const msgSeq = +element.replayMsgSeq;
+          const fetchedMsgs = msg.chatType === ChatType.KCHATTYPEGROUP ? await this.core.apis.PacketApi.pkt.operation.FetchGroupMessage(+msg.peerUin, msgSeq, msgSeq) : await this.core.apis.PacketApi.pkt.operation.FetchC2CMessage(msg.peerUid, msgSeq, msgSeq);
+          const targetMsg = fetchedMsgs.find((m) => (m.contentHead.sequence ?? 0) === msgSeq);
+          if (targetMsg?.contentHead?.newId) {
+            const msgId = String(targetMsg.contentHead.newId);
+            this.core.context.logger.logWarn("通过协议兜底成功获取引用消息", msgId);
+            return createReplyData(msgId);
+          }
+          this.core.context.logger.logWarn("协议兜底未找到匹配的引用消息");
+        } catch (e) {
+          this.core.context.logger.logError("协议兜底获取引用消息失败", e.stack);
+        }
+      }
       return null;
     },
     videoElement: async (element, msg, elementWrapper, { disableGetUrl }) => {
@@ -108297,28 +106431,32 @@ class OneBotMsgApi {
     }),
     // File service
     [OB11MessageDataType.image]: async (sendMsg, context) => {
+      const result = await this.handleOb11FileLikeMessage(sendMsg, context);
       return await this.obContext.apis.FileApi.createValidSendPicElement(
         context,
-        (await this.handleOb11FileLikeMessage(sendMsg, context)).path,
+        result.path,
         sendMsg.data.summary,
-        sendMsg.data.sub_type
+        sendMsg.data.sub_type,
+        result.isLocal
       );
     },
     [OB11MessageDataType.file]: async (sendMsg, context) => {
-      const { path, fileName } = await this.handleOb11FileLikeMessage(sendMsg, context);
-      return await this.obContext.apis.FileApi.createValidSendFileElement(context, path, fileName);
+      const { path, fileName, isLocal } = await this.handleOb11FileLikeMessage(sendMsg, context);
+      return await this.obContext.apis.FileApi.createValidSendFileElement(context, path, fileName, "", false, isLocal);
     },
     [OB11MessageDataType.video]: async (sendMsg, context) => {
-      const { path, fileName } = await this.handleOb11FileLikeMessage(sendMsg, context);
+      const { path, fileName, isLocal } = await this.handleOb11FileLikeMessage(sendMsg, context);
       let thumb = sendMsg.data.thumb;
       if (thumb) {
         const uri2LocalRes = await uriToLocalFile(this.core.NapCatTempPath, thumb);
         if (uri2LocalRes.success) {
           thumb = uri2LocalRes.path;
-          context.deleteAfterSentFiles.push(thumb);
+          if (!uri2LocalRes.isLocal) {
+            context.deleteAfterSentFiles.push(thumb);
+          }
         }
       }
-      return await this.obContext.apis.FileApi.createValidSendVideoElement(context, path, fileName, thumb);
+      return await this.obContext.apis.FileApi.createValidSendVideoElement(context, path, fileName, thumb, isLocal);
     },
     [OB11MessageDataType.voice]: async (sendMsg, context) => this.obContext.apis.FileApi.createValidSendPttElement(
       context,
@@ -108698,33 +106836,31 @@ class OneBotMsgApi {
     const sendElements = ret.filter((ele) => !!ele);
     return { sendElements, deleteAfterSentFiles };
   }
-  async sendMsgWithOb11UniqueId(peer, sendElements, deleteAfterSentFiles) {
+  async sendMsgWithOb11UniqueId(peer, sendElements, deleteAfterSentFiles, timeoutOverride) {
     if (!sendElements.length) {
       throw new Error("消息体无法解析, 请检查是否发送了不支持的消息类型");
     }
-    const calculateTotalSize = async (elements) => {
-      const sizePromises = elements.map(async (element) => {
+    const timeoutConfig = this.obContext.configLoader.configData.timeout;
+    let timeout;
+    if (timeoutOverride !== void 0 && timeoutOverride > 0) {
+      timeout = capTimeout(timeoutConfig, timeoutOverride);
+    } else {
+      const totalSize = sendElements.reduce((total, element) => {
         switch (element.elementType) {
           case ElementType.PTT:
-            return (await fs$2.stat(element.pttElement.filePath)).size;
+            return total + +(element.pttElement.fileSize || "3000");
           case ElementType.FILE:
-            return (await fs$2.stat(element.fileElement.filePath)).size;
+            return total + +(element.fileElement.fileSize || "3000");
           case ElementType.VIDEO:
-            return (await fs$2.stat(element.videoElement.filePath)).size;
+            return total + +(element.videoElement.fileSize || "3000");
           case ElementType.PIC:
-            return (await fs$2.stat(element.picElement.sourcePath)).size;
+            return total + +(element.picElement.fileSize || "3000");
           default:
-            return 0;
+            return total;
         }
-      });
-      const sizes = await Promise.all(sizePromises);
-      return sizes.reduce((total, size) => total + size, 0);
-    };
-    const totalSize = await calculateTotalSize(sendElements).catch((e) => {
-      this.core.context.logger.logError("发送消息计算预计时间异常", e);
-      return 0;
-    });
-    const timeout = 1e4 + totalSize / 1024 / 256 * 1e3;
+      }, 0);
+      timeout = calculateTimeout(timeoutConfig, totalSize, timeoutConfig.uploadSpeedKBps);
+    }
     try {
       const returnMsg = await this.core.apis.MsgApi.sendMsg(peer, sendElements, timeout);
       if (!returnMsg) throw new Error("发送消息失败");
@@ -108747,13 +106883,15 @@ class OneBotMsgApi {
     realUri = await this.handleObfuckName(realUri) ?? realUri;
     try {
       const proxy = this.obContext.configLoader.configData.imageDownloadProxy || void 0;
-      const { path, fileName, errMsg, success } = await uriToLocalFile(this.core.NapCatTempPath, realUri, void 0, void 0, proxy);
+      const { path, fileName, errMsg, success, isLocal } = await uriToLocalFile(this.core.NapCatTempPath, realUri, void 0, void 0, proxy);
       if (!success) {
         this.core.context.logger.logError("文件处理失败", errMsg);
         throw new Error("文件处理失败: " + errMsg);
       }
-      deleteAfterSentFiles.push(path);
-      return { path, fileName: inputdata.name ?? fileName };
+      if (!isLocal) {
+        deleteAfterSentFiles.push(path);
+      }
+      return { path, fileName: inputdata.name ?? fileName, isLocal };
     } catch (e) {
       throw new Error(e.message);
     }
@@ -109030,6 +107168,12 @@ const MsgActionsExamples = {
       message: "hello"
     }
   },
+  FetchPttText: {
+    payload: { message_id: 123456 },
+    response: {
+      text: "hello"
+    }
+  },
   SendMsg: {
     payload: { message_type: "group", group_id: "123456", message: "hello" },
     response: { message_id: 123456 }
@@ -109045,7 +107189,8 @@ const SendMsgPayloadSchema = Type.Object({
   source: Type.Optional(Type.String({ description: "合并转发来源" })),
   news: Type.Optional(Type.Array(Type.Object({ text: Type.String() }), { description: "合并转发新闻" })),
   summary: Type.Optional(Type.String({ description: "合并转发摘要" })),
-  prompt: Type.Optional(Type.String({ description: "合并转发提示" }))
+  prompt: Type.Optional(Type.String({ description: "合并转发提示" })),
+  timeout: Type.Optional(Type.Number({ description: "自定义发送超时(毫秒)，覆盖自动计算值" }))
 });
 const SendMsgReturnSchema = Type.Object({
   message_id: Type.Number({ description: "消息ID" }),
@@ -109181,13 +107326,13 @@ class SendMsgBase extends OneBotAction {
       }
     }
     const { sendElements, deleteAfterSentFiles } = await this.obContext.apis.MsgApi.createSendElements(messages, peer);
-    const returnMsg = await this.obContext.apis.MsgApi.sendMsgWithOb11UniqueId(peer, sendElements, deleteAfterSentFiles);
+    const returnMsg = await this.obContext.apis.MsgApi.sendMsgWithOb11UniqueId(peer, sendElements, deleteAfterSentFiles, payload.timeout);
     return { message_id: returnMsg.id };
   }
   async uploadForwardedNodesPacket(msgPeer, messageNodes, source, news, summary, prompt, parentMeta, dp = 0) {
     const packetMsg = [];
     const delFiles = [];
-    const innerMsg = new Array();
+    const innerMsg = [];
     for (const node of messageNodes) {
       if (dp >= 3) {
         this.core.context.logger.logWarn("转发消息深度超过3层，将停止解析！");
@@ -109207,7 +107352,7 @@ class SendMsgBase extends OneBotAction {
           if (uploadReturnData?.uuid) {
             innerMsg.push({ uuid: uploadReturnData.uuid, packetMsg: uploadReturnData.packetMsg });
             uploadReturnData.innerPacketMsg?.forEach((m) => {
-              innerMsg.push({ uuid: m.uuid, packetMsg: m.packetMsg });
+              innerMsg.push(m);
             });
           }
         } else {
@@ -109239,6 +107384,37 @@ class SendMsgBase extends OneBotAction {
           const msgCache = await this.core.apis.FileApi.downloadRawMsgMedia([msg]);
           delFiles.push(...msgCache);
           const transformedMsg = this.core.apis.PacketApi.pkt.msgConverter.rawMsgToPacketMsg(msg, msgPeer);
+          for (const element of msg.elements) {
+            let resId;
+            let uuid2;
+            if (element.multiForwardMsgElement?.resId) {
+              resId = element.multiForwardMsgElement.resId;
+              uuid2 = element.multiForwardMsgElement.fileName;
+            } else if (element.arkElement?.bytesData) {
+              try {
+                const json = JSON.parse(element.arkElement.bytesData);
+                if (json.app === "com.tencent.multimsg") {
+                  resId = json.meta?.detail?.resid;
+                  uuid2 = json.meta?.detail?.uniseq || json.extra?.filename;
+                }
+              } catch {
+              }
+            }
+            if (resId && uuid2) {
+              try {
+                const rawActions = await this.core.apis.PacketApi.pkt.operation.FetchForwardMsgRaw(resId);
+                for (const action of rawActions) {
+                  if (action.actionCommand === "MultiMsg") {
+                    innerMsg.push({ uuid: uuid2, actionMsgBody: action.actionData.msgBody });
+                  } else {
+                    innerMsg.push({ uuid: action.actionCommand, actionMsgBody: action.actionData.msgBody });
+                  }
+                }
+              } catch (e) {
+                this.core.context.logger.logError(`获取合并转发内层消息失败: ${e?.stack}`);
+              }
+            }
+          }
           this.core.context.logger.logDebug(`handleForwardedNodesPacket[PureRaw] 转换为 ${stringifyWithBigInt(transformedMsg)}`);
           packetMsg.push(transformedMsg);
         }
@@ -109254,10 +107430,11 @@ class SendMsgBase extends OneBotAction {
       actionCommand: "MultiMsg",
       actionMsg: packetMsg
     }];
-    innerMsg.forEach(({ uuid: uuid2, packetMsg: msg }) => {
+    innerMsg.forEach(({ uuid: uuid2, packetMsg: msg, actionMsgBody: raw }) => {
       uploadMsgData.push({
         actionCommand: uuid2,
-        actionMsg: msg
+        actionMsg: msg,
+        actionMsgBody: raw
       });
     });
     const resid = await this.core.apis.PacketApi.pkt.operation.UploadForwardMsgV2(uploadMsgData, msgPeer.chatType === ChatType.KCHATTYPEGROUP ? +msgPeer.peerUid : 0);
@@ -109556,7 +107733,7 @@ class OneBotFileApi {
     this.obContext = obContext;
     this.core = core;
   }
-  async createValidSendFileElement(context, filePath, fileName = "", folderId = "", uploadGroupFile = false) {
+  async createValidSendFileElement(context, filePath, fileName = "", folderId = "", uploadGroupFile = false, _isLocal = false) {
     const {
       fileName: _fileName,
       path,
@@ -109579,7 +107756,7 @@ class OneBotFileApi {
       }
     };
   }
-  async createValidSendPicElement(context, picPath, summary = "", subType = 0) {
+  async createValidSendPicElement(context, picPath, summary = "", subType = 0, _isLocal = false) {
     const { md5, fileName, path, fileSize } = await this.core.apis.FileApi.uploadFile(picPath, ElementType.PIC, subType);
     if (fileSize === 0) {
       throw new Error("文件异常，大小为0");
@@ -109606,7 +107783,7 @@ class OneBotFileApi {
       }
     };
   }
-  async createValidSendVideoElement(context, filePath, fileName = "", _diyThumbPath = "") {
+  async createValidSendVideoElement(context, filePath, fileName = "", _diyThumbPath = "", isLocal = false) {
     let videoInfo = {
       width: 1920,
       height: 1080,
@@ -109622,10 +107799,21 @@ class OneBotFileApi {
     } catch (e) {
       this.core.context.logger.logError("获取文件类型失败", e);
     }
-    const newFilePath = `${filePath}.${fileExt}`;
-    fs__default.copyFileSync(filePath, newFilePath);
-    context.deleteAfterSentFiles.push(newFilePath);
-    filePath = newFilePath;
+    const currentExt = path__default.extname(filePath).slice(1).toLowerCase();
+    const needsExtCopy = currentExt !== fileExt.toLowerCase();
+    if (needsExtCopy) {
+      if (isLocal) {
+        const tempFilePath = path__default.join(this.core.NapCatTempPath, `${randomUUID()}.${fileExt}`);
+        fs__default.copyFileSync(filePath, tempFilePath);
+        context.deleteAfterSentFiles.push(tempFilePath);
+        filePath = tempFilePath;
+      } else {
+        const newFilePath = `${filePath}.${fileExt}`;
+        fs__default.copyFileSync(filePath, newFilePath);
+        context.deleteAfterSentFiles.push(newFilePath);
+        filePath = newFilePath;
+      }
+    }
     const { fileName: _fileName, path, fileSize, md5 } = await this.core.apis.FileApi.uploadFile(filePath, ElementType.VIDEO);
     context.deleteAfterSentFiles.push(path);
     if (fileSize === 0) {
@@ -109727,10 +107915,10 @@ class OneBotFileApi {
   }
 }
 
-const PayloadSchema$1f = Type.Object({
+const PayloadSchema$1g = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema$1m = Type.Object({
+const ReturnSchema$1n = Type.Object({
   time: Type.Number({ description: "发送时间" }),
   message_type: Type.String({ description: "消息类型" }),
   message_id: Type.Number({ description: "消息ID" }),
@@ -109746,8 +107934,8 @@ const ReturnSchema$1m = Type.Object({
 }, { description: "OneBot 11 消息" });
 class GetMsg extends OneBotAction {
   actionName = ActionName.GetMsg;
-  payloadSchema = PayloadSchema$1f;
-  returnSchema = ReturnSchema$1m;
+  payloadSchema = PayloadSchema$1g;
+  returnSchema = ReturnSchema$1n;
   actionSummary = "获取消息";
   actionDescription = "根据消息 ID 获取消息详细信息";
   actionTags = ["消息接口"];
@@ -109763,12 +107951,22 @@ class GetMsg extends OneBotAction {
       throw new Error("消息不存在");
     }
     const peer = { guildId: "", peerUid: msgIdWithPeer?.Peer.peerUid, chatType: msgIdWithPeer.Peer.chatType };
-    const msg = (await this.core.apis.MsgApi.getMsgsByMsgId(peer, [msgIdWithPeer?.MsgId || payload.message_id.toString()])).msgList[0];
-    if (!msg) throw Error("消息不存在");
+    const getMsgTimeout = this.obContext.configLoader.configData.timeout.baseTimeout;
+    const msgRes = await PromiseTimer(
+      this.core.apis.MsgApi.getMsgsByMsgId(peer, [msgIdWithPeer?.MsgId || payload.message_id.toString()]),
+      getMsgTimeout
+    ).catch((e) => {
+      if (e instanceof Error && e.message.startsWith("PromiseTimer:")) {
+        throw new Error(`消息不存在或已被撤回: ${e.message || String(e)}`);
+      }
+      throw e;
+    });
+    const msg = msgRes.msgList[0];
+    if (!msg) throw Error("消息不存在或已被撤回");
     const retMsg = await this.obContext.apis.MsgApi.parseMessage(msg, config.messagePostFormat);
     if (!retMsg) throw Error("消息为空");
     retMsg.emoji_likes_list = [];
-    msg.emojiLikesList?.map((emoji) => {
+    msg.emojiLikesList?.forEach((emoji) => {
       retMsg.emoji_likes_list?.push({
         emoji_id: emoji.emojiId,
         emoji_type: emoji.emojiType,
@@ -109865,7 +108063,7 @@ const lastestMessageSchema = Type.Object({
   group_name: Type.String({ description: "群名称" })
 }, { $id: "OB11LatestMessage", description: "最后一条消息" });
 Type.Intersect([
-  lastestMessageSchema,
+  Type.Omit(lastestMessageSchema, []),
   Type.Object({
     message_id: Type.Number({ description: "消息ID" }),
     message_seq: Type.Number({ description: "消息序列号" }),
@@ -109903,14 +108101,14 @@ const UserActionsExamples = {
     response: [{ user_id: 123456789, nickname: "昵称", remark: "备注" }]
   }};
 
-const PayloadSchema$1e = Type.Object({
+const PayloadSchema$1f = Type.Object({
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$1l = Type.Array(OB11UserSchema, { description: "好友列表" });
+const ReturnSchema$1m = Type.Array(OB11UserSchema, { description: "好友列表" });
 class GetFriendList extends OneBotAction {
   actionName = ActionName.GetFriendList;
-  payloadSchema = PayloadSchema$1e;
-  returnSchema = ReturnSchema$1l;
+  payloadSchema = PayloadSchema$1f;
+  returnSchema = ReturnSchema$1m;
   actionSummary = "获取好友列表";
   actionDescription = "获取当前帐号的好友列表";
   actionTags = ["用户接口"];
@@ -110015,14 +108213,14 @@ const GroupActionsExamples = {
   }
 };
 
-const PayloadSchema$1d = Type.Object({
+const PayloadSchema$1e = Type.Object({
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$1k = Type.Array(OB11GroupSchema, { description: "群列表" });
+const ReturnSchema$1l = Type.Array(OB11GroupSchema, { description: "群列表" });
 class GetGroupList extends OneBotAction {
   actionName = ActionName.GetGroupList;
-  payloadSchema = PayloadSchema$1d;
-  returnSchema = ReturnSchema$1k;
+  payloadSchema = PayloadSchema$1e;
+  returnSchema = ReturnSchema$1l;
   actionSummary = "获取群列表";
   actionDescription = "获取当前帐号的群聊列表";
   actionTags = ["群组接口"];
@@ -110037,14 +108235,14 @@ class GetGroupList extends OneBotAction {
   }
 }
 
-const PayloadSchema$1c = Type.Object({
+const PayloadSchema$1d = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$1j = OB11GroupSchema;
+const ReturnSchema$1k = OB11GroupSchema;
 class GetGroupInfo extends OneBotAction {
   actionName = ActionName.GetGroupInfo;
-  payloadSchema = PayloadSchema$1c;
-  returnSchema = ReturnSchema$1j;
+  payloadSchema = PayloadSchema$1d;
+  returnSchema = ReturnSchema$1k;
   actionSummary = "获取群信息";
   actionDescription = "获取群聊的基本信息";
   actionTags = ["群组接口"];
@@ -110071,16 +108269,16 @@ class GetGroupInfo extends OneBotAction {
   }
 }
 
-const PayloadSchema$1b = Type.Object({
+const PayloadSchema$1c = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "QQ号" }),
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$1i = OB11GroupMemberSchema;
+const ReturnSchema$1j = OB11GroupMemberSchema;
 class GetGroupMemberInfo extends OneBotAction {
   actionName = ActionName.GetGroupMemberInfo;
-  payloadSchema = PayloadSchema$1b;
-  returnSchema = ReturnSchema$1i;
+  payloadSchema = PayloadSchema$1c;
+  returnSchema = ReturnSchema$1j;
   actionSummary = "获取群成员信息";
   actionDescription = "获取群聊中指定成员的信息";
   actionTags = ["群组接口"];
@@ -110153,14 +108351,14 @@ class SendPrivateMsg extends SendMsgBase {
   }
 }
 
-const PayloadSchema$1a = Type.Object({
+const PayloadSchema$1b = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema$1h = Type.Null({ description: "操作结果" });
+const ReturnSchema$1i = Type.Null({ description: "操作结果" });
 class DeleteMsg extends OneBotAction {
   actionName = ActionName.DeleteMsg;
-  payloadSchema = PayloadSchema$1a;
-  returnSchema = ReturnSchema$1h;
+  payloadSchema = PayloadSchema$1b;
+  returnSchema = ReturnSchema$1i;
   actionSummary = "撤回消息";
   actionDescription = "撤回已发送的消息";
   actionTags = ["消息接口"];
@@ -110182,14 +108380,14 @@ class DeleteMsg extends OneBotAction {
   }
 }
 
-const ReturnSchema$1g = Type.Object({
+const ReturnSchema$1h = Type.Object({
   app_name: Type.String({ description: "应用名称" }),
   protocol_version: Type.String({ description: "协议版本" }),
   app_version: Type.String({ description: "应用版本" })
 }, { description: "版本信息" });
 class GetVersionInfo extends OneBotAction {
   actionName = ActionName.GetVersionInfo;
-  returnSchema = ReturnSchema$1g;
+  returnSchema = ReturnSchema$1h;
   actionSummary = "获取版本信息";
   actionDescription = "获取版本信息";
   actionTags = ["系统接口"];
@@ -110415,11 +108613,11 @@ const GoCQHTTPActionsExamples = {
   }
 };
 
-const PayloadSchema$19 = Type.Object({
+const PayloadSchema$1a = Type.Object({
   user_id: Type.String({ description: "用户QQ" }),
   no_cache: Type.Union([Type.Boolean(), Type.String()], { default: false, description: "是否不使用缓存" })
 });
-const ReturnSchema$1f = Type.Object({
+const ReturnSchema$1g = Type.Object({
   user_id: Type.Number({ description: "用户QQ" }),
   uid: Type.String({ description: "UID" }),
   nickname: Type.String({ description: "昵称" }),
@@ -110438,8 +108636,8 @@ const ReturnSchema$1f = Type.Object({
 }, { description: "陌生人信息" });
 class GoCQHTTPGetStrangerInfo extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetStrangerInfo;
-  payloadSchema = PayloadSchema$19;
-  returnSchema = ReturnSchema$1f;
+  payloadSchema = PayloadSchema$1a;
+  returnSchema = ReturnSchema$1g;
   actionSummary = "获取陌生人信息";
   actionDescription = "获取指定非好友用户的信息";
   actionTags = ["Go-CQHTTP"];
@@ -110507,17 +108705,17 @@ class SendLike extends OneBotAction {
   }
 }
 
-const PayloadSchema$18 = Type.Object({
+const PayloadSchema$19 = Type.Object({
   flag: Type.String({ description: "请求flag" }),
   approve: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否同意" })),
   reason: Type.Optional(Type.Union([Type.String({ default: " " }), Type.Null()], { description: "拒绝理由" })),
   count: Type.Optional(Type.Number({ default: 100, description: "搜索通知数量" }))
 });
-const ReturnSchema$1e = Type.Null({ description: "操作结果" });
+const ReturnSchema$1f = Type.Null({ description: "操作结果" });
 class SetGroupAddRequest extends OneBotAction {
   actionName = ActionName.SetGroupAddRequest;
-  payloadSchema = PayloadSchema$18;
-  returnSchema = ReturnSchema$1e;
+  payloadSchema = PayloadSchema$19;
+  returnSchema = ReturnSchema$1f;
   actionSummary = "处理加群请求";
   actionDescription = "同意或拒绝加群请求或邀请";
   actionTags = ["群组接口"];
@@ -110554,15 +108752,15 @@ class SetGroupAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$17 = Type.Object({
+const PayloadSchema$18 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   is_dismiss: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否解散" }))
 });
-const ReturnSchema$1d = Type.Null({ description: "操作结果" });
+const ReturnSchema$1e = Type.Null({ description: "操作结果" });
 class SetGroupLeave extends OneBotAction {
   actionName = ActionName.SetGroupLeave;
-  payloadSchema = PayloadSchema$17;
-  returnSchema = ReturnSchema$1d;
+  payloadSchema = PayloadSchema$18;
+  returnSchema = ReturnSchema$1e;
   actionSummary = "退出群组";
   actionDescription = "退出或解散指定群聊";
   actionTags = ["群组接口"];
@@ -110605,15 +108803,15 @@ class SetFriendAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$16 = Type.Object({
+const PayloadSchema$17 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   enable: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否开启全员禁言" }))
 });
-const ReturnSchema$1c = Type.Null({ description: "操作结果" });
+const ReturnSchema$1d = Type.Null({ description: "操作结果" });
 class SetGroupWholeBan extends OneBotAction {
   actionName = ActionName.SetGroupWholeBan;
-  payloadSchema = PayloadSchema$16;
-  returnSchema = ReturnSchema$1c;
+  payloadSchema = PayloadSchema$17;
+  returnSchema = ReturnSchema$1d;
   actionSummary = "全员禁言";
   actionDescription = "开启或关闭指定群聊的全员禁言";
   actionTags = ["群组接口"];
@@ -110629,22 +108827,25 @@ class SetGroupWholeBan extends OneBotAction {
   }
 }
 
-const PayloadSchema$15 = Type.Object({
+const PayloadSchema$16 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   group_name: Type.String({ description: "群名称" })
 });
-const ReturnSchema$1b = Type.Null({ description: "操作结果" });
+const ReturnSchema$1c = Type.Null({ description: "操作结果" });
 class SetGroupName extends OneBotAction {
   actionName = ActionName.SetGroupName;
-  payloadSchema = PayloadSchema$15;
-  returnSchema = ReturnSchema$1b;
+  payloadSchema = PayloadSchema$16;
+  returnSchema = ReturnSchema$1c;
   actionSummary = "设置群名称";
   actionDescription = "修改指定群聊的名称";
   actionTags = ["群组接口"];
   payloadExample = GroupActionsExamples.SetGroupName.payload;
   returnExample = GroupActionsExamples.SetGroupName.response;
   async _handle(payload) {
-    const ret = await this.core.apis.GroupApi.setGroupName(payload.group_id.toString(), payload.group_name);
+    let ret = await this.core.apis.GroupApi.setGroupName(payload.group_id.toString(), payload.group_name);
+    if (ret.result.toString() === "1287") {
+      ret = await this.core.apis.GroupApi.setGroupName(payload.group_id.toString(), payload.group_name, true);
+    }
     if (ret.result !== 0) {
       throw new Error(`设置群名称失败 ErrCode: ${ret.result} ErrMsg: ${ret.errMsg}`);
     }
@@ -110652,16 +108853,16 @@ class SetGroupName extends OneBotAction {
   }
 }
 
-const PayloadSchema$14 = Type.Object({
+const PayloadSchema$15 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   duration: Type.Union([Type.Number(), Type.String()], { default: 0, description: "禁言时长(秒)" })
 });
-const ReturnSchema$1a = Type.Null({ description: "操作结果" });
+const ReturnSchema$1b = Type.Null({ description: "操作结果" });
 class SetGroupBan extends OneBotAction {
   actionName = ActionName.SetGroupBan;
-  payloadSchema = PayloadSchema$14;
-  returnSchema = ReturnSchema$1a;
+  payloadSchema = PayloadSchema$15;
+  returnSchema = ReturnSchema$1b;
   actionSummary = "群组禁言";
   actionDescription = "禁言群聊中的指定成员";
   actionTags = ["群组接口"];
@@ -110671,7 +108872,13 @@ class SetGroupBan extends OneBotAction {
     const uid = await this.core.apis.UserApi.getUidByUinV2(payload.user_id.toString());
     if (!uid) throw new Error("uid error");
     const member_role = (await this.core.apis.GroupApi.getGroupMemberEx(payload.group_id.toString(), uid, true))?.role;
-    if (member_role === 4) throw new Error("cannot ban owner");
+    if (member_role === void 0) throw new Error("user not in group");
+    if (member_role === NTGroupMemberRole.KOWNER) throw new Error("cannot ban owner");
+    if (member_role === NTGroupMemberRole.KADMIN) {
+      const self_role = (await this.core.apis.GroupApi.getGroupMemberEx(payload.group_id.toString(), this.core.selfInfo.uid, true))?.role;
+      if (self_role === void 0) throw new Error("failed to fetch bot role");
+      if (self_role !== NTGroupMemberRole.KOWNER) throw new Error("cannot ban admin");
+    }
     const ret = await this.core.apis.GroupApi.banMember(
       payload.group_id.toString(),
       [{ uid, timeStamp: +payload.duration }]
@@ -110681,16 +108888,16 @@ class SetGroupBan extends OneBotAction {
   }
 }
 
-const PayloadSchema$13 = Type.Object({
+const PayloadSchema$14 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   reject_add_request: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否拒绝加群请求" }))
 });
-const ReturnSchema$19 = Type.Null({ description: "操作结果" });
+const ReturnSchema$1a = Type.Null({ description: "操作结果" });
 class SetGroupKick extends OneBotAction {
   actionName = ActionName.SetGroupKick;
-  payloadSchema = PayloadSchema$13;
-  returnSchema = ReturnSchema$19;
+  payloadSchema = PayloadSchema$14;
+  returnSchema = ReturnSchema$1a;
   actionSummary = "群组踢人";
   actionDescription = "将指定成员踢出群聊";
   actionTags = ["群组接口"];
@@ -110705,16 +108912,16 @@ class SetGroupKick extends OneBotAction {
   }
 }
 
-const PayloadSchema$12 = Type.Object({
+const PayloadSchema$13 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   enable: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否设置为管理员" }))
 });
-const ReturnSchema$18 = Type.Null({ description: "操作结果" });
+const ReturnSchema$19 = Type.Null({ description: "操作结果" });
 class SetGroupAdmin extends OneBotAction {
   actionName = ActionName.SetGroupAdmin;
-  payloadSchema = PayloadSchema$12;
-  returnSchema = ReturnSchema$18;
+  payloadSchema = PayloadSchema$13;
+  returnSchema = ReturnSchema$19;
   actionSummary = "设置群管理员";
   actionDescription = "设置或取消群聊中的管理员";
   actionTags = ["群组接口"];
@@ -110729,16 +108936,16 @@ class SetGroupAdmin extends OneBotAction {
   }
 }
 
-const PayloadSchema$11 = Type.Object({
+const PayloadSchema$12 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   card: Type.Optional(Type.String({ description: "群名片" }))
 });
-const ReturnSchema$17 = Type.Null({ description: "操作结果" });
+const ReturnSchema$18 = Type.Null({ description: "操作结果" });
 class SetGroupCard extends OneBotAction {
   actionName = ActionName.SetGroupCard;
-  payloadSchema = PayloadSchema$11;
-  returnSchema = ReturnSchema$17;
+  payloadSchema = PayloadSchema$12;
+  returnSchema = ReturnSchema$18;
   actionSummary = "设置群名片";
   actionDescription = "设置群聊中指定成员的群名片";
   actionTags = ["群组接口"];
@@ -110846,7 +109053,10 @@ class GetFileBase extends OneBotAction {
     }
     const searchResult = await this.core.apis.FileApi.searchForFile([payload.file]);
     if (searchResult) {
-      const downloadPath = await this.core.apis.FileApi.downloadFileById(searchResult.id, parseInt(searchResult.fileSize));
+      const fileSize = parseInt(searchResult.fileSize);
+      const timeoutConfig = this.obContext.configLoader.configData.timeout;
+      const estimatedTime = calculateTimeout(timeoutConfig, fileSize, timeoutConfig.downloadSpeedKBps);
+      const downloadPath = await this.core.apis.FileApi.downloadFileById(searchResult.id, fileSize, estimatedTime);
       const res = {
         file: downloadPath,
         url: downloadPath,
@@ -110884,14 +109094,14 @@ class GetImage extends GetFileBase {
 }
 
 const out_format_list = ["mp3", "amr", "wma", "m4a", "spx", "ogg", "wav", "flac"];
-const PayloadSchema$10 = Type.Object({
+const PayloadSchema$11 = Type.Object({
   file: Type.Optional(Type.String({ description: "文件路径、URL或Base64" })),
   file_id: Type.Optional(Type.String({ description: "文件ID" })),
   out_format: Type.String({ description: "输出格式" })
 });
 class GetRecord extends GetFileBase {
   actionName = ActionName.GetRecord;
-  payloadSchema = PayloadSchema$10;
+  payloadSchema = PayloadSchema$11;
   actionSummary = "获取语音";
   actionDescription = "获取指定语音文件的信息，并支持格式转换";
   actionTags = ["文件接口"];
@@ -110926,12 +109136,12 @@ class GetRecord extends GetFileBase {
   }
 }
 
-const PayloadSchema$$ = Type.Object({
+const PayloadSchema$10 = Type.Object({
   user_id: Type.Optional(Type.Union([Type.String(), Type.Number()], { description: "用户QQ" })),
   group_id: Type.Optional(Type.String({ description: "群号" })),
   message_id: Type.Optional(Type.String({ description: "消息ID" }))
 });
-const ReturnSchema$16 = Type.Null({ description: "操作结果" });
+const ReturnSchema$17 = Type.Null({ description: "操作结果" });
 class MarkMsgAsRead extends OneBotAction {
   actionSummary = "标记消息已读";
   actionDescription = "标记指定渠道的消息为已读";
@@ -110973,20 +109183,20 @@ class MarkMsgAsRead extends OneBotAction {
   }
 }
 class MarkPrivateMsgAsRead extends MarkMsgAsRead {
-  payloadSchema = PayloadSchema$$;
-  returnSchema = ReturnSchema$16;
+  payloadSchema = PayloadSchema$10;
+  returnSchema = ReturnSchema$17;
   actionName = ActionName.MarkPrivateMsgAsRead;
   actionSummary = "标记私聊已读";
 }
 class MarkGroupMsgAsRead extends MarkMsgAsRead {
-  payloadSchema = PayloadSchema$$;
-  returnSchema = ReturnSchema$16;
+  payloadSchema = PayloadSchema$10;
+  returnSchema = ReturnSchema$17;
   actionName = ActionName.MarkGroupMsgAsRead;
   actionSummary = "标记群聊已读";
 }
 class GoCQHTTPMarkMsgAsRead extends MarkMsgAsRead {
-  payloadSchema = PayloadSchema$$;
-  returnSchema = ReturnSchema$16;
+  payloadSchema = PayloadSchema$10;
+  returnSchema = ReturnSchema$17;
   actionName = ActionName.GoCQHTTP_MarkMsgAsRead;
   actionSummary = "标记消息已读 (Go-CQHTTP)";
 }
@@ -111040,8 +109250,10 @@ class GoCQHTTPUploadGroupFile extends OneBotAction {
       peer,
       deleteAfterSentFiles: []
     };
-    const sendFileEle = await this.obContext.apis.FileApi.createValidSendFileElement(msgContext, downloadResult.path, payload.name, payload.folder ?? payload.folder_id, payload.upload_file);
-    msgContext.deleteAfterSentFiles.push(downloadResult.path);
+    const sendFileEle = await this.obContext.apis.FileApi.createValidSendFileElement(msgContext, downloadResult.path, payload.name, payload.folder ?? payload.folder_id, payload.upload_file, downloadResult.isLocal);
+    if (!downloadResult.isLocal) {
+      msgContext.deleteAfterSentFiles.push(downloadResult.path);
+    }
     const returnMsg = await this.obContext.apis.MsgApi.sendMsgWithOb11UniqueId(peer, [sendFileEle], msgContext.deleteAfterSentFiles);
     const fileElement = returnMsg.elements.find((ele) => ele.elementType === ElementType.FILE);
     return {
@@ -111092,28 +109304,28 @@ const ExtendsActionsExamples = {
   }
 };
 
-const PayloadSchema$_ = Type.Object({
+const PayloadSchema$$ = Type.Object({
   file: Type.String({ description: "图片路径、URL或Base64" })
 });
-const ReturnSchema$15 = Type.Null({ description: "设置结果" });
+const ReturnSchema$16 = Type.Null({ description: "设置结果" });
 class SetAvatar extends OneBotAction {
   actionName = ActionName.SetQQAvatar;
-  payloadSchema = PayloadSchema$_;
-  returnSchema = ReturnSchema$15;
+  payloadSchema = PayloadSchema$$;
+  returnSchema = ReturnSchema$16;
   actionSummary = "设置QQ头像";
   actionDescription = "修改当前账号的QQ头像";
   actionTags = ["扩展接口"];
   payloadExample = ExtendsActionsExamples.SetQQAvatar.payload;
   returnExample = ExtendsActionsExamples.SetQQAvatar.response;
   async _handle(payload) {
-    const { path, success } = await uriToLocalFile(this.core.NapCatTempPath, payload.file);
+    const { path, success, isLocal } = await uriToLocalFile(this.core.NapCatTempPath, payload.file);
     if (!success) {
       throw new Error(`头像${payload.file}设置失败,file字段可能格式不正确`);
     }
     if (path) {
       await checkFileExist(path, 5e3);
       const ret = await this.core.apis.UserApi.setQQAvatar(path);
-      fs$2.unlink(path).catch(() => {
+      if (!isLocal) fs$2.unlink(path).catch(() => {
       });
       if (!ret) {
         throw new Error(`头像${payload.file}设置失败,api无返回`);
@@ -111124,27 +109336,25 @@ class SetAvatar extends OneBotAction {
         throw new Error(`头像${payload.file}设置失败,未知的错误,${ret.result}:${ret.errMsg}`);
       }
     } else {
-      fs$2.unlink(path).catch(() => {
-      });
       throw new Error(`头像${payload.file}设置失败,无法获取头像,文件可能不存在`);
     }
     return null;
   }
 }
 
-const PayloadSchema$Z = Type.Object({
+const PayloadSchema$_ = Type.Object({
   url: Type.Optional(Type.String({ description: "下载链接" })),
   base64: Type.Optional(Type.String({ description: "base64数据" })),
   name: Type.Optional(Type.String({ description: "文件名" })),
   headers: Type.Optional(Type.Union([Type.String(), Type.Array(Type.String())], { description: "请求头" }))
 });
-const ReturnSchema$14 = Type.Object({
+const ReturnSchema$15 = Type.Object({
   file: Type.String({ description: "文件路径" })
 }, { description: "下载结果" });
 class GoCQHTTPDownloadFile extends OneBotAction {
   actionName = ActionName.GoCQHTTP_DownloadFile;
-  payloadSchema = PayloadSchema$Z;
-  returnSchema = ReturnSchema$14;
+  payloadSchema = PayloadSchema$_;
+  returnSchema = ReturnSchema$15;
   actionSummary = "下载文件";
   actionDescription = "下载网络文件到本地临时目录";
   actionTags = ["Go-CQHTTP"];
@@ -111201,7 +109411,7 @@ class GoCQHTTPDownloadFile extends OneBotAction {
   }
 }
 
-const PayloadSchema$Y = Type.Object({
+const PayloadSchema$Z = Type.Object({
   group_id: Type.String({ description: "群号" }),
   message_seq: Type.Optional(Type.String({ description: "起始消息序号" })),
   count: Type.Number({ default: 20, description: "获取消息数量" }),
@@ -111211,13 +109421,13 @@ const PayloadSchema$Y = Type.Object({
   quick_reply: Type.Boolean({ default: false, description: "是否快速回复" }),
   reverseOrder: Type.Boolean({ default: false, description: "是否反向排序(旧版本兼容)" })
 });
-const ReturnSchema$13 = Type.Object({
+const ReturnSchema$14 = Type.Object({
   messages: Type.Array(Type.Any(), { description: "消息列表" })
 }, { description: "群历史消息" });
 class GoCQHTTPGetGroupMsgHistory extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupMsgHistory;
-  payloadSchema = PayloadSchema$Y;
-  returnSchema = ReturnSchema$13;
+  payloadSchema = PayloadSchema$Z;
+  returnSchema = ReturnSchema$14;
   actionSummary = "获取群历史消息";
   actionDescription = "获取指定群聊的历史聊天记录";
   actionTags = ["Go-CQHTTP"];
@@ -111239,11 +109449,11 @@ class GoCQHTTPGetGroupMsgHistory extends OneBotAction {
   }
 }
 
-const PayloadSchema$X = Type.Object({
+const PayloadSchema$Y = Type.Object({
   message_id: Type.Optional(Type.String({ description: "消息ID" })),
   id: Type.Optional(Type.String({ description: "消息ID" }))
 });
-const ReturnSchema$12 = Type.Object({
+const ReturnSchema$13 = Type.Object({
   messages: Type.Optional(Type.Array(Type.Unknown(), { description: "消息列表" }))
 }, { description: "合并转发消息" });
 function isForward(msg) {
@@ -111251,8 +109461,8 @@ function isForward(msg) {
 }
 class GoCQHTTPGetForwardMsgAction extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetForwardMsg;
-  payloadSchema = PayloadSchema$X;
-  returnSchema = ReturnSchema$12;
+  payloadSchema = PayloadSchema$Y;
+  returnSchema = ReturnSchema$13;
   actionSummary = "获取合并转发消息";
   actionDescription = "获取合并转发消息的具体内容";
   actionTags = ["Go-CQHTTP"];
@@ -111375,7 +109585,7 @@ class GoCQHTTPGetForwardMsgAction extends OneBotAction {
   }
 }
 
-const PayloadSchema$W = Type.Object({
+const PayloadSchema$X = Type.Object({
   user_id: Type.String({ description: "用户QQ" }),
   message_seq: Type.Optional(Type.String({ description: "起始消息序号" })),
   count: Type.Number({ default: 20, description: "获取消息数量" }),
@@ -111385,13 +109595,13 @@ const PayloadSchema$W = Type.Object({
   quick_reply: Type.Boolean({ default: false, description: "是否快速回复" }),
   reverseOrder: Type.Boolean({ default: false, description: "是否反向排序(旧版本兼容)" })
 });
-const ReturnSchema$11 = Type.Object({
+const ReturnSchema$12 = Type.Object({
   messages: Type.Array(Type.Any(), { description: "消息列表" })
 }, { description: "好友历史消息" });
 class GetFriendMsgHistory extends OneBotAction {
   actionName = ActionName.GetFriendMsgHistory;
-  payloadSchema = PayloadSchema$W;
-  returnSchema = ReturnSchema$11;
+  payloadSchema = PayloadSchema$X;
+  returnSchema = ReturnSchema$12;
   actionSummary = "获取好友历史消息";
   actionDescription = "获取指定好友的历史聊天记录";
   actionTags = ["Go-CQHTTP"];
@@ -111440,17 +109650,26 @@ class GetCookies extends OneBotAction {
   async _handle(payload) {
     const cookiesObject = await this.core.apis.UserApi.getCookies(payload.domain);
     const cookies = Object.entries(cookiesObject).map(([key, value]) => `${key}=${value}`).join("; ");
-    const bkn = cookiesObject?.["skey"] ? this.core.apis.WebApi.getBknFromCookie(cookiesObject) : "";
+    let bkn = "";
+    if (payload.domain.includes("qzone.qq.com")) {
+      if (cookiesObject?.["p_skey"]) {
+        bkn = this.core.apis.WebApi.getBknFromPSKey(cookiesObject["p_skey"]);
+      } else {
+        bkn = cookiesObject?.["skey"] ? this.core.apis.WebApi.getBknFromCookie(cookiesObject) : "";
+      }
+    } else {
+      bkn = cookiesObject?.["skey"] ? this.core.apis.WebApi.getBknFromCookie(cookiesObject) : "";
+    }
     return { cookies, bkn };
   }
 }
 
-const PayloadSchema$V = Type.Object({
+const PayloadSchema$W = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" }),
   emoji_id: Type.Union([Type.Number(), Type.String()], { description: "表情ID" }),
   set: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否设置" }))
 });
-const ReturnSchema$10 = Type.Any({ description: "操作结果" });
+const ReturnSchema$11 = Type.Any({ description: "操作结果" });
 class SetMsgEmojiLike extends OneBotAction {
   actionName = ActionName.SetMsgEmojiLike;
   actionSummary = "设置消息表情点赞";
@@ -111463,8 +109682,8 @@ class SetMsgEmojiLike extends OneBotAction {
   returnExample = {
     result: true
   };
-  payloadSchema = PayloadSchema$V;
-  returnSchema = ReturnSchema$10;
+  payloadSchema = PayloadSchema$W;
+  returnSchema = ReturnSchema$11;
   async _handle(payload) {
     const msg = MessageUnique.getMsgIdAndPeerByShortId(+payload.message_id);
     if (!msg) {
@@ -111487,7 +109706,7 @@ class SetMsgEmojiLike extends OneBotAction {
   }
 }
 
-const ReturnSchema$$ = Type.Array(Type.Any(), { description: "机器人Uin范围列表" });
+const ReturnSchema$10 = Type.Array(Type.Any(), { description: "机器人Uin范围列表" });
 class GetRobotUinRange extends OneBotAction {
   actionName = ActionName.GetRobotUinRange;
   actionSummary = "获取机器人 UIN 范围";
@@ -111497,22 +109716,22 @@ class GetRobotUinRange extends OneBotAction {
     { minUin: "12345678", maxUin: "87654321" }
   ];
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$$;
+  returnSchema = ReturnSchema$10;
   async _handle() {
     return await this.core.apis.UserApi.getRobotUinRange();
   }
 }
 
-const PayloadSchema$U = Type.Object({
+const PayloadSchema$V = Type.Object({
   status: Type.Union([Type.Number(), Type.String()], { description: "在线状态" }),
   ext_status: Type.Union([Type.Number(), Type.String()], { description: "扩展状态" }),
   battery_status: Type.Union([Type.Number(), Type.String()], { description: "电量状态" })
 });
-const ReturnSchema$_ = Type.Null({ description: "设置结果" });
+const ReturnSchema$$ = Type.Null({ description: "设置结果" });
 class SetOnlineStatus extends OneBotAction {
   actionName = ActionName.SetOnlineStatus;
-  payloadSchema = PayloadSchema$U;
-  returnSchema = ReturnSchema$_;
+  payloadSchema = PayloadSchema$V;
+  returnSchema = ReturnSchema$$;
   actionSummary = "设置在线状态";
   actionDescription = statusText;
   actionTags = ["系统扩展"];
@@ -111747,10 +109966,10 @@ const statusText = `
 \`\`\`
 `;
 
-const PayloadSchema$T = Type.Object({
+const PayloadSchema$U = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$Z = Type.Array(Type.Object({
+const ReturnSchema$_ = Type.Array(Type.Object({
   sender_id: Type.Number({ description: "发送者QQ" }),
   publish_time: Type.Number({ description: "发布时间" }),
   notice_id: Type.String({ description: "公告ID" }),
@@ -111764,8 +109983,8 @@ const ReturnSchema$Z = Type.Array(Type.Object({
 }), { description: "群公告列表" });
 class GetGroupNotice extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupNotice;
-  payloadSchema = PayloadSchema$T;
-  returnSchema = ReturnSchema$Z;
+  payloadSchema = PayloadSchema$U;
+  returnSchema = ReturnSchema$_;
   actionSummary = "获取群公告";
   actionDescription = "获取指定群聊中的公告列表";
   actionTags = ["群组接口"];
@@ -111804,10 +110023,10 @@ class GetGroupNotice extends OneBotAction {
   }
 }
 
-const PayloadSchema$S = Type.Object({
+const PayloadSchema$T = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$Y = Type.Array(Type.Object({
+const ReturnSchema$Z = Type.Array(Type.Object({
   msg_seq: Type.Number({ description: "消息序号" }),
   msg_random: Type.Number({ description: "消息随机数" }),
   sender_id: Type.Number({ description: "发送者QQ" }),
@@ -111820,8 +110039,8 @@ const ReturnSchema$Y = Type.Array(Type.Object({
 }), { description: "精华消息列表" });
 class GetGroupEssence extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetEssenceMsg;
-  payloadSchema = PayloadSchema$S;
-  returnSchema = ReturnSchema$Y;
+  payloadSchema = PayloadSchema$T;
+  returnSchema = ReturnSchema$Z;
   actionSummary = "获取群精华消息";
   actionDescription = "获取指定群聊中的精华消息列表";
   actionTags = ["群组接口"];
@@ -111914,12 +110133,12 @@ class GetGroupEssence extends OneBotAction {
   }
 }
 
-const PayloadSchema$R = Type.Object({
+const PayloadSchema$S = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" }),
   group_id: Type.Optional(Type.String({ description: "目标群号" })),
   user_id: Type.Optional(Type.String({ description: "目标用户QQ" }))
 });
-const ReturnSchema$X = Type.Null({ description: "操作结果" });
+const ReturnSchema$Y = Type.Null({ description: "操作结果" });
 class ForwardSingleMsg extends OneBotAction {
   actionSummary = "转发单条消息";
   actionDescription = "转发单条消息";
@@ -111957,17 +110176,17 @@ class ForwardSingleMsg extends OneBotAction {
   }
 }
 class ForwardFriendSingleMsg extends ForwardSingleMsg {
-  payloadSchema = PayloadSchema$R;
-  returnSchema = ReturnSchema$X;
+  payloadSchema = PayloadSchema$S;
+  returnSchema = ReturnSchema$Y;
   actionName = ActionName.ForwardFriendSingleMsg;
 }
 class ForwardGroupSingleMsg extends ForwardSingleMsg {
-  payloadSchema = PayloadSchema$R;
-  returnSchema = ReturnSchema$X;
+  payloadSchema = PayloadSchema$S;
+  returnSchema = ReturnSchema$Y;
   actionName = ActionName.ForwardGroupSingleMsg;
 }
 
-const ReturnSchema$W = Type.Array(
+const ReturnSchema$X = Type.Array(
   Type.Object({
     categoryId: Type.Number({ description: "分组ID" }),
     categoryName: Type.String({ description: "分组名称" }),
@@ -111979,7 +110198,7 @@ const ReturnSchema$W = Type.Array(
 class GetFriendWithCategory extends OneBotAction {
   actionName = ActionName.GetFriendsWithCategory;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$W;
+  returnSchema = ReturnSchema$X;
   actionSummary = "获取带分组的好友列表";
   actionTags = ["用户扩展"];
   payloadExample = {};
@@ -112024,7 +110243,8 @@ class SendGroupNotice extends OneBotAction {
     if (payload.image) {
       const {
         path,
-        success
+        success,
+        isLocal
       } = await uriToLocalFile(this.core.NapCatTempPath, payload.image);
       if (!success) {
         throw new Error(`群公告${payload.image}设置失败,image字段可能格式不正确`);
@@ -112037,7 +110257,7 @@ class SendGroupNotice extends OneBotAction {
       if (ImageUploadResult.errCode !== 0) {
         throw new Error(`群公告${payload.image}设置失败,图片上传失败 ， 错误信息:${ImageUploadResult.errMsg}`);
       }
-      unlink(path).catch(() => {
+      if (!isLocal) unlink(path).catch(() => {
       });
       UploadImage = ImageUploadResult.picInfo;
     }
@@ -112059,11 +110279,11 @@ class SendGroupNotice extends OneBotAction {
   }
 }
 
-const PayloadSchema$Q = Type.Object({
+const PayloadSchema$R = Type.Object({
   group_id: Type.String({ description: "群号" }),
   type: Type.Optional(Type.Enum(WebHonorType, { description: "荣誉类型" }))
 });
-const ReturnSchema$V = Type.Object({
+const ReturnSchema$W = Type.Object({
   group_id: Type.Number({ description: "群号" }),
   current_talkative: Type.Record(Type.String(), Type.Unknown(), { description: "当前龙王" }),
   talkative_list: Type.Array(Type.Unknown(), { description: "龙王列表" }),
@@ -112074,8 +110294,8 @@ const ReturnSchema$V = Type.Object({
 }, { description: "群荣誉信息" });
 class GetGroupHonorInfo extends OneBotAction {
   actionName = ActionName.GetGroupHonorInfo;
-  payloadSchema = PayloadSchema$Q;
-  returnSchema = ReturnSchema$V;
+  payloadSchema = PayloadSchema$R;
+  returnSchema = ReturnSchema$W;
   actionSummary = "获取群荣誉信息";
   actionDescription = "获取指定群聊的荣誉信息，如龙王等";
   actionTags = ["Go-CQHTTP"];
@@ -112099,7 +110319,7 @@ const SenderSchema = Type.Object({
   role: Type.Optional(Type.String({ description: "群角色" }))
 });
 const QuickActionSchema = Type.Object({
-  reply: Type.Optional(Type.String({ description: "回复内容" })),
+  reply: Type.Optional(OB11MessageMixTypeSchema),
   auto_escape: Type.Optional(Type.Boolean({ description: "是否作为纯文本发送" })),
   at_sender: Type.Optional(Type.Boolean({ description: "是否 @ 发送者" })),
   delete: Type.Optional(Type.Boolean({ description: "是否撤回该消息" })),
@@ -112147,16 +110367,16 @@ class GoCQHTTPHandleQuickAction extends OneBotAction {
   }
 }
 
-const PayloadSchema$P = Type.Object({}, { description: "群忽略通知负载" });
-const ReturnSchema$U = Type.Object({
+const PayloadSchema$Q = Type.Object({}, { description: "群忽略通知负载" });
+const ReturnSchema$V = Type.Object({
   invited_requests: Type.Array(Type.Any(), { description: "邀请请求列表" }),
   InvitedRequest: Type.Array(Type.Any(), { description: "邀请请求列表" }),
   join_requests: Type.Array(Type.Any(), { description: "加入请求列表" })
 }, { description: "群忽略通知结果" });
 class GetGroupIgnoredNotifies extends OneBotAction {
   actionName = ActionName.GetGroupIgnoredNotifies;
-  payloadSchema = PayloadSchema$P;
-  returnSchema = ReturnSchema$U;
+  payloadSchema = PayloadSchema$Q;
+  returnSchema = ReturnSchema$V;
   actionSummary = "获取群忽略通知";
   actionDescription = "获取被忽略的入群申请和邀请通知";
   actionTags = ["群组接口"];
@@ -112195,12 +110415,12 @@ class GetGroupIgnoredNotifies extends OneBotAction {
   }
 }
 
-const PayloadSchema$O = Type.Object({}, { description: "在线客户端负载" });
-const ReturnSchema$T = Type.Array(Type.Any(), { description: "在线客户端列表" });
+const PayloadSchema$P = Type.Object({}, { description: "在线客户端负载" });
+const ReturnSchema$U = Type.Array(Type.Any(), { description: "在线客户端列表" });
 class GetOnlineClient extends OneBotAction {
   actionName = ActionName.GetOnlineClient;
-  payloadSchema = PayloadSchema$O;
-  returnSchema = ReturnSchema$T;
+  payloadSchema = PayloadSchema$P;
+  returnSchema = ReturnSchema$U;
   actionSummary = "获取在线客户端";
   actionDescription = "获取当前登录账号的在线客户端列表";
   actionTags = ["Go-CQHTTP"];
@@ -112213,20 +110433,20 @@ class GetOnlineClient extends OneBotAction {
   }
 }
 
-const PayloadSchema$N = Type.Object({
+const PayloadSchema$O = Type.Object({
   image: Type.String({ description: "图片路径、URL或Base64" })
 });
-const ReturnSchema$S = Type.Any({ description: "OCR结果" });
+const ReturnSchema$T = Type.Any({ description: "OCR结果" });
 class OCRImageBase extends OneBotAction {
-  payloadSchema = PayloadSchema$N;
-  returnSchema = ReturnSchema$S;
+  payloadSchema = PayloadSchema$O;
+  returnSchema = ReturnSchema$T;
   actionSummary = "图片 OCR 识别";
   actionDescription = "识别图片中的文字内容(仅Windows端支持)";
   actionTags = ["扩展接口"];
   payloadExample = ExtendsActionsExamples.OCRImage.payload;
   returnExample = ExtendsActionsExamples.OCRImage.response;
   async _handle(payload) {
-    const { path, success } = await uriToLocalFile(this.core.NapCatTempPath, payload.image);
+    const { path, success, isLocal } = await uriToLocalFile(this.core.NapCatTempPath, payload.image);
     if (!success) {
       throw new Error(`OCR ${payload.image}失败, image字段可能格式不正确`);
     }
@@ -112239,7 +110459,7 @@ class OCRImageBase extends OneBotAction {
         }
         return ret.result;
       } finally {
-        fs__default.unlink(path, () => {
+        if (!isLocal) fs__default.unlink(path, () => {
         });
       }
     }
@@ -112255,16 +110475,16 @@ class IOCRImage extends OCRImageBase {
   actionSummary = "图片 OCR 识别 (内部)";
 }
 
-const PayloadSchema$M = Type.Object({
+const PayloadSchema$N = Type.Object({
   words: Type.Array(Type.String(), { description: "待翻译单词列表" })
 });
-const ReturnSchema$R = Type.Object({
+const ReturnSchema$S = Type.Object({
   words: Type.Array(Type.String(), { description: "翻译结果列表" })
 }, { description: "翻译结果" });
 class TranslateEnWordToZn extends OneBotAction {
   actionName = ActionName.TranslateEnWordToZn;
-  payloadSchema = PayloadSchema$M;
-  returnSchema = ReturnSchema$R;
+  payloadSchema = PayloadSchema$N;
+  returnSchema = ReturnSchema$S;
   actionSummary = "英文单词翻译";
   actionDescription = "将英文单词列表翻译为中文";
   actionTags = ["扩展接口"];
@@ -112313,15 +110533,15 @@ class SetQQProfile extends OneBotAction {
   }
 }
 
-const PayloadSchema$L = Type.Object({
+const PayloadSchema$M = Type.Object({
   user_id: Type.Optional(Type.String({ description: "QQ号" })),
   group_id: Type.Optional(Type.String({ description: "群号" })),
   phone_number: Type.String({ default: "", description: "手机号" })
 });
-const ReturnSchema$Q = Type.Any({ description: "分享结果" });
+const ReturnSchema$R = Type.Any({ description: "分享结果" });
 class SharePeerBase extends OneBotAction {
-  payloadSchema = PayloadSchema$L;
-  returnSchema = ReturnSchema$Q;
+  payloadSchema = PayloadSchema$M;
+  returnSchema = ReturnSchema$R;
   actionSummary = "分享用户 (Ark)";
   actionDescription = "获取用户推荐的 Ark 内容";
   actionTags = ["消息扩展"];
@@ -112372,15 +110592,15 @@ class SendArkShare extends SharePeerBase {
   actionName = ActionName.SendArkShare;
 }
 
-const PayloadSchema$K = Type.Object({
+const PayloadSchema$L = Type.Object({
   rawData: Type.String({ description: "原始数据" }),
   brief: Type.String({ description: "简要描述" })
 });
-const ReturnSchema$P = Type.Any({ description: "创建结果" });
+const ReturnSchema$Q = Type.Any({ description: "创建结果" });
 class CreateCollection extends OneBotAction {
   actionName = ActionName.CreateCollection;
-  payloadSchema = PayloadSchema$K;
-  returnSchema = ReturnSchema$P;
+  payloadSchema = PayloadSchema$L;
+  returnSchema = ReturnSchema$Q;
   actionSummary = "创建收藏";
   actionTags = ["扩展接口"];
   payloadExample = {
@@ -112402,14 +110622,14 @@ class CreateCollection extends OneBotAction {
   }
 }
 
-const PayloadSchema$J = Type.Object({
+const PayloadSchema$K = Type.Object({
   longNick: Type.String({ description: "签名内容" })
 });
-const ReturnSchema$O = Type.Any({ description: "设置结果" });
+const ReturnSchema$P = Type.Any({ description: "设置结果" });
 class SetLongNick extends OneBotAction {
   actionName = ActionName.SetLongNick;
-  payloadSchema = PayloadSchema$J;
-  returnSchema = ReturnSchema$O;
+  payloadSchema = PayloadSchema$K;
+  returnSchema = ReturnSchema$P;
   actionSummary = "设置个性签名";
   actionDescription = "修改当前登录帐号的个性签名";
   actionTags = ["扩展接口"];
@@ -112420,17 +110640,17 @@ class SetLongNick extends OneBotAction {
   }
 }
 
-const PayloadSchema$I = Type.Object({
+const PayloadSchema$J = Type.Object({
   message_id: Type.Optional(Type.Union([Type.Number(), Type.String()], { description: "消息ID" })),
   msg_seq: Type.Optional(Type.String({ description: "消息序号" })),
   msg_random: Type.Optional(Type.String({ description: "消息随机数" })),
   group_id: Type.Optional(Type.String({ description: "群号" }))
 });
-const ReturnSchema$N = Type.Any({ description: "操作结果" });
+const ReturnSchema$O = Type.Any({ description: "操作结果" });
 class DelEssenceMsg extends OneBotAction {
   actionName = ActionName.DelEssenceMsg;
-  payloadSchema = PayloadSchema$I;
-  returnSchema = ReturnSchema$N;
+  payloadSchema = PayloadSchema$J;
+  returnSchema = ReturnSchema$O;
   actionSummary = "移出精华消息";
   actionDescription = "将一条消息从群精华消息列表中移出";
   actionTags = ["群组接口"];
@@ -112461,14 +110681,14 @@ class DelEssenceMsg extends OneBotAction {
   }
 }
 
-const PayloadSchema$H = Type.Object({
+const PayloadSchema$I = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema$M = Type.Any({ description: "操作结果" });
+const ReturnSchema$N = Type.Any({ description: "操作结果" });
 class SetEssenceMsg extends OneBotAction {
   actionName = ActionName.SetEssenceMsg;
-  payloadSchema = PayloadSchema$H;
-  returnSchema = ReturnSchema$M;
+  payloadSchema = PayloadSchema$I;
+  returnSchema = ReturnSchema$N;
   actionSummary = "设置精华消息";
   actionDescription = "将一条消息设置为群精华消息";
   actionTags = ["群组接口"];
@@ -112553,12 +110773,12 @@ class GetRecentContact extends OneBotAction {
   }
 }
 
-const PayloadSchema$G = Type.Object({
+const PayloadSchema$H = Type.Object({
   user_id: Type.Optional(Type.String({ description: "QQ号" })),
   start: Type.Union([Type.Number(), Type.String()], { default: 0, description: "起始位置" }),
   count: Type.Union([Type.Number(), Type.String()], { default: 10, description: "获取数量" })
 });
-const ReturnSchema$L = Type.Object({
+const ReturnSchema$M = Type.Object({
   uid: Type.String({ description: "用户UID" }),
   time: Type.String({ description: "时间" }),
   favoriteInfo: Type.Object({
@@ -112577,8 +110797,8 @@ const ReturnSchema$L = Type.Object({
 }, { description: "点赞详情" });
 class GetProfileLike extends OneBotAction {
   actionName = ActionName.GetProfileLike;
-  payloadSchema = PayloadSchema$G;
-  returnSchema = ReturnSchema$L;
+  payloadSchema = PayloadSchema$H;
+  returnSchema = ReturnSchema$M;
   actionSummary = "获取资料点赞";
   actionTags = ["用户扩展"];
   payloadExample = {
@@ -112626,28 +110846,28 @@ const SetGroupPortraitPayloadSchema = Type.Object({
   file: Type.String({ description: "头像文件路径或 URL" }),
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$K = Type.Object({
+const ReturnSchema$L = Type.Object({
   result: Type.Number(),
   errMsg: Type.String()
 }, { description: "设置结果" });
 class SetGroupPortrait extends OneBotAction {
   actionName = ActionName.SetGroupPortrait;
   payloadSchema = SetGroupPortraitPayloadSchema;
-  returnSchema = ReturnSchema$K;
+  returnSchema = ReturnSchema$L;
   actionSummary = "设置群头像";
   actionDescription = "修改指定群聊的头像";
   actionTags = ["Go-CQHTTP"];
   payloadExample = GoCQHTTPActionsExamples.SetGroupPortrait.payload;
   returnExample = GoCQHTTPActionsExamples.SetGroupPortrait.response;
   async _handle(payload) {
-    const { path, success } = await uriToLocalFile(this.core.NapCatTempPath, payload.file);
+    const { path, success, isLocal } = await uriToLocalFile(this.core.NapCatTempPath, payload.file);
     if (!success) {
       throw new Error(`头像${payload.file}设置失败,file字段可能格式不正确`);
     }
     if (path) {
       await checkFileExistV2(path, 5e3);
       const ret = await this.core.apis.GroupApi.setGroupAvatar(payload.group_id.toString(), path);
-      fs$2.unlink(path).catch(() => {
+      if (!isLocal) fs$2.unlink(path).catch(() => {
       });
       if (!ret) {
         throw new Error(`头像${payload.file}设置失败,api无返回`);
@@ -112662,21 +110882,19 @@ class SetGroupPortrait extends OneBotAction {
         errMsg: ret.errMsg
       };
     } else {
-      fs$2.unlink(path).catch(() => {
-      });
       throw new Error(`头像${payload.file}设置失败,无法获取头像,文件可能不存在`);
     }
   }
 }
 
-const PayloadSchema$F = Type.Object({
+const PayloadSchema$G = Type.Object({
   count: Type.Union([Type.Number(), Type.String()], { default: 48, description: "获取数量" })
 });
-const ReturnSchema$J = Type.Array(Type.String(), { description: "表情URL列表" });
+const ReturnSchema$K = Type.Array(Type.String(), { description: "表情URL列表" });
 class FetchCustomFace extends OneBotAction {
   actionName = ActionName.FetchCustomFace;
-  payloadSchema = PayloadSchema$F;
-  returnSchema = ReturnSchema$J;
+  payloadSchema = PayloadSchema$G;
+  returnSchema = ReturnSchema$K;
   actionSummary = "获取自定义表情";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -112735,8 +110953,10 @@ class GoCQHTTPUploadPrivateFile extends OneBotAction {
       }, ContextMode.Private),
       deleteAfterSentFiles: []
     };
-    const sendFileEle = await this.obContext.apis.FileApi.createValidSendFileElement(msgContext, downloadResult.path, payload.name, "", payload.upload_file);
-    msgContext.deleteAfterSentFiles.push(downloadResult.path);
+    const sendFileEle = await this.obContext.apis.FileApi.createValidSendFileElement(msgContext, downloadResult.path, payload.name, "", payload.upload_file, downloadResult.isLocal);
+    if (!downloadResult.isLocal) {
+      msgContext.deleteAfterSentFiles.push(downloadResult.path);
+    }
     const returnMsg = await this.obContext.apis.MsgApi.sendMsgWithOb11UniqueId(await this.getPeer(payload), [sendFileEle], msgContext.deleteAfterSentFiles);
     const fileElement = returnMsg.elements.find((ele) => ele.elementType === ElementType.FILE);
     return {
@@ -112745,14 +110965,14 @@ class GoCQHTTPUploadPrivateFile extends OneBotAction {
   }
 }
 
-const PayloadSchema$E = Type.Object({
+const PayloadSchema$F = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" }),
   emojiId: Type.Union([Type.Number(), Type.String()], { description: "表情ID" }),
   emojiType: Type.Union([Type.Number(), Type.String()], { description: "表情类型" }),
   count: Type.Union([Type.Number(), Type.String()], { default: 20, description: "获取数量" }),
   cookie: Type.String({ default: "", description: "分页Cookie" })
 });
-const ReturnSchema$I = Type.Object({
+const ReturnSchema$J = Type.Object({
   emojiLikesList: Type.Array(Type.Object({
     tinyId: Type.String({ description: "TinyID" }),
     nickName: Type.String({ description: "昵称" }),
@@ -112789,8 +111009,8 @@ class FetchEmojiLike extends OneBotAction {
     result: 0,
     errMsg: ""
   };
-  payloadSchema = PayloadSchema$E;
-  returnSchema = ReturnSchema$I;
+  payloadSchema = PayloadSchema$F;
+  returnSchema = ReturnSchema$J;
   async _handle(payload) {
     const msgIdPeer = MessageUnique.getMsgIdAndPeerByShortId(+payload.message_id);
     if (!msgIdPeer) throw new Error("消息不存在");
@@ -112808,14 +111028,14 @@ class FetchEmojiLike extends OneBotAction {
   }
 }
 
-const PayloadSchema$D = Type.Object({
+const PayloadSchema$E = Type.Object({
   group_id: Type.Optional(Type.String({ description: "群号，短ID可不传" })),
   message_id: Type.String({ description: "消息ID，可以传递长ID或短ID" }),
   emoji_id: Type.String({ description: "表情ID" }),
   emoji_type: Type.Optional(Type.String({ description: "表情类型" })),
   count: Type.Number({ default: 0, description: "数量，0代表全部" })
 });
-const ReturnSchema$H = Type.Object({
+const ReturnSchema$I = Type.Object({
   emoji_like_list: Type.Array(
     Type.Object({
       user_id: Type.String({ description: "点击者QQ号" }),
@@ -112840,8 +111060,8 @@ class GetEmojiLikes extends OneBotAction {
       }
     ]
   };
-  payloadSchema = PayloadSchema$D;
-  returnSchema = ReturnSchema$H;
+  payloadSchema = PayloadSchema$E;
+  returnSchema = ReturnSchema$I;
   async _handle(payload) {
     let peer;
     let msgId;
@@ -112860,7 +111080,7 @@ class GetEmojiLikes extends OneBotAction {
     const emojiType = payload.emoji_type ?? (payload.emoji_id.length > 3 ? "2" : "1");
     const emojiLikeList = [];
     let cookie = "";
-    let needFetchCount = payload.count == 0 ? 200 : Math.ceil(payload.count / 15);
+    const needFetchCount = payload.count === 0 ? 200 : Math.ceil(payload.count / 15);
     for (let page = 0; page < needFetchCount; page++) {
       const res = await this.core.apis.MsgApi.getMsgEmojiLikesList(
         peer,
@@ -112885,15 +111105,15 @@ class GetEmojiLikes extends OneBotAction {
   }
 }
 
-const PayloadSchema$C = Type.Object({
+const PayloadSchema$D = Type.Object({
   user_id: Type.String({ description: "QQ号" }),
   event_type: Type.Number({ description: "事件类型" })
 });
-const ReturnSchema$G = Type.Any({ description: "设置结果" });
+const ReturnSchema$H = Type.Any({ description: "设置结果" });
 class SetInputStatus extends OneBotAction {
   actionName = ActionName.SetInputStatus;
-  payloadSchema = PayloadSchema$C;
-  returnSchema = ReturnSchema$G;
+  payloadSchema = PayloadSchema$D;
+  returnSchema = ReturnSchema$H;
   actionSummary = "设置输入状态";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -112937,15 +111157,15 @@ class GetCSRF extends OneBotAction {
   }
 }
 
-const PayloadSchema$B = Type.Object({
+const PayloadSchema$C = Type.Object({
   group_id: Type.String({ description: "群号" }),
   notice_id: Type.String({ description: "公告ID" })
 });
-const ReturnSchema$F = Type.Any({ description: "操作结果" });
+const ReturnSchema$G = Type.Any({ description: "操作结果" });
 class DelGroupNotice extends OneBotAction {
   actionName = ActionName.DelGroupNotice;
-  payloadSchema = PayloadSchema$B;
-  returnSchema = ReturnSchema$F;
+  payloadSchema = PayloadSchema$C;
+  returnSchema = ReturnSchema$G;
   actionSummary = "删除群公告";
   actionDescription = "删除群聊中的公告";
   actionTags = ["群组接口"];
@@ -112958,10 +111178,10 @@ class DelGroupNotice extends OneBotAction {
   }
 }
 
-const PayloadSchema$A = Type.Object({
+const PayloadSchema$B = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$E = Type.Any({ description: "群扩展信息" });
+const ReturnSchema$F = Type.Any({ description: "群扩展信息" });
 class GetGroupInfoEx extends OneBotAction {
   actionName = ActionName.GetGroupInfoEx;
   actionSummary = "获取群详细信息 (扩展)";
@@ -112970,22 +111190,22 @@ class GetGroupInfoEx extends OneBotAction {
     group_id: "123456"
   };
   returnExample = {};
-  payloadSchema = PayloadSchema$A;
-  returnSchema = ReturnSchema$E;
+  payloadSchema = PayloadSchema$B;
+  returnSchema = ReturnSchema$F;
   async _handle(payload) {
     return (await this.core.apis.GroupApi.getGroupExtFE0Info([payload.group_id.toString()])).result.groupExtInfos.get(payload.group_id.toString());
   }
 }
 
-const PayloadSchema$z = Type.Object({
+const PayloadSchema$A = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$D = Type.Any({ description: "删除结果" });
+const ReturnSchema$E = Type.Any({ description: "删除结果" });
 class DeleteGroupFile extends OneBotAction {
   actionName = ActionName.GOCQHTTP_DeleteGroupFile;
-  payloadSchema = PayloadSchema$z;
-  returnSchema = ReturnSchema$D;
+  payloadSchema = PayloadSchema$A;
+  returnSchema = ReturnSchema$E;
   actionSummary = "删除群文件";
   actionDescription = "在群文件系统中删除指定的文件";
   actionTags = ["Go-CQHTTP"];
@@ -112998,21 +111218,21 @@ class DeleteGroupFile extends OneBotAction {
   }
 }
 
-const PayloadSchema$y = Type.Object({
+const PayloadSchema$z = Type.Object({
   group_id: Type.String({ description: "群号" }),
   // 兼容gocq 与name二选一
   folder_name: Type.Optional(Type.String({ description: "文件夹名称" })),
   // 兼容gocq 与folder_name二选一
   name: Type.Optional(Type.String({ description: "文件夹名称" }))
 });
-const ReturnSchema$C = Type.Object({
+const ReturnSchema$D = Type.Object({
   result: Type.Any({ description: "操作结果" }),
   groupItem: Type.Any({ description: "群项信息" })
 }, { description: "创建文件夹结果" });
 class CreateGroupFileFolder extends OneBotAction {
   actionName = ActionName.GoCQHTTP_CreateGroupFileFolder;
-  payloadSchema = PayloadSchema$y;
-  returnSchema = ReturnSchema$C;
+  payloadSchema = PayloadSchema$z;
+  returnSchema = ReturnSchema$D;
   actionSummary = "创建群文件目录";
   actionDescription = "在群文件系统中创建新的文件夹";
   actionTags = ["Go-CQHTTP"];
@@ -113030,16 +111250,16 @@ class CreateGroupFileFolder extends OneBotAction {
   }
 }
 
-const PayloadSchema$x = Type.Object({
+const PayloadSchema$y = Type.Object({
   group_id: Type.String({ description: "群号" }),
   folder_id: Type.Optional(Type.String({ description: "文件夹ID" })),
   folder: Type.Optional(Type.String({ description: "文件夹ID" }))
 });
-const ReturnSchema$B = Type.Any({ description: "删除结果" });
+const ReturnSchema$C = Type.Any({ description: "删除结果" });
 class DeleteGroupFileFolder extends OneBotAction {
   actionName = ActionName.GoCQHTTP_DeleteGroupFileFolder;
-  payloadSchema = PayloadSchema$x;
-  returnSchema = ReturnSchema$B;
+  payloadSchema = PayloadSchema$y;
+  returnSchema = ReturnSchema$C;
   actionSummary = "删除群文件目录";
   actionDescription = "在群文件系统中删除指定的文件夹";
   actionTags = ["Go-CQHTTP"];
@@ -113053,10 +111273,10 @@ class DeleteGroupFileFolder extends OneBotAction {
   }
 }
 
-const PayloadSchema$w = Type.Object({
+const PayloadSchema$x = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$A = Type.Object({
+const ReturnSchema$B = Type.Object({
   file_count: Type.Number({ description: "文件总数" }),
   limit_count: Type.Number({ description: "文件上限" }),
   used_space: Type.Number({ description: "已使用空间" }),
@@ -113064,8 +111284,8 @@ const ReturnSchema$A = Type.Object({
 }, { description: "群文件系统信息" });
 class GetGroupFileSystemInfo extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupFileSystemInfo;
-  payloadSchema = PayloadSchema$w;
-  returnSchema = ReturnSchema$A;
+  payloadSchema = PayloadSchema$x;
+  returnSchema = ReturnSchema$B;
   actionSummary = "获取群文件系统信息";
   actionDescription = "获取群聊文件系统的空间及状态信息";
   actionTags = ["Go-CQHTTP"];
@@ -113085,18 +111305,18 @@ class GetGroupFileSystemInfo extends OneBotAction {
   }
 }
 
-const PayloadSchema$v = Type.Object({
+const PayloadSchema$w = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_count: Type.Union([Type.Number(), Type.String()], { default: 50, description: "文件数量" })
 });
-const ReturnSchema$z = Type.Object({
+const ReturnSchema$A = Type.Object({
   files: Type.Array(Type.Any(), { description: "文件列表" }),
   folders: Type.Array(Type.Any(), { description: "文件夹列表" })
 }, { description: "群根目录文件列表" });
 class GetGroupRootFiles extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupRootFiles;
-  payloadSchema = PayloadSchema$v;
-  returnSchema = ReturnSchema$z;
+  payloadSchema = PayloadSchema$w;
+  returnSchema = ReturnSchema$A;
   actionSummary = "获取群根目录文件列表";
   actionDescription = "获取群文件根目录下的所有文件和文件夹";
   actionTags = ["Go-CQHTTP"];
@@ -113117,20 +111337,20 @@ class GetGroupRootFiles extends OneBotAction {
   }
 }
 
-const PayloadSchema$u = Type.Object({
+const PayloadSchema$v = Type.Object({
   group_id: Type.String({ description: "群号" }),
   folder_id: Type.Optional(Type.String({ description: "文件夹ID" })),
   folder: Type.Optional(Type.String({ description: "文件夹ID" })),
   file_count: Type.Union([Type.Number(), Type.String()], { default: 50, description: "文件数量" })
 });
-const ReturnSchema$y = Type.Object({
+const ReturnSchema$z = Type.Object({
   files: Type.Array(Type.Unknown(), { description: "文件列表" }),
   folders: Type.Array(Type.Unknown(), { description: "文件夹列表" })
 }, { description: "群文件夹文件列表" });
 class GetGroupFilesByFolder extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupFilesByFolder;
-  payloadSchema = PayloadSchema$u;
-  returnSchema = ReturnSchema$y;
+  payloadSchema = PayloadSchema$v;
+  returnSchema = ReturnSchema$z;
   actionSummary = "获取群文件夹文件列表";
   actionDescription = "获取指定群文件夹下的文件及子文件夹列表";
   actionTags = ["Go-CQHTTP"];
@@ -113229,17 +111449,17 @@ class GetPacketStatus extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$t = Type.Object({
+const PayloadSchema$u = Type.Object({
   user_id: Type.String({ description: "QQ号" })
 });
-const ReturnSchema$x = Type.Object({
+const ReturnSchema$y = Type.Object({
   status: Type.Number({ description: "在线状态" }),
   ext_status: Type.Number({ description: "扩展状态" })
 }, { description: "用户状态" });
 class GetUserStatus extends GetPacketStatusDepends {
   actionName = ActionName.GetUserStatus;
-  payloadSchema = PayloadSchema$t;
-  returnSchema = ReturnSchema$x;
+  payloadSchema = PayloadSchema$u;
+  returnSchema = ReturnSchema$y;
   actionSummary = "获取用户在线状态";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -113258,18 +111478,18 @@ class GetUserStatus extends GetPacketStatusDepends {
   }
 }
 
-const ReturnSchema$w = Type.Array(Type.Any(), { description: "Rkey列表" });
+const ReturnSchema$x = Type.Array(Type.Any(), { description: "Rkey列表" });
 class GetRkey extends GetPacketStatusDepends {
   actionName = ActionName.GetRkey;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$w;
+  returnSchema = ReturnSchema$x;
   actionSummary = "获取 RKey";
   actionTags = ["系统扩展"];
   payloadExample = {};
   returnExample = [
     {
-      "key": "rkey_value",
-      "expired": 1734567890
+      key: "rkey_value",
+      expired: 1734567890
     }
   ];
   async _handle() {
@@ -113277,16 +111497,16 @@ class GetRkey extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$s = Type.Object({
+const PayloadSchema$t = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "QQ号" }),
   special_title: Type.String({ default: "", description: "专属头衔" })
 });
-const ReturnSchema$v = Type.Void({ description: "设置结果" });
+const ReturnSchema$w = Type.Void({ description: "设置结果" });
 class SetSpecialTitle extends GetPacketStatusDepends {
   actionName = ActionName.SetSpecialTitle;
-  payloadSchema = PayloadSchema$s;
-  returnSchema = ReturnSchema$v;
+  payloadSchema = PayloadSchema$t;
+  returnSchema = ReturnSchema$w;
   actionSummary = "设置专属头衔";
   actionDescription = "设置群聊中指定成员的专属头衔";
   actionTags = ["扩展接口"];
@@ -113299,14 +111519,14 @@ class SetSpecialTitle extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$r = Type.Object({
+const PayloadSchema$s = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$u = Type.Array(Type.Any(), { description: "禁言成员列表" });
+const ReturnSchema$v = Type.Array(Type.Any(), { description: "禁言成员列表" });
 class GetGroupShutList extends OneBotAction {
   actionName = ActionName.GetGroupShutList;
-  payloadSchema = PayloadSchema$r;
-  returnSchema = ReturnSchema$u;
+  payloadSchema = PayloadSchema$s;
+  returnSchema = ReturnSchema$v;
   actionSummary = "获取群禁言列表";
   actionTags = ["群组接口"];
   payloadExample = {
@@ -113324,15 +111544,15 @@ class GetGroupShutList extends OneBotAction {
   }
 }
 
-const PayloadSchema$q = Type.Object({
+const PayloadSchema$r = Type.Object({
   group_id: Type.String({ description: "群号" }),
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$t = Type.Array(Type.Any(), { description: "群成员列表" });
+const ReturnSchema$u = Type.Array(Type.Any(), { description: "群成员列表" });
 class GetGroupMemberList extends OneBotAction {
   actionName = ActionName.GetGroupMemberList;
-  payloadSchema = PayloadSchema$q;
-  returnSchema = ReturnSchema$t;
+  payloadSchema = PayloadSchema$r;
+  returnSchema = ReturnSchema$u;
   actionSummary = "获取群成员列表";
   actionDescription = "获取群聊中的所有成员列表";
   actionTags = ["群组接口"];
@@ -113366,17 +111586,17 @@ class GetGroupMemberList extends OneBotAction {
   }
 }
 
-const PayloadSchema$p = Type.Object({
+const PayloadSchema$q = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$s = Type.Object({
+const ReturnSchema$t = Type.Object({
   url: Type.Optional(Type.String({ description: "文件下载链接" }))
 }, { description: "群文件URL信息" });
 class GetGroupFileUrl extends GetPacketStatusDepends {
   actionName = ActionName.GOCQHTTP_GetGroupFileUrl;
-  payloadSchema = PayloadSchema$p;
-  returnSchema = ReturnSchema$s;
+  payloadSchema = PayloadSchema$q;
+  returnSchema = ReturnSchema$t;
   actionSummary = "获取群文件URL";
   actionDescription = "获取指定群文件的下载链接";
   actionTags = ["文件接口"];
@@ -113439,13 +111659,13 @@ class SetRestart extends OneBotAction {
   }
 }
 
-const PayloadSchema$o = Type.Object({
+const PayloadSchema$p = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$r = Type.Void({ description: "打卡结果" });
+const ReturnSchema$s = Type.Void({ description: "打卡结果" });
 class SetGroupSignBase extends GetPacketStatusDepends {
-  payloadSchema = PayloadSchema$o;
-  returnSchema = ReturnSchema$r;
+  payloadSchema = PayloadSchema$p;
+  returnSchema = ReturnSchema$s;
   actionSummary = "群打卡";
   actionTags = ["群组扩展"];
   payloadExample = {
@@ -113463,18 +111683,18 @@ class SendGroupSign extends SetGroupSignBase {
   actionName = ActionName.SendGroupSign;
 }
 
-const PayloadSchema$n = Type.Object({
+const PayloadSchema$o = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$q = Type.Object({
+const ReturnSchema$r = Type.Object({
   can_at_all: Type.Boolean({ description: "是否可以艾特全体" }),
   remain_at_all_count_for_group: Type.Number({ description: "群艾特全体剩余次数" }),
   remain_at_all_count_for_uin: Type.Number({ description: "个人艾特全体剩余次数" })
 }, { description: "群艾特全体剩余次数" });
 class GoCQHTTPGetGroupAtAllRemain extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupAtAllRemain;
-  payloadSchema = PayloadSchema$n;
-  returnSchema = ReturnSchema$q;
+  payloadSchema = PayloadSchema$o;
+  returnSchema = ReturnSchema$r;
   actionSummary = "获取群艾特全体剩余次数";
   actionDescription = "获取指定群聊中艾特全体成员的剩余次数";
   actionTags = ["Go-CQHTTP"];
@@ -113667,7 +111887,7 @@ class MiniAppInfoHelper {
   }
 }
 
-const PayloadSchema$m = Type.Union([
+const PayloadSchema$n = Type.Union([
   Type.Object({
     type: Type.Union([Type.Literal("bili"), Type.Literal("weibo")], { description: "模板类型" }),
     title: Type.String({ description: "标题" }),
@@ -113696,13 +111916,13 @@ const PayloadSchema$m = Type.Union([
     rawArkData: Type.Optional(Type.String({ description: "是否返回原始Ark数据" }))
   })
 ], { description: "小程序Ark参数" });
-const ReturnSchema$p = Type.Object({
+const ReturnSchema$q = Type.Object({
   data: Type.Any({ description: "Ark数据" })
 }, { description: "获取小程序Ark结果" });
 class GetMiniAppArk extends GetPacketStatusDepends {
   actionName = ActionName.GetMiniAppArk;
-  payloadSchema = PayloadSchema$m;
-  returnSchema = ReturnSchema$p;
+  payloadSchema = PayloadSchema$n;
+  returnSchema = ReturnSchema$q;
   actionSummary = "获取小程序 Ark";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -113764,16 +111984,16 @@ var AIVoiceChatType = /* @__PURE__ */ ((AIVoiceChatType2) => {
   return AIVoiceChatType2;
 })(AIVoiceChatType || {});
 
-const PayloadSchema$l = Type.Object({
+const PayloadSchema$m = Type.Object({
   character: Type.String({ description: "角色ID" }),
   group_id: Type.String({ description: "群号" }),
   text: Type.String({ description: "语音文本内容" })
 });
-const ReturnSchema$o = Type.String({ description: "语音URL" });
+const ReturnSchema$p = Type.String({ description: "语音URL" });
 class GetAiRecord extends GetPacketStatusDepends {
   actionName = ActionName.GetAiRecord;
-  payloadSchema = PayloadSchema$l;
-  returnSchema = ReturnSchema$o;
+  payloadSchema = PayloadSchema$m;
+  returnSchema = ReturnSchema$p;
   actionSummary = "获取 AI 语音";
   actionDescription = "通过 AI 语音引擎获取指定文本的语音 URL";
   actionTags = ["AI 扩展"];
@@ -113792,18 +112012,18 @@ class GetAiRecord extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$k = Type.Object({
+const PayloadSchema$l = Type.Object({
   character: Type.String({ description: "角色ID" }),
   group_id: Type.String({ description: "群号" }),
   text: Type.String({ description: "语音文本内容" })
 });
-const ReturnSchema$n = Type.Object({
+const ReturnSchema$o = Type.Object({
   message_id: Type.Number({ description: "消息ID" })
 }, { description: "发送结果" });
 class SendGroupAiRecord extends GetPacketStatusDepends {
   actionName = ActionName.SendGroupAiRecord;
-  payloadSchema = PayloadSchema$k;
-  returnSchema = ReturnSchema$n;
+  payloadSchema = PayloadSchema$l;
+  returnSchema = ReturnSchema$o;
   actionSummary = "发送群 AI 语音";
   actionDescription = "发送 AI 生成的语音到指定群聊";
   actionTags = ["AI 扩展"];
@@ -113822,11 +112042,11 @@ class SendGroupAiRecord extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$j = Type.Object({
+const PayloadSchema$k = Type.Object({
   group_id: Type.String({ description: "群号" }),
   chat_type: Type.Union([Type.Number(), Type.String()], { default: 1, description: "聊天类型" })
 });
-const ReturnSchema$m = Type.Array(
+const ReturnSchema$n = Type.Array(
   Type.Object({
     type: Type.String({ description: "角色类型" }),
     characters: Type.Array(
@@ -113842,8 +112062,8 @@ const ReturnSchema$m = Type.Array(
 );
 class GetAiCharacters extends GetPacketStatusDepends {
   actionName = ActionName.GetAiCharacters;
-  payloadSchema = PayloadSchema$j;
-  returnSchema = ReturnSchema$m;
+  payloadSchema = PayloadSchema$k;
+  returnSchema = ReturnSchema$n;
   actionSummary = "获取AI角色列表";
   actionDescription = "获取群聊中的AI角色列表";
   actionTags = ["扩展接口"];
@@ -113900,13 +112120,13 @@ class GetGuildProfile extends OneBotAction {
   }
 }
 
-const ReturnSchema$l = Type.Object({
+const ReturnSchema$m = Type.Object({
   clientkey: Type.Optional(Type.String({ description: "客户端Key" }))
 }, { description: "获取ClientKey结果" });
 class GetClientkey extends OneBotAction {
   actionName = ActionName.GetClientkey;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$l;
+  returnSchema = ReturnSchema$m;
   actionSummary = "获取ClientKey";
   actionDescription = "获取当前登录帐号的ClientKey";
   actionTags = ["扩展接口"];
@@ -113917,15 +112137,15 @@ class GetClientkey extends OneBotAction {
   }
 }
 
-const PayloadSchema$i = Type.Object({
+const PayloadSchema$j = Type.Object({
   cmd: Type.String({ description: "命令字" }),
   data: Type.String({ description: "十六进制数据" }),
   rsp: Type.Union([Type.String(), Type.Boolean()], { default: true, description: "是否等待响应" })
 });
-const ReturnSchema$k = Type.Union([Type.String({ description: "响应十六进制数据" }), Type.Undefined()], { description: "发包结果" });
+const ReturnSchema$l = Type.Union([Type.String({ description: "响应十六进制数据" }), Type.Undefined()], { description: "发包结果" });
 class SendPacket extends GetPacketStatusDepends {
-  payloadSchema = PayloadSchema$i;
-  returnSchema = ReturnSchema$k;
+  payloadSchema = PayloadSchema$j;
+  returnSchema = ReturnSchema$l;
   actionName = ActionName.SendPacket;
   actionSummary = "发送原始数据包";
   actionTags = ["系统扩展"];
@@ -113949,6 +112169,14 @@ const PacketActionsExamples = {
     response: {}
   },
   SetGroupTodo: {
+    payload: { group_id: "123456", message_id: "123456789" },
+    response: {}
+  },
+  CompleteGroupTodo: {
+    payload: { group_id: "123456", message_id: "123456789" },
+    response: {}
+  },
+  CancelGroupTodo: {
     payload: { group_id: "123456", message_id: "123456789" },
     response: {}
   }
@@ -113987,17 +112215,17 @@ class FriendPoke extends SendPokeBase {
   actionName = ActionName.FriendPoke;
 }
 
-const PayloadSchema$h = Type.Object({
+const PayloadSchema$i = Type.Object({
   face_id: Type.Union([Type.Number(), Type.String()], { description: "图标ID" }),
   // 参考 face_config.json 的 QSid
   face_type: Type.Union([Type.Number(), Type.String()], { default: "1", description: "图标类型" }),
   wording: Type.String({ default: " ", description: "状态文字内容" })
 });
-const ReturnSchema$j = Type.String({ description: "错误信息（如果有）" });
+const ReturnSchema$k = Type.String({ description: "错误信息（如果有）" });
 class SetDiyOnlineStatus extends OneBotAction {
   actionName = ActionName.SetDiyOnlineStatus;
-  payloadSchema = PayloadSchema$h;
-  returnSchema = ReturnSchema$j;
+  payloadSchema = PayloadSchema$i;
+  returnSchema = ReturnSchema$k;
   actionSummary = "设置自定义在线状态";
   actionDescription = "设置自定义在线状态";
   actionTags = ["用户扩展"];
@@ -114033,18 +112261,18 @@ class BotExit extends OneBotAction {
   }
 }
 
-const PayloadSchema$g = Type.Object({
+const PayloadSchema$h = Type.Object({
   group_id: Type.String({ description: "群号" }),
   bot_appid: Type.String({ description: "机器人AppID" }),
   button_id: Type.String({ default: "", description: "按钮ID" }),
   callback_data: Type.String({ default: "", description: "回调数据" }),
   msg_seq: Type.String({ default: "10086", description: "消息序列号" })
 });
-const ReturnSchema$i = Type.Any({ description: "点击结果" });
+const ReturnSchema$j = Type.Any({ description: "点击结果" });
 class ClickInlineKeyboardButton extends OneBotAction {
   actionName = ActionName.ClickInlineKeyboardButton;
-  payloadSchema = PayloadSchema$g;
-  returnSchema = ReturnSchema$i;
+  payloadSchema = PayloadSchema$h;
+  returnSchema = ReturnSchema$j;
   actionSummary = "点击内联键盘按钮";
   actionTags = ["消息扩展"];
   payloadExample = {
@@ -114068,16 +112296,16 @@ class ClickInlineKeyboardButton extends OneBotAction {
   }
 }
 
-const PayloadSchema$f = Type.Object({
+const PayloadSchema$g = Type.Object({
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$h = Type.Object({
+const ReturnSchema$i = Type.Object({
   url: Type.Optional(Type.String({ description: "文件下载链接" }))
 }, { description: "私聊文件URL信息" });
 class GetPrivateFileUrl extends GetPacketStatusDepends {
   actionName = ActionName.NapCat_GetPrivateFileUrl;
-  payloadSchema = PayloadSchema$f;
-  returnSchema = ReturnSchema$h;
+  payloadSchema = PayloadSchema$g;
+  returnSchema = ReturnSchema$i;
   actionSummary = "获取私聊文件URL";
   actionDescription = "获取指定私聊文件的下载链接";
   actionTags = ["文件接口"];
@@ -114293,7 +112521,7 @@ function X(r, e) {
   return t._fieldId = typeof r == "number" ? r : 0, t;
 }
 
-const ReturnSchema$g = Type.Array(
+const ReturnSchema$h = Type.Array(
   Type.Object({
     uin: Type.Number({ description: "QQ号" }),
     uid: Type.String({ description: "用户UID" }),
@@ -114306,7 +112534,7 @@ const ReturnSchema$g = Type.Array(
 class GetUnidirectionalFriendList extends OneBotAction {
   actionName = ActionName.GetUnidirectionalFriendList;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$g;
+  returnSchema = ReturnSchema$h;
   actionSummary = "获取单向好友列表";
   actionTags = ["用户扩展"];
   payloadExample = {};
@@ -114352,15 +112580,15 @@ class GetUnidirectionalFriendList extends OneBotAction {
   }
 }
 
-const PayloadSchema$e = Type.Object({
+const PayloadSchema$f = Type.Object({
   group_id: Type.String({ description: "群号" }),
   remark: Type.String({ description: "备注" })
 });
-const ReturnSchema$f = Type.Null({ description: "返回结果" });
+const ReturnSchema$g = Type.Null({ description: "返回结果" });
 class SetGroupRemark extends OneBotAction {
   actionName = ActionName.SetGroupRemark;
-  payloadSchema = PayloadSchema$e;
-  returnSchema = ReturnSchema$f;
+  payloadSchema = PayloadSchema$f;
+  returnSchema = ReturnSchema$g;
   actionSummary = "设置群备注";
   actionDescription = "设置群备注";
   actionTags = ["群组扩展"];
@@ -114378,13 +112606,13 @@ class SetGroupRemark extends OneBotAction {
   }
 }
 
-const PayloadSchema$d = Type.Object({
+const PayloadSchema$e = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" }),
   current_parent_directory: Type.String({ description: "当前父目录" }),
   target_parent_directory: Type.String({ description: "目标父目录" })
 });
-const ReturnSchema$e = Type.Object({
+const ReturnSchema$f = Type.Object({
   ok: Type.Boolean({ description: "是否成功" })
 }, { description: "移动文件结果" });
 class MoveGroupFile extends GetPacketStatusDepends {
@@ -114400,8 +112628,8 @@ class MoveGroupFile extends GetPacketStatusDepends {
   returnExample = {
     ok: true
   };
-  payloadSchema = PayloadSchema$d;
-  returnSchema = ReturnSchema$e;
+  payloadSchema = PayloadSchema$e;
+  returnSchema = ReturnSchema$f;
   async _handle(payload) {
     const contextMsgFile = FileNapCatOneBotUUID.decode(payload.file_id) || FileNapCatOneBotUUID.decodeModelId(payload.file_id);
     if (contextMsgFile?.fileUUID) {
@@ -114414,11 +112642,11 @@ class MoveGroupFile extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$c = Type.Object({
+const PayloadSchema$d = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$d = Type.Object({
+const ReturnSchema$e = Type.Object({
   ok: Type.Boolean({ description: "是否成功" })
 }, { description: "转发文件结果" });
 class TransGroupFile extends GetPacketStatusDepends {
@@ -114432,8 +112660,8 @@ class TransGroupFile extends GetPacketStatusDepends {
   returnExample = {
     ok: true
   };
-  payloadSchema = PayloadSchema$c;
-  returnSchema = ReturnSchema$d;
+  payloadSchema = PayloadSchema$d;
+  returnSchema = ReturnSchema$e;
   async _handle(payload) {
     const contextMsgFile = FileNapCatOneBotUUID.decode(payload.file_id) || FileNapCatOneBotUUID.decodeModelId(payload.file_id);
     if (contextMsgFile?.fileUUID) {
@@ -114449,13 +112677,13 @@ class TransGroupFile extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$b = Type.Object({
+const PayloadSchema$c = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" }),
   current_parent_directory: Type.String({ description: "当前父目录" }),
   new_name: Type.String({ description: "新文件名" })
 });
-const ReturnSchema$c = Type.Object({
+const ReturnSchema$d = Type.Object({
   ok: Type.Boolean({ description: "是否成功" })
 }, { description: "重命名文件结果" });
 class RenameGroupFile extends GetPacketStatusDepends {
@@ -114471,8 +112699,8 @@ class RenameGroupFile extends GetPacketStatusDepends {
   returnExample = {
     ok: true
   };
-  payloadSchema = PayloadSchema$b;
-  returnSchema = ReturnSchema$c;
+  payloadSchema = PayloadSchema$c;
+  returnSchema = ReturnSchema$d;
   async _handle(payload) {
     const contextMsgFile = FileNapCatOneBotUUID.decode(payload.file_id) || FileNapCatOneBotUUID.decodeModelId(payload.file_id);
     if (contextMsgFile?.fileUUID) {
@@ -114687,13 +112915,13 @@ class GetDoubtFriendsAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$a = Type.Object({
+const PayloadSchema$b = Type.Object({
   group_id: Type.String({ description: "群号" }),
   add_type: Type.Number({ description: "加群方式" }),
   group_question: Type.Optional(Type.String({ description: "加群问题" })),
   group_answer: Type.Optional(Type.String({ description: "加群答案" }))
 });
-const ReturnSchema$b = Type.Null({ description: "返回结果" });
+const ReturnSchema$c = Type.Null({ description: "返回结果" });
 class SetGroupAddOption extends OneBotAction {
   actionName = ActionName.SetGroupAddOption;
   actionSummary = "设置群加群选项";
@@ -114703,8 +112931,8 @@ class SetGroupAddOption extends OneBotAction {
     add_type: 1
   };
   returnExample = null;
-  payloadSchema = PayloadSchema$a;
-  returnSchema = ReturnSchema$b;
+  payloadSchema = PayloadSchema$b;
+  returnSchema = ReturnSchema$c;
   async _handle(payload) {
     const ret = await this.core.apis.GroupApi.setGroupAddOption(payload.group_id, {
       addOption: payload.add_type,
@@ -114718,12 +112946,12 @@ class SetGroupAddOption extends OneBotAction {
   }
 }
 
-const PayloadSchema$9 = Type.Object({
+const PayloadSchema$a = Type.Object({
   group_id: Type.String({ description: "群号" }),
   no_code_finger_open: Type.Optional(Type.Number({ description: "未知" })),
   no_finger_open: Type.Optional(Type.Number({ description: "未知" }))
 });
-const ReturnSchema$a = Type.Null({ description: "返回结果" });
+const ReturnSchema$b = Type.Null({ description: "返回结果" });
 class SetGroupSearch extends OneBotAction {
   actionName = ActionName.SetGroupSearch;
   actionSummary = "设置群搜索选项";
@@ -114732,8 +112960,8 @@ class SetGroupSearch extends OneBotAction {
     group_id: "123456"
   };
   returnExample = null;
-  payloadSchema = PayloadSchema$9;
-  returnSchema = ReturnSchema$a;
+  payloadSchema = PayloadSchema$a;
+  returnSchema = ReturnSchema$b;
   async _handle(payload) {
     const ret = await this.core.apis.GroupApi.setGroupSearch(payload.group_id, {
       noCodeFingerOpenFlag: payload.no_code_finger_open,
@@ -114746,12 +112974,12 @@ class SetGroupSearch extends OneBotAction {
   }
 }
 
-const PayloadSchema$8 = Type.Object({
+const PayloadSchema$9 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   robot_member_switch: Type.Optional(Type.Number({ description: "机器人成员开关" })),
   robot_member_examine: Type.Optional(Type.Number({ description: "机器人成员审核" }))
 });
-const ReturnSchema$9 = Type.Null({ description: "返回结果" });
+const ReturnSchema$a = Type.Null({ description: "返回结果" });
 class SetGroupRobotAddOption extends OneBotAction {
   actionName = ActionName.SetGroupRobotAddOption;
   actionSummary = "设置群机器人加群选项";
@@ -114760,8 +112988,8 @@ class SetGroupRobotAddOption extends OneBotAction {
     group_id: "123456"
   };
   returnExample = null;
-  payloadSchema = PayloadSchema$8;
-  returnSchema = ReturnSchema$9;
+  payloadSchema = PayloadSchema$9;
+  returnSchema = ReturnSchema$a;
   async _handle(payload) {
     const ret = await this.core.apis.GroupApi.setGroupRobotAddOption(
       payload.group_id,
@@ -114775,16 +113003,16 @@ class SetGroupRobotAddOption extends OneBotAction {
   }
 }
 
-const PayloadSchema$7 = Type.Object({
+const PayloadSchema$8 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.Array(Type.String(), { description: "QQ号列表" }),
   reject_add_request: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否拒绝加群请求" }))
 });
-const ReturnSchema$8 = Type.Null({ description: "返回结果" });
+const ReturnSchema$9 = Type.Null({ description: "返回结果" });
 class SetGroupKickMembers extends OneBotAction {
   actionName = ActionName.SetGroupKickMembers;
-  payloadSchema = PayloadSchema$7;
-  returnSchema = ReturnSchema$8;
+  payloadSchema = PayloadSchema$8;
+  returnSchema = ReturnSchema$9;
   actionSummary = "批量踢出群成员";
   actionDescription = "从指定群聊中批量踢出多个成员";
   actionTags = ["扩展接口"];
@@ -114798,10 +113026,10 @@ class SetGroupKickMembers extends OneBotAction {
   }
 }
 
-const PayloadSchema$6 = Type.Object({
+const PayloadSchema$7 = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$7 = Type.Object({
+const ReturnSchema$8 = Type.Object({
   group_id: Type.Number({ description: "群号" }),
   group_name: Type.String({ description: "群名称" }),
   member_count: Type.Number({ description: "成员数量" }),
@@ -114811,8 +113039,8 @@ const ReturnSchema$7 = Type.Object({
 }, { description: "群详细信息" });
 class GetGroupDetailInfo extends OneBotAction {
   actionName = ActionName.GetGroupDetailInfo;
-  payloadSchema = PayloadSchema$6;
-  returnSchema = ReturnSchema$7;
+  payloadSchema = PayloadSchema$7;
+  returnSchema = ReturnSchema$8;
   actionSummary = "获取群详细信息";
   actionDescription = "获取群聊的详细信息，包括成员数、最大成员数等";
   actionTags = ["群组接口"];
@@ -114832,7 +113060,7 @@ class GetGroupDetailInfo extends OneBotAction {
   }
 }
 
-const ReturnSchema$6 = Type.Array(
+const ReturnSchema$7 = Type.Array(
   Type.Object({
     request_id: Type.Number({ description: "请求ID" }),
     invitor_uin: Type.Number({ description: "邀请者QQ" }),
@@ -114849,7 +113077,7 @@ const ReturnSchema$6 = Type.Array(
 class GetGroupAddRequest extends OneBotAction {
   actionName = ActionName.GetGroupIgnoreAddRequest;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$6;
+  returnSchema = ReturnSchema$7;
   actionSummary = "获取群被忽略的加群请求";
   actionTags = ["群组接口"];
   payloadExample = {};
@@ -114891,15 +113119,15 @@ class GetGroupAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$5 = Type.Object({
+const PayloadSchema$6 = Type.Object({
   category: Type.String({ description: "分类ID" }),
   count: Type.String({ default: "50", description: "获取数量" })
 });
-const ReturnSchema$5 = Type.Any({ description: "收藏列表" });
+const ReturnSchema$6 = Type.Any({ description: "收藏列表" });
 class GetCollectionList extends OneBotAction {
   actionName = ActionName.GetCollectionList;
-  payloadSchema = PayloadSchema$5;
-  returnSchema = ReturnSchema$5;
+  payloadSchema = PayloadSchema$6;
+  returnSchema = ReturnSchema$6;
   actionSummary = "获取收藏列表";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -114962,23 +113190,19 @@ class GetCollectionList extends OneBotAction {
   }
 }
 
-const SetGroupTodoPayloadSchema = Type.Object({
+const GroupTodoPayloadSchema = Type.Object({
   group_id: Type.Union([Type.String(), Type.Number()], { description: "群号" }),
   message_id: Type.Optional(Type.String({ description: "消息ID" })),
   message_seq: Type.Optional(Type.String({ description: "消息Seq (可选)" }))
 });
-class SetGroupTodo extends GetPacketStatusDepends {
-  actionName = ActionName.SetGroupTodo;
-  payloadSchema = SetGroupTodoPayloadSchema;
+class BaseGroupTodoAction extends GetPacketStatusDepends {
+  payloadSchema = GroupTodoPayloadSchema;
   returnSchema = Type.Null();
-  actionSummary = "设置群待办";
-  actionDescription = "将指定消息设置为群待办";
   actionTags = ["核心接口"];
-  payloadExample = PacketActionsExamples.SetGroupTodo.payload;
-  returnExample = PacketActionsExamples.SetGroupTodo.response;
   async _handle(payload) {
+    const groupId = +payload.group_id;
     if (payload.message_seq) {
-      return await this.core.apis.PacketApi.pkt.operation.SetGroupTodo(+payload.group_id, payload.message_seq.toString());
+      return await this.handleGroupTodo(groupId, payload.message_seq.toString());
     }
     if (!payload.message_id) {
       throw new Error("缺少参数 message_id 或 message_seq");
@@ -114989,44 +113213,94 @@ class SetGroupTodo extends GetPacketStatusDepends {
     };
     const { MsgId, Peer: Peer2 } = MessageUnique.getMsgIdAndPeerByShortId(+payload.message_id) ?? { Peer: peer, MsgId: payload.message_id.toString() };
     const msg = (await this.core.apis.MsgApi.getMsgsByMsgId(Peer2, [MsgId])).msgList[0];
-    if (!msg) throw new Error("消息不存在");
-    await this.core.apis.PacketApi.pkt.operation.SetGroupTodo(+payload.group_id, msg.msgSeq);
+    if (!msg) {
+      throw new Error("消息不存在");
+    }
+    await this.handleGroupTodo(groupId, msg.msgSeq);
   }
 }
 
-const PayloadSchema$4 = Type.Object({
-  group_id: Type.String({ description: "群号" })
+class CompleteGroupTodo extends BaseGroupTodoAction {
+  actionName = ActionName.CompleteGroupTodo;
+  actionSummary = "完成群待办";
+  actionDescription = "将指定消息对应的群待办标记为已完成";
+  payloadExample = PacketActionsExamples.CompleteGroupTodo.payload;
+  returnExample = PacketActionsExamples.CompleteGroupTodo.response;
+  async handleGroupTodo(groupId, msgSeq) {
+    await this.core.apis.PacketApi.pkt.operation.CompleteGroupTodo(groupId, msgSeq);
+  }
+}
+
+class CancelGroupTodo extends BaseGroupTodoAction {
+  actionName = ActionName.CancelGroupTodo;
+  actionSummary = "取消群待办";
+  actionDescription = "将指定消息对应的群待办取消";
+  payloadExample = PacketActionsExamples.CancelGroupTodo.payload;
+  returnExample = PacketActionsExamples.CancelGroupTodo.response;
+  async handleGroupTodo(groupId, msgSeq) {
+    await this.core.apis.PacketApi.pkt.operation.CancelGroupTodo(groupId, msgSeq);
+  }
+}
+
+class SetGroupTodo extends BaseGroupTodoAction {
+  actionName = ActionName.SetGroupTodo;
+  actionSummary = "设置群待办";
+  actionDescription = "将指定消息设置为群待办";
+  payloadExample = PacketActionsExamples.SetGroupTodo.payload;
+  returnExample = PacketActionsExamples.SetGroupTodo.response;
+  async handleGroupTodo(groupId, msgSeq) {
+    await this.core.apis.PacketApi.pkt.operation.SetGroupTodo(groupId, msgSeq);
+  }
+}
+
+const PayloadSchema$5 = Type.Object({
+  group_id: Type.String({ description: "群号" }),
+  attach_info: Type.Optional(Type.String({ default: "", description: "附加信息（用于分页，从上一次返回结果中获取）" }))
 });
-const ReturnSchema$4 = Type.Array(Type.Any(), { description: "群相册列表" });
+const ReturnSchema$5 = Type.Object({
+  album_list: Type.Array(Type.Any(), { description: "群相册列表" }),
+  attach_info: Type.String({ description: "分页附加信息，传入下一次请求以获取更多数据" }),
+  has_more: Type.Boolean({ description: "是否有更多数据" })
+}, { description: "群相册列表响应" });
 class GetQunAlbumList extends OneBotAction {
   actionName = ActionName.GetQunAlbumList;
   actionSummary = "获取群相册列表";
   actionTags = ["群组扩展"];
   payloadExample = {
-    group_id: "123456"
+    group_id: "123456",
+    attach_info: ""
   };
-  returnExample = [
-    {
-      album_id: "album_1",
-      album_name: "测试相册",
-      cover_url: "http://example.com/cover.jpg",
-      create_time: 1734567890
-    }
-  ];
-  payloadSchema = PayloadSchema$4;
-  returnSchema = ReturnSchema$4;
+  returnExample = {
+    album_list: [
+      {
+        album_id: "album_1",
+        album_name: "测试相册",
+        cover_url: "http://example.com/cover.jpg",
+        create_time: 1734567890
+      }
+    ],
+    attach_info: "",
+    has_more: false
+  };
+  payloadSchema = PayloadSchema$5;
+  returnSchema = ReturnSchema$5;
   async _handle(payload) {
-    return (await this.core.apis.WebApi.getAlbumListByNTQQ(payload.group_id)).response.album_list;
+    const resp = (await this.core.apis.WebApi.getAlbumListByNTQQ(payload.group_id, payload.attach_info)).response;
+    return {
+      album_list: resp.album_list,
+      attach_info: resp.attach_info,
+      has_more: resp.has_more
+    };
   }
 }
 
-const PayloadSchema$3 = Type.Object({
+const PayloadSchema$4 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   album_name: Type.String({ description: "相册名称" }),
   file: Type.String({ description: "图片路径、URL或Base64" })
 });
-const ReturnSchema$3 = Type.Any({ description: "上传结果" });
+const ReturnSchema$4 = Type.Any({ description: "上传结果" });
 class UploadImageToQunAlbum extends OneBotAction {
   actionName = ActionName.UploadImageToQunAlbum;
   actionSummary = "上传图片到群相册";
@@ -115040,14 +113314,14 @@ class UploadImageToQunAlbum extends OneBotAction {
   returnExample = {
     result: null
   };
-  payloadSchema = PayloadSchema$3;
-  returnSchema = ReturnSchema$3;
+  payloadSchema = PayloadSchema$4;
+  returnSchema = ReturnSchema$4;
   async _handle(payload) {
     const downloadResult = await uriToLocalFile(this.core.NapCatTempPath, payload.file);
     try {
       return await this.core.apis.WebApi.uploadImageToQunAlbum(payload.group_id, payload.album_id, payload.album_name, downloadResult.path);
     } finally {
-      if (downloadResult.path && existsSync(downloadResult.path)) {
+      if (!downloadResult.isLocal && downloadResult.path && existsSync(downloadResult.path)) {
         await unlink(downloadResult.path);
       }
     }
@@ -115085,12 +113359,12 @@ class DoGroupAlbumComment extends OneBotAction {
   }
 }
 
-const PayloadSchema$2 = Type.Object({
+const PayloadSchema$3 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
-  attach_info: Type.String({ default: "", description: "附加信息（用于分页）" })
+  attach_info: Type.Optional(Type.String({ default: "", description: "附加信息（用于分页）" }))
 });
-const ReturnSchema$2 = Type.Any({ description: "相册媒体列表" });
+const ReturnSchema$3 = Type.Any({ description: "相册媒体列表" });
 class GetGroupAlbumMediaList extends OneBotAction {
   actionName = ActionName.GetGroupAlbumMediaList;
   actionSummary = "获取群相册媒体列表";
@@ -115104,8 +113378,8 @@ class GetGroupAlbumMediaList extends OneBotAction {
       { media_id: "media_id_1", url: "http://example.com/1.jpg" }
     ]
   };
-  payloadSchema = PayloadSchema$2;
-  returnSchema = ReturnSchema$2;
+  payloadSchema = PayloadSchema$3;
+  returnSchema = ReturnSchema$3;
   async _handle(payload) {
     return await this.core.apis.WebApi.getAlbumMediaListByNTQQ(
       payload.group_id,
@@ -115115,7 +113389,7 @@ class GetGroupAlbumMediaList extends OneBotAction {
   }
 }
 
-const PayloadSchema$1 = Type.Object({
+const PayloadSchema$2 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   lloc: Type.String({ description: "媒体ID (lloc)" }),
@@ -115124,7 +113398,7 @@ const PayloadSchema$1 = Type.Object({
   set: Type.Boolean({ default: true, description: "是否点赞" })
   // true=点赞 false=取消点赞 未实现
 });
-const ReturnSchema$1 = Type.Any({ description: "操作结果" });
+const ReturnSchema$2 = Type.Any({ description: "操作结果" });
 class SetGroupAlbumMediaLike extends OneBotAction {
   actionName = ActionName.SetGroupAlbumMediaLike;
   actionSummary = "点赞群相册媒体";
@@ -115138,8 +113412,8 @@ class SetGroupAlbumMediaLike extends OneBotAction {
   returnExample = {
     result: {}
   };
-  payloadSchema = PayloadSchema$1;
-  returnSchema = ReturnSchema$1;
+  payloadSchema = PayloadSchema$2;
+  returnSchema = ReturnSchema$2;
   async _handle(payload) {
     return await this.core.apis.WebApi.doAlbumMediaLikeByNTQQ(
       payload.group_id,
@@ -115150,12 +113424,12 @@ class SetGroupAlbumMediaLike extends OneBotAction {
   }
 }
 
-const PayloadSchema = Type.Object({
+const PayloadSchema$1 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   lloc: Type.String({ description: "媒体ID (lloc)" })
 });
-const ReturnSchema = Type.Any({ description: "删除结果" });
+const ReturnSchema$1 = Type.Any({ description: "删除结果" });
 class DelGroupAlbumMedia extends OneBotAction {
   actionName = ActionName.DelGroupAlbumMedia;
   actionSummary = "删除群相册媒体";
@@ -115168,8 +113442,8 @@ class DelGroupAlbumMedia extends OneBotAction {
   returnExample = {
     result: {}
   };
-  payloadSchema = PayloadSchema;
-  returnSchema = ReturnSchema;
+  payloadSchema = PayloadSchema$1;
+  returnSchema = ReturnSchema$1;
   async _handle(payload) {
     return await this.core.apis.WebApi.deleteAlbumMediaByNTQQ(
       payload.group_id,
@@ -115235,8 +113509,11 @@ class BaseDownloadStream extends OneBotAction {
     }
     const searchResult = await this.core.apis.FileApi.searchForFile([target]);
     if (searchResult) {
-      downloadPath = await this.core.apis.FileApi.downloadFileById(searchResult.id, parseInt(searchResult.fileSize));
-      fileSize = parseInt(searchResult.fileSize);
+      const fileSizeNum = parseInt(searchResult.fileSize);
+      const timeoutConfig = this.obContext.configLoader.configData.timeout;
+      const estimatedTime = calculateTimeout(timeoutConfig, fileSizeNum, timeoutConfig.downloadSpeedKBps);
+      downloadPath = await this.core.apis.FileApi.downloadFileById(searchResult.id, fileSizeNum, estimatedTime);
+      fileSize = fileSizeNum;
       fileName = searchResult.fileName;
       return { downloadPath, fileName, fileSize };
     }
@@ -116102,6 +114379,78 @@ class GetFilesetId extends OneBotAction {
   }
 }
 
+const PayloadSchema = Type.Object({
+  message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
+});
+const ReturnSchema = Type.Object({ text: Type.String({ description: "得到的文本" }) });
+class FetchPttText extends OneBotAction {
+  actionName = ActionName.FetchPttText;
+  actionSummary = "获取语音转文字结果";
+  actionTags = ["消息扩展"];
+  payloadExample = MsgActionsExamples.FetchPttText.payload;
+  returnExample = MsgActionsExamples.FetchPttText.response;
+  payloadSchema = PayloadSchema;
+  returnSchema = ReturnSchema;
+  async _handle(payload) {
+    if (!payload.message_id) {
+      throw Error("参数message_id不能为空");
+    }
+    const MsgShortId = MessageUnique.getShortIdByMsgId(payload.message_id.toString());
+    const msgIdWithPeer = MessageUnique.getMsgIdAndPeerByShortId(MsgShortId ?? +payload.message_id);
+    if (!msgIdWithPeer) {
+      throw new Error("消息不存在");
+    }
+    const peer = { guildId: "", peerUid: msgIdWithPeer?.Peer.peerUid, chatType: msgIdWithPeer.Peer.chatType };
+    const getMsgTimeout = this.obContext.configLoader.configData.timeout.baseTimeout;
+    const msgRes = await PromiseTimer(
+      this.core.apis.MsgApi.getMsgsByMsgId(peer, [msgIdWithPeer?.MsgId || payload.message_id.toString()]),
+      getMsgTimeout
+    ).catch((e) => {
+      if (e instanceof Error && e.message.startsWith("PromiseTimer:")) {
+        throw new Error(`消息不存在或已被撤回: ${e.message || String(e)}`);
+      }
+      throw e;
+    });
+    const msg = msgRes.msgList[0];
+    if (!msg) throw Error("消息不存在或已被撤回");
+    const pttSegment = msg.elements.find(
+      (s) => s.elementType === ElementType.PTT
+    );
+    if (!pttSegment) {
+      throw Error("消息中不包含语音");
+    }
+    const getPttTextTimeout = this.obContext.configLoader.configData.timeout.baseTimeout;
+    await PromiseTimer(
+      this.core.context.session.getMsgService().translatePtt2Text(msgIdWithPeer.MsgId, msgIdWithPeer.Peer, pttSegment),
+      getPttTextTimeout
+    ).catch((e) => {
+      if (e instanceof Error && e.message.startsWith("PromiseTimer:")) {
+        throw new Error(`获取语音转文字结果失败: ${e.message || String(e)}`);
+      }
+      throw e;
+    });
+    const msgRes2 = await PromiseTimer(
+      this.core.apis.MsgApi.getMsgsByMsgId(peer, [msgIdWithPeer?.MsgId || payload.message_id.toString()]),
+      getMsgTimeout
+    ).catch((e) => {
+      if (e instanceof Error && e.message.startsWith("PromiseTimer:")) {
+        throw new Error(`消息不存在或已被撤回: ${e.message || String(e)}`);
+      }
+      throw e;
+    });
+    const msg2 = msgRes2.msgList[0];
+    if (!msg2) throw Error("消息不存在或已被撤回");
+    for (const s of msg2.elements) {
+      if (s.elementType === ElementType.PTT) {
+        if (s.pttElement?.text) {
+          return { text: s.pttElement?.text };
+        }
+      }
+    }
+    throw new Error("获取语音转文字结果失败");
+  }
+}
+
 function getAllHandlers(obContext, core) {
   const actionHandlers = [
     new CleanStreamTempFile(obContext, core),
@@ -116117,6 +114466,8 @@ function getAllHandlers(obContext, core) {
     new GetQunAlbumList(obContext, core),
     new UploadImageToQunAlbum(obContext, core),
     new SetGroupTodo(obContext, core),
+    new CompleteGroupTodo(obContext, core),
+    new CancelGroupTodo(obContext, core),
     new GetGroupDetailInfo(obContext, core),
     new SetGroupKickMembers(obContext, core),
     new SetGroupAddOption(obContext, core),
@@ -116131,6 +114482,7 @@ function getAllHandlers(obContext, core) {
     new GetGroupInfoEx(obContext, core),
     new FetchEmojiLike(obContext, core),
     new GetEmojiLikes(obContext, core),
+    new FetchPttText(obContext, core),
     new GetFile(obContext, core),
     new SetQQProfile(obContext, core),
     new ShareGroupEx(obContext, core),
@@ -117088,27 +115440,15 @@ class NapCatProtocolApiBase {
   }
 }
 class NapCatProtocolMsgApi extends NapCatProtocolApiBase {
-  constructor(adapter, core) {
-    super(adapter, core);
-  }
   // 消息相关 API 方法可以在这里实现
 }
 class NapCatProtocolUserApi extends NapCatProtocolApiBase {
-  constructor(adapter, core) {
-    super(adapter, core);
-  }
   // 用户相关 API 方法可以在这里实现
 }
 class NapCatProtocolGroupApi extends NapCatProtocolApiBase {
-  constructor(adapter, core) {
-    super(adapter, core);
-  }
   // 群组相关 API 方法可以在这里实现
 }
 class NapCatProtocolFriendApi extends NapCatProtocolApiBase {
-  constructor(adapter, core) {
-    super(adapter, core);
-  }
   // 好友相关 API 方法可以在这里实现
 }
 
@@ -117481,6 +115821,20 @@ const offset = {
   "3.2.25-45758-x64": {"send":"AAC4E00","recv":"AAC88A0"},
   "9.9.27-45758-x64": {"send":"2E5C4A0","recv":"2E5FA20"},
   "3.2.25-45758-arm64": {"send":"6D6F9A0","recv":"6D73350"},
+  "3.2.26-46494-x64": {"send":"AB341C0","recv":"AB37C60"},
+  "9.9.28-46494-x64": {"send":"2E77C20","recv":"2E7B1A0"},
+  "3.2.26-46494-arm64": {"send":"6DBBBB0","recv":"6DBF560"},
+  "3.2.26-46928-arm64": {"send":"6DBBBB0","recv":"6DBF560"},
+  "3.2.26-46928-x64": {"send":"AB341C0","recv":"AB37C60"},
+  "9.9.28-46928-x64": {"send":"2E77C20","recv":"2E7B1A0"},
+  "3.2.27-47354-x64": {"send":"AB6A6C0","recv":"AB6E160"},
+  "3.2.27-47354-arm64": {"send":"6DE1438","recv":"6DE4DE8"},
+  "9.9.29-47354-x64": {"send":"2E84920","recv":"2E87EA0"},
+  "6.9.93-47354-arm64": {"send":"3FD1E98","recv":"3FD47A8"},
+  "6.9.93-47354-x64": {"send":"47CD940","recv":"47D04F0"},
+  "3.2.28-48517-x64": {"send":"AD7C280","recv":"AD7FD20"},
+  "9.9.30-48517-x64": {"send":"2F3B960","recv":"2F3EEE0"},
+  "3.2.28-48517-arm64": {"send":"6F48B70","recv":"6F4C520"},
 };
 
 const typedOffset = offset;
@@ -117500,7 +115854,7 @@ class NativePacketHandler {
         this.logger.logWarn(`NativePacketClient: 缺失运行时文件: ${moehoo_path}`);
         this.loaded = false;
       }
-      process.dlopen(this.MoeHooExport, moehoo_path, constants.dlopen.RTLD_LAZY);
+      process.dlopen(this.MoeHooExport, moehoo_path, constants$1.dlopen.RTLD_LAZY);
       this.loaded = true;
       this.logger.log("[PacketHandler] 加载成功");
     } catch (error) {
@@ -117628,7 +115982,7 @@ class NativePacketHandler {
       }
     }
   }
-  async init(version) {
+  async init(version, o3HookMode = false) {
     const version_arch = version + "-" + process.arch;
     try {
       if (!this.loaded) {
@@ -117648,11 +116002,71 @@ class NativePacketHandler {
       }
       this.MoeHooExport.exports.initHook?.(send, recv, (type, uin, cmd, seq, hex_data) => {
         this.emitPacket(type, uin, cmd, seq, hex_data);
-      }, true);
+      }, o3HookMode);
       this.logger.log("[PacketHandler] 初始化成功");
       return true;
     } catch (error) {
       this.logger.logError("NativePacketClient 初始化出错:", error);
+      return false;
+    }
+  }
+}
+
+class Napi2NativeLoader {
+  supportedPlatforms = ["win32.x64", "linux.x64", "linux.arm64", "darwin.x64", "darwin.arm64"];
+  exports = { exports: {} };
+  logger;
+  _loaded = false;
+  constructor({ logger }) {
+    this.logger = logger;
+    this.load();
+  }
+  load() {
+    const platform = process.platform + "." + process.arch;
+    if (!this.supportedPlatforms.includes(platform)) {
+      this.logger.logWarn(`Napi2NativeLoader: 不支持的平台: ${platform}`);
+      this._loaded = false;
+      return;
+    }
+    const nativeModulePath = path__default$1.join(
+      dirname(fileURLToPath(import.meta.url)),
+      "./native/napi2native/napi2native." + platform + ".node"
+    );
+    if (!fs__default.existsSync(nativeModulePath)) {
+      this.logger.logWarn(`Napi2NativeLoader: 缺失运行时文件: ${nativeModulePath}`);
+      this._loaded = false;
+      return;
+    }
+    try {
+      process.dlopen(this.exports, nativeModulePath, constants$1.dlopen.RTLD_LAZY);
+      this._loaded = true;
+      this.logger.log("[Napi2NativeLoader] 加载成功");
+    } catch (error) {
+      this.logger.logError("Napi2NativeLoader 加载出错:", error);
+      this._loaded = false;
+    }
+  }
+  get loaded() {
+    return this._loaded;
+  }
+  get nativeExports() {
+    return this.exports.exports;
+  }
+  /**
+   * 初始化 Hook
+   * @param send send 偏移地址
+   * @param recv recv 偏移地址
+   * @returns 是否初始化成功
+   */
+  initHook(send, recv) {
+    if (!this._loaded) {
+      this.logger.logWarn("Napi2NativeLoader 未成功加载，无法初始化 Hook");
+      return false;
+    }
+    try {
+      return this.nativeExports.initHook?.(send, recv) ?? false;
+    } catch (error) {
+      this.logger.logError("Napi2NativeLoader initHook 出错:", error);
       return false;
     }
   }
@@ -117962,6 +116376,21 @@ async function handleLogin(loginService, logger, pathWrapper, quickLoginUin, his
   return await selfInfo;
 }
 async function handleLoginInner(context, logger, loginService, quickLoginUin, historyLoginList) {
+  const resolveQuickPasswordMd5 = () => {
+    const quickPasswordMd5 = process.env["NAPCAT_QUICK_PASSWORD_MD5"]?.trim();
+    if (quickPasswordMd5) {
+      if (/^[a-fA-F0-9]{32}$/.test(quickPasswordMd5)) {
+        return quickPasswordMd5.toLowerCase();
+      }
+      logger.logError("NAPCAT_QUICK_PASSWORD_MD5 格式无效（需为 32 位 MD5）");
+    }
+    const quickPassword = process.env["NAPCAT_QUICK_PASSWORD"];
+    if (typeof quickPassword === "string" && quickPassword.length > 0) {
+      logger.log("检测到 NAPCAT_QUICK_PASSWORD，已在内存中计算 MD5 用于回退登录");
+      return createHash("md5").update(quickPassword, "utf8").digest("hex");
+    }
+    return void 0;
+  };
   WebUiDataRuntime.setRefreshQRCodeCallback(async () => {
     loginService.getQRCodePicture();
   });
@@ -117970,10 +116399,12 @@ async function handleLoginInner(context, logger, loginService, quickLoginUin, hi
       if (uin) {
         logger.log("正在快速登录 ", uin);
         loginService.quickLoginWithUin(uin).then((res) => {
-          if (res.loginErrorInfo.errMsg) {
-            WebUiDataRuntime.setQQLoginError(res.loginErrorInfo.errMsg);
+          const quickLoginSuccess = res.result === "0" && !res.loginErrorInfo?.errMsg;
+          if (!quickLoginSuccess) {
+            const errMsg = res.loginErrorInfo?.errMsg || `快速登录失败，错误码: ${res.result}`;
+            WebUiDataRuntime.setQQLoginError(errMsg);
             loginService.getQRCodePicture();
-            resolve({ result: false, message: res.loginErrorInfo.errMsg });
+            resolve({ result: false, message: errMsg });
           } else {
             WebUiDataRuntime.setQQLoginStatus(true);
             WebUiDataRuntime.setQQLoginError("");
@@ -117998,21 +116429,43 @@ async function handleLoginInner(context, logger, loginService, quickLoginUin, hi
           uin,
           passwordMd5,
           step: 0,
-          newDeviceLoginSig: "",
-          proofWaterSig: "",
-          proofWaterRand: "",
-          proofWaterSid: ""
+          newDeviceLoginSig: new Uint8Array(),
+          proofWaterSig: new Uint8Array(),
+          proofWaterRand: new Uint8Array(),
+          proofWaterSid: new Uint8Array(),
+          unusualDeviceCheckSig: new Uint8Array()
         }).then((res) => {
           if (res.result === "140022008") {
-            const errMsg = "需要验证码，暂不支持";
-            WebUiDataRuntime.setQQLoginError(errMsg);
-            loginService.getQRCodePicture();
-            resolve({ result: false, message: errMsg });
+            const proofWaterUrl = res.loginErrorInfo?.proofWaterUrl || "";
+            logger.log("需要验证码, proofWaterUrl: ", proofWaterUrl);
+            resolve({
+              result: false,
+              message: "需要验证码",
+              needCaptcha: true,
+              proofWaterUrl
+            });
           } else if (res.result === "140022010") {
-            const errMsg = "新设备需要扫码登录，暂不支持";
-            WebUiDataRuntime.setQQLoginError(errMsg);
-            loginService.getQRCodePicture();
-            resolve({ result: false, message: errMsg });
+            const jumpUrl = res.loginErrorInfo?.jumpUrl || "";
+            const newDevicePullQrCodeSig = res.loginErrorInfo?.newDevicePullQrCodeSig || "";
+            logger.log("新设备需要扫码验证, jumpUrl: ", jumpUrl);
+            resolve({
+              result: false,
+              message: "新设备需要扫码验证",
+              needNewDevice: true,
+              jumpUrl,
+              newDevicePullQrCodeSig
+            });
+          } else if (res.result === "140022011") {
+            const jumpUrl = res.loginErrorInfo?.jumpUrl || "";
+            const newDevicePullQrCodeSig = res.loginErrorInfo?.newDevicePullQrCodeSig || "";
+            logger.log("异常设备需要验证, jumpUrl: ", jumpUrl);
+            resolve({
+              result: false,
+              message: "异常设备需要验证",
+              needNewDevice: true,
+              jumpUrl,
+              newDevicePullQrCodeSig
+            });
           } else if (res.result !== "0") {
             const errMsg = res.loginErrorInfo?.errMsg || "密码登录失败";
             WebUiDataRuntime.setQQLoginError(errMsg);
@@ -118034,19 +116487,159 @@ async function handleLoginInner(context, logger, loginService, quickLoginUin, hi
       }
     });
   });
+  const tryPasswordFallbackLogin = async (uin) => {
+    const quickPasswordMd5 = resolveQuickPasswordMd5();
+    if (!quickPasswordMd5) {
+      logger.log(`QQ ${uin} 未配置回退密码环境变量，建议优先使用 ACCOUNT + NAPCAT_QUICK_PASSWORD（NAPCAT_QUICK_PASSWORD_MD5 作为备用），将使用二维码登录方式`);
+      return { success: false, attempted: false };
+    }
+    logger.log("正在尝试密码回退登录 ", uin);
+    const fallbackResult = await WebUiDataRuntime.requestPasswordLogin(uin, quickPasswordMd5);
+    if (fallbackResult.result) {
+      logger.log("密码回退登录成功 ", uin);
+      return { success: true, attempted: true };
+    }
+    if (fallbackResult.needCaptcha) {
+      const captchaTip = fallbackResult.proofWaterUrl ? `密码回退需要验证码，请在 WebUi 中继续完成验证：${fallbackResult.proofWaterUrl}` : "密码回退需要验证码，请在 WebUi 中继续完成验证";
+      logger.logWarn(captchaTip);
+      WebUiDataRuntime.setQQLoginError("密码回退需要验证码，请在 WebUi 中继续完成验证");
+      return { success: false, attempted: true };
+    }
+    if (fallbackResult.needNewDevice) {
+      const newDeviceTip = fallbackResult.jumpUrl ? `密码回退需要新设备验证，请在 WebUi 中继续完成验证：${fallbackResult.jumpUrl}` : "密码回退需要新设备验证，请在 WebUi 中继续完成验证";
+      logger.logWarn(newDeviceTip);
+      WebUiDataRuntime.setQQLoginError("密码回退需要新设备验证，请在 WebUi 中继续完成验证");
+      return { success: false, attempted: true };
+    }
+    logger.logError("密码回退登录失败：", fallbackResult.message);
+    return { success: false, attempted: true };
+  };
+  WebUiDataRuntime.setCaptchaLoginCall(async (uin, passwordMd5, ticket, randstr, sid) => {
+    return await new Promise((resolve) => {
+      if (uin && passwordMd5 && ticket) {
+        logger.log("正在验证码登录 ", uin);
+        loginService.passwordLogin({
+          uin,
+          passwordMd5,
+          step: 1,
+          newDeviceLoginSig: new Uint8Array(),
+          proofWaterSig: new TextEncoder().encode(ticket),
+          proofWaterRand: new TextEncoder().encode(randstr),
+          proofWaterSid: new TextEncoder().encode(sid),
+          unusualDeviceCheckSig: new Uint8Array()
+        }).then((res) => {
+          console.log("验证码登录结果: ", res);
+          if (res.result === "140022010") {
+            const jumpUrl = res.loginErrorInfo?.jumpUrl || "";
+            const newDevicePullQrCodeSig = res.loginErrorInfo?.newDevicePullQrCodeSig || "";
+            logger.log("验证码登录后需要新设备验证, jumpUrl: ", jumpUrl);
+            resolve({
+              result: false,
+              message: "新设备需要扫码验证",
+              needNewDevice: true,
+              jumpUrl,
+              newDevicePullQrCodeSig
+            });
+          } else if (res.result === "140022011") {
+            const jumpUrl = res.loginErrorInfo?.jumpUrl || "";
+            const newDevicePullQrCodeSig = res.loginErrorInfo?.newDevicePullQrCodeSig || "";
+            logger.log("验证码登录后需要异常设备验证, jumpUrl: ", jumpUrl);
+            resolve({
+              result: false,
+              message: "异常设备需要验证",
+              needNewDevice: true,
+              jumpUrl,
+              newDevicePullQrCodeSig
+            });
+          } else if (res.result !== "0") {
+            const errMsg = res.loginErrorInfo?.errMsg || "验证码登录失败";
+            WebUiDataRuntime.setQQLoginError(errMsg);
+            loginService.getQRCodePicture();
+            resolve({ result: false, message: errMsg });
+          } else {
+            WebUiDataRuntime.setQQLoginStatus(true);
+            WebUiDataRuntime.setQQLoginError("");
+            resolve({ result: true, message: "" });
+          }
+        }).catch((e) => {
+          logger.logError(e);
+          WebUiDataRuntime.setQQLoginError("验证码登录发生错误");
+          loginService.getQRCodePicture();
+          resolve({ result: false, message: "验证码登录发生错误" });
+        });
+      } else {
+        resolve({ result: false, message: "验证码登录失败：参数不完整" });
+      }
+    });
+  });
+  WebUiDataRuntime.setNewDeviceLoginCall(async (uin, passwordMd5, newDevicePullQrCodeSig) => {
+    return await new Promise((resolve) => {
+      if (uin && passwordMd5 && newDevicePullQrCodeSig) {
+        logger.log("正在新设备验证登录 ", uin);
+        loginService.passwordLogin({
+          uin,
+          passwordMd5,
+          step: 2,
+          newDeviceLoginSig: new TextEncoder().encode(newDevicePullQrCodeSig),
+          proofWaterSig: new Uint8Array(),
+          proofWaterRand: new Uint8Array(),
+          proofWaterSid: new Uint8Array(),
+          unusualDeviceCheckSig: new Uint8Array()
+        }).then((res) => {
+          if (res.result === "140022011") {
+            const jumpUrl = res.loginErrorInfo?.jumpUrl || "";
+            const newDevicePullQrCodeSig2 = res.loginErrorInfo?.newDevicePullQrCodeSig || "";
+            logger.log("新设备验证后需要异常设备验证, jumpUrl: ", jumpUrl);
+            resolve({
+              result: false,
+              message: "异常设备需要验证",
+              needNewDevice: true,
+              jumpUrl,
+              newDevicePullQrCodeSig: newDevicePullQrCodeSig2
+            });
+          } else if (res.result !== "0") {
+            const errMsg = res.loginErrorInfo?.errMsg || "新设备验证登录失败";
+            WebUiDataRuntime.setQQLoginError(errMsg);
+            loginService.getQRCodePicture();
+            resolve({ result: false, message: errMsg });
+          } else {
+            WebUiDataRuntime.setQQLoginStatus(true);
+            WebUiDataRuntime.setQQLoginError("");
+            resolve({ result: true, message: "" });
+          }
+        }).catch((e) => {
+          logger.logError(e);
+          WebUiDataRuntime.setQQLoginError("新设备验证登录发生错误");
+          loginService.getQRCodePicture();
+          resolve({ result: false, message: "新设备验证登录发生错误" });
+        });
+      } else {
+        resolve({ result: false, message: "新设备验证登录失败：参数不完整" });
+      }
+    });
+  });
   if (quickLoginUin) {
     if (historyLoginList.some((u) => u.uin === quickLoginUin)) {
       logger.log("正在快速登录 ", quickLoginUin);
-      loginService.quickLoginWithUin(quickLoginUin).then((result) => {
-        if (result.loginErrorInfo.errMsg) {
-          logger.logError("快速登录错误：", result.loginErrorInfo.errMsg);
-          WebUiDataRuntime.setQQLoginError(result.loginErrorInfo.errMsg);
-          if (!context.isLogined) loginService.getQRCodePicture();
+      loginService.quickLoginWithUin(quickLoginUin).then(async (result) => {
+        const quickLoginSuccess = result.result === "0" && !result.loginErrorInfo?.errMsg;
+        if (!quickLoginSuccess) {
+          const errMsg = result.loginErrorInfo?.errMsg || `快速登录失败，错误码: ${result.result}`;
+          logger.logError("快速登录错误：", errMsg);
+          WebUiDataRuntime.setQQLoginError(errMsg);
+          const { success, attempted } = await tryPasswordFallbackLogin(quickLoginUin);
+          if (!success && !attempted && !context.isLogined) loginService.getQRCodePicture();
         }
-      }).catch();
+      }).catch(async (error) => {
+        logger.logError("快速登录异常：", error);
+        WebUiDataRuntime.setQQLoginError("快速登录发生错误");
+        const { success, attempted } = await tryPasswordFallbackLogin(quickLoginUin);
+        if (!success && !attempted && !context.isLogined) loginService.getQRCodePicture();
+      });
     } else {
-      logger.logError("快速登录失败，未找到该 QQ 历史登录记录，将使用二维码登录方式");
-      if (!context.isLogined) loginService.getQRCodePicture();
+      logger.logError("快速登录失败，未找到该 QQ 历史登录记录，将尝试密码回退登录");
+      const { success, attempted } = await tryPasswordFallbackLogin(quickLoginUin);
+      if (!success && !attempted && !context.isLogined) loginService.getQRCodePicture();
     }
   } else {
     logger.log("没有 -q 指令指定快速登录，将使用二维码登录方式");
@@ -118136,16 +116729,47 @@ async function NCoreInitShell() {
   console.log("NapCat Shell App Loading...");
   const pathWrapper = new NapCatPathWrapper();
   const logger = new LogWrapper(pathWrapper.logsPath);
+  if (process.env["NAPCAT_WORKER_PROCESS"] !== "1" && process.env["NAPCAT_DISABLE_MULTI_PROCESS"] !== "1" && process.env["NAPCAT_DISABLE_MULTIPROCESSING"] !== "1") {
+    logger.setFileLogEnabled(false);
+  }
   handleUncaughtExceptions(logger);
   await applyPendingUpdates(pathWrapper, logger);
+  const basicInfoWrapper = new QQBasicInfoWrapper({ logger });
+  const nativePacketHandler = new NativePacketHandler({ logger });
+  const napi2nativeLoader = new Napi2NativeLoader({ logger });
   await FFmpegService.init(pathWrapper.binaryPath, logger);
   if (!(process.env["NAPCAT_DISABLE_PIPE"] === "1" || process.env["NAPCAT_WORKER_PROCESS"] === "1")) {
     await connectToNamedPipe(logger).catch((e) => logger.logError("命名管道连接失败", e));
   }
-  const basicInfoWrapper = new QQBasicInfoWrapper({ logger });
   const wrapper = loadQQWrapper(basicInfoWrapper.QQMainPath, basicInfoWrapper.getFullQQVersion());
-  const nativePacketHandler = new NativePacketHandler({ logger });
-  await nativePacketHandler.init(basicInfoWrapper.getFullQQVersion());
+  const napcatConfig = loadNapcatConfig(pathWrapper.configPath);
+  await nativePacketHandler.init(basicInfoWrapper.getFullQQVersion(), napcatConfig.o3HookMode === 1);
+  let dbPassphrase;
+  nativePacketHandler.onCmd("OidbSvcTrpcTcp.0xcde_2", ({ type, hex_data }) => {
+    if (type !== 1) return;
+    try {
+      const raw = Buffer.from(hex_data, "hex");
+      const base = new NapProtoMsg(OidbSvcTrpcTcpBase).decode(raw);
+      if (base.body && base.body.length > 0) {
+        const body = new NapProtoMsg(OidbSvcTrpcTcp0XCDE_2RespBody).decode(base.body);
+        if (body.inner?.value) {
+          dbPassphrase = body.inner.value;
+          logger.log("[NapCat] 已启用数据库辅助支持能力");
+        }
+      }
+    } catch (e) {
+      logger.logError("[NapCat] [0xCDE_2] 解析失败:", e);
+    }
+  });
+  if (process.env["NAPCAT_ENABLE_VERBOSE_LOG"] === "1") {
+    napi2nativeLoader.nativeExports.setVerbose?.(true);
+  }
+  if (process.env["NAPCAT_DISABLE_BYPASS"] !== "1") {
+    const bypassOptions = napcatConfig.bypass ?? {};
+    napi2nativeLoader.nativeExports.enableAllBypasses?.(bypassOptions);
+  } else {
+    logger.log("[NapCat] Napi2NativeLoader: Bypass已通过环境变量禁用");
+  }
   const o3Service = wrapper.NodeIO3MiscService.get();
   o3Service.addO3MiscListener(new NodeIO3MiscListener());
   logger.log("[NapCat] [Core] NapCat.Core Version: " + napCatVersion);
@@ -118188,6 +116812,10 @@ async function NCoreInitShell() {
   const dataTimestape = (/* @__PURE__ */ new Date()).getTime().toString();
   o3Service.reportAmgomWeather("login", "a1", [dataTimestape, "0", "0"]);
   const selfInfo = await handleLogin(loginService, logger, pathWrapper, quickLoginUin, historyLoginList);
+  if (typeof process.send === "function") {
+    process.send({ type: "login-success" });
+    logger.log("[NapCat] 已通知主进程登录成功");
+  }
   const amgomDataPiece = "eb1fd6ac257461580dc7438eb099f23aae04ca679f4d88f53072dc56e3bb1129";
   o3Service.setAmgomDataPiece(basicInfoWrapper.QQVersionAppid, new Uint8Array(Buffer.from(amgomDataPiece, "hex")));
   let guid = loginService.getMachineGuid();
@@ -118211,22 +116839,28 @@ async function NCoreInitShell() {
     }
   }
   logger.logDebug("本账号数据/缓存目录：", accountDataPath);
-  await new NapCatShell(
+  const shell = new NapCatShell(
     wrapper,
     session,
     logger,
     selfInfo,
     basicInfoWrapper,
     pathWrapper,
-    nativePacketHandler
-  ).InitNapCat();
+    nativePacketHandler,
+    napi2nativeLoader
+  );
+  if (dbPassphrase) {
+    shell.core.dbPassphrase = dbPassphrase;
+  }
+  await shell.InitNapCat();
 }
 class NapCatShell {
   core;
   context;
-  constructor(wrapper, session, logger, selfInfo, basicInfoWrapper, pathWrapper, packetHandler) {
+  constructor(wrapper, session, logger, selfInfo, basicInfoWrapper, pathWrapper, packetHandler, napi2nativeLoader) {
     this.context = {
       packetHandler,
+      napi2nativeLoader,
       workingEnv: NapCatCoreWorkingEnv$1.Shell,
       wrapper,
       session,
@@ -118367,7 +117001,6 @@ const envPath = path__default$1.join(__dirname$1, "config", ".env");
 if (fs__default.existsSync(envPath)) {
   try {
     const data = fs__default.readFileSync(envPath, "utf8");
-    let loadedCount = 0;
     data.split(/\r?\n/).forEach((line) => {
       line = line.trim();
       if (line && !line.startsWith("#")) {
@@ -118376,7 +117009,6 @@ if (fs__default.existsSync(envPath)) {
         const value = parts.slice(1).join("=").trim();
         if (key && value) {
           process.env[key] = value;
-          loadedCount++;
         }
       }
     });
@@ -118386,10 +117018,13 @@ if (fs__default.existsSync(envPath)) {
 }
 const ENV = {
   isWorkerProcess: process.env["NAPCAT_WORKER_PROCESS"] === "1",
-  isMultiProcessDisabled: process.env["NAPCAT_DISABLE_MULTI_PROCESS"] === "1",
+  isMultiProcessDisabled: process.env["NAPCAT_DISABLE_MULTI_PROCESS"] === "1" || process.env["NAPCAT_DISABLE_MULTIPROCESSING"] === "1",
   isPipeDisabled: process.env["NAPCAT_DISABLE_PIPE"] === "1"
 };
 const logger = new LogWrapper(pathWrapper.logsPath);
+if (!ENV.isWorkerProcess && !ENV.isMultiProcessDisabled) {
+  logger.setFileLogEnabled(false);
+}
 let processManager = null;
 let currentWorker = null;
 let isElectron = false;
@@ -118423,8 +117058,31 @@ function forceKillProcess(pid) {
         logger.logError(`[NapCat] [Process] 强制终止进程失败: PID ${pid}`);
       }
     } else {
-      logger.logError(`[NapCat] [Process] 强制终止进程失败:`, error);
+      logger.logError("[NapCat] [Process] 强制终止进程失败:", error);
     }
+  }
+}
+async function cleanupOrphanedProcesses(excludePids) {
+  if (!isElectron) return;
+  try {
+    const electron = await import('electron');
+    if (electron.app && typeof electron.app.getAppMetrics === "function") {
+      const metrics = electron.app.getAppMetrics();
+      const mainPid = process.pid;
+      for (const metric of metrics) {
+        const pid = metric.pid;
+        if (pid === mainPid || excludePids.includes(pid)) {
+          continue;
+        }
+        try {
+          process.kill(pid, "SIGTERM");
+          logger.log(`[NapCat] [Process] 已清理残留进程: PID ${pid} (${metric.type})`);
+        } catch {
+        }
+      }
+    }
+  } catch (error) {
+    logger.logDebug?.("[NapCat] [Process] 清理残留进程时出错:", error);
   }
 }
 async function restartWorker(secretKey, port) {
@@ -118462,6 +117120,10 @@ async function restartWorker(secretKey, port) {
   }
   await new Promise((resolve) => setTimeout(resolve, 3e3));
   await startWorker(false, secretKey, port);
+  if (isElectron && currentWorker?.pid) {
+    const excludePids = [process.pid, currentWorker.pid];
+    await cleanupOrphanedProcesses(excludePids);
+  }
   isRestarting = false;
 }
 async function startWorker(passQuickLogin = true, secretKey, preferredPort) {
@@ -118509,6 +117171,8 @@ async function startWorker(passQuickLogin = true, secretKey, preferredPort) {
         restartWorker(message.secretKey, message.port).catch((e) => {
           logger.logError(`[NapCat] [${processType}] 重启Worker进程失败:`, e);
         });
+      } else if (message.type === "login-success") {
+        logger.log(`[NapCat] [${processType}] Worker进程已登录成功，切换到正常重试策略`);
       }
     }
   });
