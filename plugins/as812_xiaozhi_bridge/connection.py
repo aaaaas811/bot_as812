@@ -53,7 +53,7 @@ class XiaozhiConnection:
             self._ws = await asyncio.wait_for(
                 websockets.connect(
                     self._url,
-                    extra_headers=self._headers,
+                    additional_headers=self._headers,
                 ),
                 timeout=self._connect_timeout,
             )

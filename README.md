@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="as812.png" alt="as812" width="200">
+</p>
+
 # bot_as812
 
 基于 [NcatBot](https://github.com/ncatbot/NcatBot) 框架的多功能 QQ 机器人，集成 AI 对话、游戏数据查询、内容推送与 xiaozhi-esp32-server 桥接。
