@@ -57,9 +57,6 @@ class XiaozhiBridge(NcatBotPlugin):
                 )
         except ConnectionError as e:
             _log.warning(f"[xiaozhi_bridge] 连接错误: {e}")
-            await self._qq_post_private_msg(
-                event.user_id, text="xiaozhi服务暂不可用，请稍后再试"
-            )
         except ResponseTimeout:
             _log.warning(f"[xiaozhi_bridge] 响应超时 user={user_id}")
             await self._qq_post_private_msg(

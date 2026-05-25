@@ -226,3 +226,10 @@ nohup python main.py > bot.log 2>&1 &
 [issues-url]: https://github.com/aaaaas811/bot_as812/issues
 [license-shield]: https://img.shields.io/github/license/aaaaas811/bot_as812.svg?style=flat-square
 [license-url]: https://github.com/aaaaas811/bot_as812/blob/main/LICENSE
+
+
+Todolist:
+ESP结合
+贴表情功能重构
+游戏资讯推送
+灵活的定时任务

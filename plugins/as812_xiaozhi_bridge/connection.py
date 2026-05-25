@@ -29,6 +29,7 @@ class XiaozhiConnection:
         self._connect_timeout = server_cfg.get("connect_timeout", 15)
         self._response_timeout = server_cfg.get("response_timeout", 120)
         self._hello_params = server_cfg.get("hello_params", {})
+        self._target_device_id = server_cfg.get("target_device_id", "")
 
         headers = {
             "Device-ID": server_cfg.get("device_id", "qq-bot-bridge"),
@@ -93,7 +94,10 @@ class XiaozhiConnection:
         return True
 
     async def send_text(self, text: str) -> str:
-        """发送文本到 xiaozhi-server，等待 AI 响应"""
+        """通过 bridge 将文本注入目标 ESP32 设备，等待 TTS 响应镜像"""
+        if not self._target_device_id:
+            raise ConnectionError("未配置 target_device_id，无法桥接消息")
+
         async with self._send_lock:
             self._expecting_response = True
             self._text_buffer.clear()
@@ -101,8 +105,8 @@ class XiaozhiConnection:
 
             try:
                 await self._ws.send(json.dumps({
-                    "type": "listen",
-                    "state": "detect",
+                    "type": "bridge",
+                    "target_device_id": self._target_device_id,
                     "text": text,
                 }))
             except Exception as e:
@@ -134,6 +138,15 @@ class XiaozhiConnection:
                     continue
 
                 msg_type = msg.get("type", "")
+                if msg_type == "bridge_response":
+                    err = msg.get("error", "")
+                    if self._response_future and not self._response_future.done():
+                        if err:
+                            self._response_future.set_exception(ConnectionError(err))
+                        else:
+                            self._response_future.set_result(msg.get("text", ""))
+                    self._expecting_response = False
+                    continue
                 if msg_type != "tts":
                     continue
 

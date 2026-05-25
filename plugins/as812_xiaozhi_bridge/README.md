@@ -14,7 +14,7 @@ xiaozhi-server 本身为 ESP32 硬件设计，通过 WebSocket 传输 Opus 音�
 
 ```yaml
 xiaozhi_server:
-  url: "ws://10.208.83.246:8000/xiaozhi/v1/"
+  url: "ws://10.203.135.87:8000/xiaozhi/v1/"
   device_id: "qq-bot-bridge"
   client_id: "qq-bot-client"
   authorization: ""          # 如 xiaozhi-server 开启 auth 则填入 Bearer token

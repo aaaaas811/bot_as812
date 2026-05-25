@@ -10372,7 +10372,7 @@ class RkeyManager {
 }
 
 const __vite_import_meta_env__ = {};
-const napCatVersion = typeof (__vite_import_meta_env__) !== "undefined" && "4.18.2" || "1.0.0-dev";
+const napCatVersion = typeof (__vite_import_meta_env__) !== "undefined" && "4.18.4" || "1.0.0-dev";
 const SEMVER_REGEX$1 = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 function parseSemVer(version) {
   if (!version || typeof version !== "string") {
@@ -13484,11 +13484,12 @@ function createAlbumCommentRequest(uin, content, client_key) {
     }
   };
 }
-function createAlbumFeedPublish(qunId, uin, albumId, lloc, sloc) {
+function createAlbumFeedPublish(qunId, uin, albumId, batchId) {
   return {
     cell_common: {
       time: Date.now(),
-      feed_id: ""
+      feed_id: `422_0_${batchId}`
+      // 需要补全feed_id
     },
     cell_user_info: {
       user: {
@@ -13497,14 +13498,7 @@ function createAlbumFeedPublish(qunId, uin, albumId, lloc, sloc) {
     },
     cell_media: {
       album_id: albumId,
-      batch_id: 0,
-      media_items: [{
-        type: 0,
-        image: {
-          lloc,
-          sloc: sloc || lloc
-        }
-      }]
+      batch_id: batchId
     },
     cell_qun_info: {
       qun_id: qunId
@@ -13926,9 +13920,17 @@ class NTQQWebApi {
       []
     );
   }
-  async doAlbumMediaLikeByNTQQ(qunId, albumId, lloc, id) {
+  async doAlbumMediaLikeByNTQQ(qunId, albumId, batchId, lloc, isLike) {
     const random_seq = Math.floor(Math.random() * 9e3) + 1e3;
     const uin = this.core.selfInfo.uin || "10001";
+    const type = isLike ? 2 : 1;
+    const status = isLike ? 0 : 1;
+    let id = "";
+    if (lloc) {
+      id = `421_1_0_${qunId}|${albumId}|${batchId}^||^421_1_0_${qunId}|${albumId}|${lloc}^||^0`;
+    } else {
+      id = `421_1_0_${qunId}|${albumId}|${batchId}`;
+    }
     return await this.context.session.getAlbumService().doQunLike(
       random_seq,
       {
@@ -13936,11 +13938,12 @@ class NTQQWebApi {
         map_bytes_info: [],
         map_user_account: []
       },
+      type,
       {
         id,
-        status: 1
+        status
       },
-      createAlbumFeedPublish(qunId, uin, albumId, lloc)
+      createAlbumFeedPublish(qunId, uin, albumId, batchId)
     );
   }
 }
@@ -14033,6 +14036,8 @@ const offset$1 = {
   "9.9.30-48517-x64": {"send":"0A9B1BC","recv":"1F0324D"},
   "3.2.28-48517-x64": {"send":"5E41890","recv":"3216D10"},
   "3.2.28-48517-arm64": {"send":"3F9C7E4","recv":"14E1AA8"},
+  "9.9.30-48762-x64": {"send":"0A9B1BC","recv":"1F0324D"},
+  "9.9.31-49599-x64": {"send":"0AF885C","recv":"20058E1"},
 };
 
 class Frame {
@@ -49732,8 +49737,12 @@ class PacketOperationContext {
           return element;
         })
       );
+      const isGroup = msg?.responseHead.grp !== void 0;
+      const peerUin = isGroup ? String(msg?.responseHead.grp?.groupUin ?? 0) : String(msg?.responseHead.fromUin ?? 0);
+      const peerUid = isGroup ? String(msg?.responseHead.grp?.groupUin ?? 0) : String(msg?.responseHead.fromUid ?? "");
+      const sendNickName = isGroup ? msg?.responseHead.grp?.memberName ?? "" : msg?.responseHead.forward?.friendName ?? "";
       return {
-        chatType: ChatType.KCHATTYPEGROUP,
+        chatType: isGroup ? ChatType.KCHATTYPEGROUP : ChatType.KCHATTYPEC2C,
         elements,
         guildId: "",
         isOnlineMsg: false,
@@ -49745,18 +49754,18 @@ class PacketOperationContext {
         msgType: NTMsgType.KMSGTYPEMIX,
         parentMsgIdList: [],
         parentMsgPeer: {
-          chatType: ChatType.KCHATTYPEGROUP,
-          peerUid: String(msg?.responseHead.grp?.groupUin ?? 0)
+          chatType: isGroup ? ChatType.KCHATTYPEGROUP : ChatType.KCHATTYPEC2C,
+          peerUid
         },
         peerName: "",
-        peerUid: "1094950020",
-        peerUin: "1094950020",
+        peerUid,
+        peerUin,
         recallTime: "0",
         records: [],
-        sendNickName: msg?.responseHead.grp?.memberName ?? "",
-        sendRemarkName: msg?.responseHead.grp?.memberName ?? "",
-        senderUid: "",
-        senderUin: "1094950020",
+        sendNickName,
+        sendRemarkName: sendNickName,
+        senderUid: msg?.responseHead.fromUid ?? "",
+        senderUin: String(msg?.responseHead.fromUin ?? 0),
         sourceType: MsgSourceType.K_DOWN_SOURCETYPE_UNKNOWN,
         subMsgType: 1
       };
@@ -61128,6 +61137,8 @@ const AppidTable = {
   "6.9.93-47354": {"appid":537346896,"qua":"V1_MAC_NQ_6.9.93_47354_GW_B"},
   "9.9.30-48517": {"appid":537352474,"qua":"V1_WIN_NQ_9.9.30_48517_GW_B"},
   "3.2.28-48517": {"appid":537352510,"qua":"V1_LNX_NQ_3.2.28_48517_GW_B"},
+  "9.9.30-48762": {"appid":537352525,"qua":"V1_WIN_NQ_9.9.30_48762_GW_B"},
+  "9.9.31-49599": {"appid":537355779,"qua":"V1_WIN_NQ_9.9.31_49599_GW_B"},
 };
 
 class QQBasicInfoWrapper {
@@ -61550,6 +61561,7 @@ const ActionName = {
   DownloadFileImageStream: "download_file_image_stream",
   DelGroupAlbumMedia: "del_group_album_media",
   SetGroupAlbumMediaLike: "set_group_album_media_like",
+  CancelGroupAlbumMediaLike: "cancel_group_album_media_like",
   DoGroupAlbumComment: "do_group_album_comment",
   GetGroupAlbumMediaList: "get_group_album_media_list",
   UploadImageToQunAlbum: "upload_image_to_qun_album",
@@ -92197,7 +92209,8 @@ router$7.post("/DeleteSSLCert", DeleteSSLCertHandler);
 
 const SKIP_UPDATE_FILES = [
   "NapCatWinBootMain.exe",
-  "NapCatWinBootHook.dll"
+  "NapCatWinBootHook.dll",
+  "quickLoginExample.bat"
 ];
 const PRESERVE_USER_CONFIG_RELATIVE_PATHS = /* @__PURE__ */ new Set([
   path.normalize("config/napcat.json")
@@ -93769,6 +93782,7 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
   async reload(newConfig) {
     const wasEnabled = this.isEnable;
     const oldPort = this.config.port;
+    const oldHost = this.config.host;
     const oldEnableWebsocket = this.config.enableWebsocket;
     this.config = newConfig;
     if (newConfig.enable && !wasEnabled) {
@@ -93778,7 +93792,7 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
       this.close();
       return OB11NetworkReloadType.NetWorkClose;
     }
-    if (oldPort !== newConfig.port || oldEnableWebsocket !== newConfig.enableWebsocket) {
+    if (oldPort !== newConfig.port || oldHost !== newConfig.host || oldEnableWebsocket !== newConfig.enableWebsocket) {
       this.close();
       if (newConfig.enable) {
         this.open();
@@ -113392,11 +113406,8 @@ class GetGroupAlbumMediaList extends OneBotAction {
 const PayloadSchema$2 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
-  lloc: Type.String({ description: "媒体ID (lloc)" }),
-  id: Type.String({ description: "点赞ID" }),
-  // 421_1_0_1012959257|V61Yiali4PELg90bThrH4Bo2iI1M5Kab|V5bCgAxMDEyOTU5MjU3.PyqaPndPxg!^||^421_1_0_1012959257|V61Yiali4PELg90bThrH4Bo2iI1M5Kab|17560363448^||^1
-  set: Type.Boolean({ default: true, description: "是否点赞" })
-  // true=点赞 false=取消点赞 未实现
+  batch_id: Type.String({ description: "batch_id" }),
+  lloc: Type.Optional(Type.String({ description: "lloc，若对整个上传操作则不填" }))
 });
 const ReturnSchema$2 = Type.Any({ description: "操作结果" });
 class SetGroupAlbumMediaLike extends OneBotAction {
@@ -113405,9 +113416,9 @@ class SetGroupAlbumMediaLike extends OneBotAction {
   actionTags = ["群组扩展"];
   payloadExample = {
     group_id: "123456",
-    album_id: "album_id_1",
-    lloc: "media_id_1",
-    id: "123456"
+    album_id: "album_id_123",
+    batch_id: "112233",
+    lloc: "aabbcc12213123"
   };
   returnExample = {
     result: {}
@@ -113418,8 +113429,36 @@ class SetGroupAlbumMediaLike extends OneBotAction {
     return await this.core.apis.WebApi.doAlbumMediaLikeByNTQQ(
       payload.group_id,
       payload.album_id,
+      payload.batch_id,
       payload.lloc,
-      payload.id
+      true
+      // isLike = true
+    );
+  }
+}
+class CancelGroupAlbumMediaLike extends OneBotAction {
+  actionName = ActionName.CancelGroupAlbumMediaLike;
+  // 注意：需要在 router/index.ts 的 ActionName 枚举中补充该定义
+  actionSummary = "取消点赞群相册媒体";
+  actionTags = ["群组扩展"];
+  payloadExample = {
+    group_id: "123456",
+    album_id: "album_id",
+    batch_id: "112233",
+    lloc: "aabbcc"
+  };
+  returnExample = {
+    result: {}
+  };
+  payloadSchema = PayloadSchema$2;
+  returnSchema = ReturnSchema$2;
+  async _handle(payload) {
+    return await this.core.apis.WebApi.doAlbumMediaLikeByNTQQ(
+      payload.group_id,
+      payload.album_id,
+      payload.batch_id,
+      payload.lloc,
+      false
     );
   }
 }
@@ -114461,6 +114500,7 @@ function getAllHandlers(obContext, core) {
     new UploadFileStream(obContext, core),
     new DelGroupAlbumMedia(obContext, core),
     new SetGroupAlbumMediaLike(obContext, core),
+    new CancelGroupAlbumMediaLike(obContext, core),
     new DoGroupAlbumComment(obContext, core),
     new GetGroupAlbumMediaList(obContext, core),
     new GetQunAlbumList(obContext, core),
@@ -115835,6 +115875,8 @@ const offset = {
   "3.2.28-48517-x64": {"send":"AD7C280","recv":"AD7FD20"},
   "9.9.30-48517-x64": {"send":"2F3B960","recv":"2F3EEE0"},
   "3.2.28-48517-arm64": {"send":"6F48B70","recv":"6F4C520"},
+  "9.9.30-48762-x64": {"send":"2F3B960","recv":"2F3EEE0"},
+  "9.9.31-49599-x64": {"send":"3082C40","recv":"30861C8"},
 };
 
 const typedOffset = offset;
@@ -116644,14 +116686,22 @@ async function handleLoginInner(context, logger, loginService, quickLoginUin, hi
   } else {
     logger.log("没有 -q 指令指定快速登录，将使用二维码登录方式");
     if (historyLoginList.length > 0) {
-      logger.log(`可用于快速登录的 QQ：
+      logger.log(`可用于快速登录 of QQ：
 ${historyLoginList.map((u, index) => `${index + 1}. ${u.uin} ${u.nickName}`).join("\n")}`);
     }
-    loginService.getQRCodePicture();
+    let hasAttemptedFallback = false;
     try {
+      const quickLoginList = WebUiDataRuntime.getQQQuickLoginList() || [];
+      const hasAutoLogin = process.env["NAPCAT_QUICK_ACCOUNT"] || quickLoginList.length > 0;
+      if (hasAutoLogin || process.env["NAPCAT_QUICK_PASSWORD"] || process.env["NAPCAT_QUICK_PASSWORD_MD5"]) {
+        hasAttemptedFallback = true;
+      }
       await WebUiDataRuntime.runWebUiConfigQuickFunction();
     } catch (error) {
       logger.logError("WebUi 快速登录失败 执行失败", error);
+    }
+    if (!hasAttemptedFallback && !context.isLogined) {
+      loginService.getQRCodePicture();
     }
   }
   loginService.getLoginList().then((res) => {

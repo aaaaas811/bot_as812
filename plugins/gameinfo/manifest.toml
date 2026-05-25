@@ -1,0 +1,9 @@
+name = "gameinfo"
+version = "1.0.0"
+main = "main.py"
+author = "as811"
+description = "获取B站指定UP主当日视频并合并转发到特定群"
+entry_class = "GameInfo"
+pip_dependencies = []
+
+[dependencies]

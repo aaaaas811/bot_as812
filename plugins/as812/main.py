@@ -34,6 +34,19 @@ from uapi.errors import UapiError
 
 _log = get_log()
 
+# 导入素描本插件的绘图工具
+_SKETCHBOOK_UTILS = Path(__file__).parent.parent / "Anans_sketchbook_chatbox_ncatbot" / "utils"
+_SKETCHBOOK_AVAILABLE = False
+if _SKETCHBOOK_UTILS.exists():
+    if str(_SKETCHBOOK_UTILS) not in sys.path:
+        sys.path.insert(0, str(_SKETCHBOOK_UTILS))
+    try:
+        from text_fit_draw import draw_text_auto  # type: ignore[import-not-found]
+        from config import Config as SketchConfig  # type: ignore[import-not-found]
+        _SKETCHBOOK_AVAILABLE = True
+    except ImportError:
+        _log.warning("素描本绘图工具导入失败，帮我说将使用文本模式")
+
 
 class _NoopRegistrar:
     """当未提供 bilibili 注册器时，保证装饰器不报错。"""
@@ -445,11 +458,66 @@ class as812(NcatBotPlugin):
                     await qq_api.post_private_msg(msg.user_id, text="格式错误，请使用：帮我说：内容")
                 return
 
-            say_text = f"811说\"{content}\""
-            try:
-                await self._qq_post_group_msg(active_group_id, text=say_text)
+            if not _SKETCHBOOK_AVAILABLE:
+                # 降级为纯文本转述
+                say_text = f"811说\"{content}\""
+                try:
+                    await self._qq_post_group_msg(active_group_id, text=say_text)
+                    if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                        await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}")
+                except Exception as e:
+                    _log.error(f"私聊转述到群失败: {e}")
+                    if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                        await qq_api.post_private_msg(msg.user_id, text=f"转述失败: {e}")
+                return
+
+            # 随机选择表情，生成素描本风格图片
+            emotion_list = ["base", "开心", "生气", "无语", "脸红", "病娇",
+                            "哭泣", "害怕", "惊讶", "激动", "闭眼", "难受"]
+            emotion = random.choice(emotion_list)
+
+            emotion_mapping = {
+                "base": "base.png", "开心": "开心.png", "生气": "生气.png",
+                "无语": "无语.png", "脸红": "脸红.png", "病娇": "病娇.png",
+                "哭泣": "哭泣.png", "害怕": "害怕.png", "惊讶": "惊讶.png",
+                "激动": "激动.png", "闭眼": "闭眼.png", "难受": "难受.png",
+            }
+
+            base_images_dir = _SKETCHBOOK_UTILS / "BaseImages"
+            base_image_path = str(base_images_dir / emotion_mapping[emotion])
+
+            if not os.path.exists(base_image_path):
+                _log.error(f"底图文件不存在: {base_image_path}")
+                await self._qq_post_group_msg(active_group_id, text=f"811说\"{content}\"")
                 if qq_api is not None and hasattr(qq_api, "post_private_msg"):
                     await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}")
+                return
+
+            try:
+                sketch_config = SketchConfig()
+                font_path = str(_SKETCHBOOK_UTILS / sketch_config.font_file)
+                overlay_path = (
+                    str(_SKETCHBOOK_UTILS / sketch_config.base_overlay_file)
+                    if sketch_config.use_base_overlay
+                    else None
+                )
+
+                png_bytes = draw_text_auto(
+                    image_source=base_image_path,
+                    top_left=sketch_config.text_box_topleft,
+                    bottom_right=sketch_config.image_box_bottomright,
+                    text=f"811：{content}",
+                    color=(0, 0, 0),
+                    max_font_height=64,
+                    font_path=font_path if os.path.exists(font_path) else None,
+                    image_overlay=overlay_path if overlay_path and os.path.exists(overlay_path) else None,
+                    wrap_algorithm=sketch_config.text_wrap_algorithm,
+                )
+
+                image_base64 = base64.b64encode(png_bytes).decode('utf-8')
+                await self._qq_post_group_msg(active_group_id, image='base64://' + image_base64)
+                if qq_api is not None and hasattr(qq_api, "post_private_msg"):
+                    await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}（表情：{emotion}）")
             except Exception as e:
                 _log.error(f"私聊转述到群失败: {e}")
                 if qq_api is not None and hasattr(qq_api, "post_private_msg"):
