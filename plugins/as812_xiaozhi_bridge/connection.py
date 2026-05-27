@@ -93,7 +93,7 @@ class XiaozhiConnection:
         self._reader_task = asyncio.create_task(self._reader_loop())
         return True
 
-    async def send_text(self, text: str) -> str:
+    async def send_text(self, text: str, sender_id: str = "", sender_name: str = "") -> str:
         """通过 bridge 将文本注入目标 ESP32 设备，等待 TTS 响应镜像"""
         if not self._target_device_id:
             raise ConnectionError("未配置 target_device_id，无法桥接消息")
@@ -108,6 +108,8 @@ class XiaozhiConnection:
                     "type": "bridge",
                     "target_device_id": self._target_device_id,
                     "text": text,
+                    "sender_id": sender_id,
+                    "sender_name": sender_name,
                 }))
             except Exception as e:
                 self._expecting_response = False
@@ -205,12 +207,12 @@ class ConnectionManager:
         self._config = config
         self._connections: dict[str, XiaozhiConnection] = {}
 
-    async def send_message(self, user_id: str, text: str) -> str:
+    async def send_message(self, user_id: str, text: str, sender_id: str = "", sender_name: str = "") -> str:
         """向 xiaozhi-server 发送消息并返回响应"""
         conn = await self._get_or_create_connection(user_id)
 
         try:
-            return await conn.send_text(text)
+            return await conn.send_text(text, sender_id=sender_id, sender_name=sender_name)
         except (ConnectionError, ResponseTimeout):
             raise
         except Exception as e:
@@ -218,7 +220,7 @@ class ConnectionManager:
             # 重试一次（新建连接）
             await self._remove_connection(user_id)
             conn = await self._get_or_create_connection(user_id)
-            return await conn.send_text(text)
+            return await conn.send_text(text, sender_id=sender_id, sender_name=sender_name)
 
     async def _get_or_create_connection(self, user_id: str) -> XiaozhiConnection:
         conn = self._connections.get(user_id)

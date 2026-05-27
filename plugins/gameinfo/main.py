@@ -216,7 +216,18 @@ class GameInfo(NcatBotPlugin):
         info = data.get("data", {})
         return {"name": info.get("name", f"UID{uid}"), "face": info.get("face", "")}
 
-    async def _get_user_videos(self, uid: int) -> list[dict]:
+    async def _get_user_videos(
+        self, uid: int, start_ts: float | None = None, end_ts: float | None = None
+    ) -> list[dict]:
+        if start_ts is None or end_ts is None:
+            today_start = (
+                datetime.now(CST)
+                .replace(hour=0, minute=0, second=0, microsecond=0)
+                .timestamp()
+            )
+            start_ts = start_ts if start_ts is not None else today_start
+            end_ts = end_ts if end_ts is not None else today_start + 86400
+
         try:
             img_key, sub_key = await self._fetch_wbi_keys()
         except RuntimeError as e:
@@ -252,18 +263,11 @@ class GameInfo(NcatBotPlugin):
         if not vlist:
             return []
 
-        today_start = (
-            datetime.now(CST)
-            .replace(hour=0, minute=0, second=0, microsecond=0)
-            .timestamp()
-        )
-        today_end = today_start + 86400
-
-        today_videos: list[dict] = []
+        matched: list[dict] = []
         for v in vlist:
             pubdate = v.get("created", 0)
-            if today_start <= pubdate < today_end:
-                today_videos.append(
+            if start_ts <= pubdate < end_ts:
+                matched.append(
                     {
                         "bvid": v.get("bvid", ""),
                         "aid": v.get("aid", 0),
@@ -277,17 +281,22 @@ class GameInfo(NcatBotPlugin):
                     }
                 )
 
-        return today_videos
+        return matched
 
     # ---- build forward message ----
 
-    def _build_forward(self, all_videos: dict):
+    def _build_forward(self, all_videos: dict, date_label: str | None = None):
         """构造嵌套合并转发：外层按 UP 主分组，每个 UP 主内层是该 UP 主的视频列表。"""
-        today_str = datetime.now(CST).strftime("%Y-%m-%d")
+        if date_label is None:
+            date_label = f"今日 ({datetime.now(CST).strftime('%Y-%m-%d')})"
+
+        uid_names = self._config.get("uid_names", {}) or {}
+        all_names = list(dict.fromkeys(uid_names.values()))
+        names_str = "，".join(all_names) if all_names else "暂无"
 
         outer = ForwardConstructor(user_id="bilibili", nickname="B站UP主动态")
         outer.attach_text(
-            f"今日 ({today_str}) 的游戏资讯就由812呈上！(目前包括：IGN中国，PlayStation，游戏动力ATK,机核网)"
+            f"{date_label} 的游戏资讯就由812呈上！(目前包括：{names_str})"
         )
 
         for uid, data in all_videos.items():
@@ -299,7 +308,7 @@ class GameInfo(NcatBotPlugin):
             inner = ForwardConstructor(user_id=node_uid, nickname=name)
             for video in data["videos"]:
                 pub_time = datetime.fromtimestamp(video["pubdate"], tz=CST).strftime(
-                    "%H:%M"
+                    "%Y-%m-%d %H:%M"
                 )
                 text = (
                     f"【{video['title']}】\n"
@@ -328,11 +337,15 @@ class GameInfo(NcatBotPlugin):
         source_event: GroupMessageEvent | None = None,
         *,
         full_report: bool = False,
+        start_ts: float | None = None,
+        end_ts: float | None = None,
+        date_label: str | None = None,
     ):
         """拉取视频并转发。
 
         full_report=True  (/gameinfo): 发送到触发指令的群，返回当日全部视频。
         full_report=False (定时检查): 发送到配置的目标群，仅返回新视频。
+        start_ts/end_ts: 指定时间范围（时间戳）。
         """
         uids = self._get_uids()
         target_groups = self._get_target_groups()
@@ -360,12 +373,12 @@ class GameInfo(NcatBotPlugin):
         total_count = 0
 
         for uid in uids:
-            videos = await self._get_user_videos(uid)
+            videos = await self._get_user_videos(uid, start_ts, end_ts)
             if not videos:
                 continue
 
             if full_report:
-                # /gameinfo: 返回当日全部视频，不检查去重
+                # /gameinfo: 返回全部视频，不检查去重
                 selected = videos
             else:
                 # 定时检查: 只返回尚未发送的视频
@@ -387,7 +400,7 @@ class GameInfo(NcatBotPlugin):
             total_count += len(selected)
 
         if total_count == 0:
-            msg = "今日暂无UP主发布视频"
+            msg = "暂无UP主发布视频"
             if source_event:
                 await self.api.qq.post_group_msg(source_event.group_id, text=msg)
             return
@@ -395,7 +408,7 @@ class GameInfo(NcatBotPlugin):
         if not full_report:
             self._save_sent_videos(sent_videos)
 
-        forward = self._build_forward(all_result)
+        forward = self._build_forward(all_result, date_label)
 
         for gid in send_to:
             try:
@@ -406,12 +419,98 @@ class GameInfo(NcatBotPlugin):
 
     # ---- triggers ----
 
+    ALLOWED_USERS: set[int] = {3196611630}
+
+    @staticmethod
+    def _is_group_admin(event: GroupMessageEvent) -> bool:
+        """检查发送者是否为群主、管理员或特殊允许的账号。"""
+        role = getattr(getattr(event, "sender", None), "role", None) or ""
+        if role in ("owner", "admin"):
+            return True
+        try:
+            return int(event.user_id) in GameInfo.ALLOWED_USERS
+        except (TypeError, ValueError):
+            return False
+
+    async def _handle_days_query(self, event: GroupMessageEvent, days_str: str):
+        """处理 /gameinfo x 指令，查询最近 x 天的视频。"""
+        try:
+            days = int(days_str)
+        except ValueError:
+            await self.api.qq.post_group_msg(event.group_id, text=f"无效的天数: {days_str}")
+            return
+
+        if days <= 0:
+            await self.api.qq.post_group_msg(event.group_id, text="天数需大于0")
+            return
+
+        now = datetime.now(CST)
+        start_ts = (now - timedelta(days=days)).replace(
+            hour=0, minute=0, second=0, microsecond=0
+        ).timestamp()
+        end_ts = now.timestamp()
+        date_label = f"最近{days}天"
+
+        _log.info("[gameinfo] 查询最近 %s 天视频，群=%s", days, event.group_id)
+        await self._check_and_send(event, full_report=True, start_ts=start_ts, end_ts=end_ts, date_label=date_label)
+
+    async def _handle_add_uid(self, event: GroupMessageEvent, uid_str: str, label: str):
+        """处理 /gameinfo add xxx 名称 指令。"""
+        try:
+            uid = int(uid_str)
+        except ValueError:
+            await self.api.qq.post_group_msg(event.group_id, text=f"无效的UID: {uid_str}")
+            return
+
+        if not self._is_group_admin(event):
+            await self.api.qq.post_group_msg(event.group_id, text="仅群主/管理员可使用此指令")
+            return
+
+        uids = self._config.get("uids", []) or []
+        is_new = uid not in uids
+        if is_new:
+            uids.append(uid)
+            self._config["uids"] = uids
+
+        uid_names = self._config.get("uid_names", {}) or {}
+        uid_names[str(uid)] = label
+        self._config["uid_names"] = uid_names
+
+        self._config_path.parent.mkdir(parents=True, exist_ok=True)
+        self._config_path.write_text(
+            yaml.dump(self._config, allow_unicode=True, default_flow_style=False),
+            encoding="utf-8",
+        )
+        self._load_config()
+
+        if is_new:
+            await self.api.qq.post_group_msg(
+                event.group_id, text=f"已添加UP主: {label} (UID: {uid})"
+            )
+        else:
+            await self.api.qq.post_group_msg(
+                event.group_id, text=f"已更新UID {uid} 的备注名为: {label}"
+            )
+        _log.info("[gameinfo] 用户 %s 设置UID %s 备名: %s", event.user_id, uid, label)
+
     @registrar.qq.on_group_message()
     async def _on_group_msg(self, event: GroupMessageEvent):
         text = self._extract_text(event)
         if text == "/gameinfo":
             _log.info("[gameinfo] 收到 /gameinfo 指令，群=%s 用户=%s", event.group_id, event.user_id)
             await self._check_and_send(event, full_report=True)
+            return
+
+        add_match = re.match(r"^/gameinfo\s+add\s+(\d+)\s+(.+)$", text)
+        if add_match:
+            _log.info("[gameinfo] 收到 /gameinfo add 指令，群=%s 用户=%s", event.group_id, event.user_id)
+            await self._handle_add_uid(event, add_match.group(1), add_match.group(2).strip())
+            return
+
+        days_match = re.match(r"^/gameinfo\s+(\d+)$", text)
+        if days_match:
+            _log.info("[gameinfo] 收到 /gameinfo 天数指令，群=%s 用户=%s", event.group_id, event.user_id)
+            await self._handle_days_query(event, days_match.group(1))
 
     async def _scheduled_check(self):
         _log.info("[gameinfo] 定时检查触发")

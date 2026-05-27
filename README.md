@@ -49,6 +49,7 @@
 | 插件 | 说明 |
 |------|------|
 | **as812** | 主插件：AI 聊天（DeepSeek / Ollama）、RAG 知识库、B 站动态监听、表情包、私聊转述、情绪管理 |
+| **gameinfo** | B 站游戏资讯：监控指定 UP 主视频，支持定时推送、按天数查询、动态添加 UP 主 |
 | **mh** | 怪物猎人插件：MHW/MHR 集会码管理、怪物数据查询（肉质/弱点/简介）、Wiki 爬虫 |
 | **yuri** | 内容推送：Yuri 图片、每日金句、百合台词、名言警句，支持定时任务 |
 | **_31966_plugin** | 工具箱：戳一戳自动回击、表情回应、群成员欢迎、睡眠模式控制 |
@@ -113,6 +114,9 @@ bot_as812/
 │   │   ├── mh.py                  # 插件入口
 │   │   ├── analyze.py             # 怪物数据分析
 │   │   └── data/                  # 怪物 JSON 数据
+│   ├── gameinfo/                  # B站游戏资讯插件
+│   │   ├── main.py                # 插件入口
+│   │   └── config/                # UP主列表、目标群等配置
 │   ├── yuri/                      # 内容推送插件
 │   │   ├── main.py                # 插件入口
 │   │   └── data/                  # 语录文件
@@ -161,6 +165,16 @@ plugins/<plugin_name>/
 | 群成员增加 | `@registrar.qq.on_group_increase()` | 新人入群 |
 | 表情回应 | `@registrar.on("notice.group_msg_emoji_like", platform="qq")` | 表情回复 |
 | B 站弹幕/私信等 | `@bili_registrar.on_danmu()` | Bilibili 平台事件 |
+
+#### gameinfo 插件指令
+
+| 指令 | 说明 | 权限 |
+|------|------|------|
+| `/gameinfo` | 获取当日所有监控 UP 主的视频，合并转发到当前群 | 所有人 |
+| `/gameinfo x` | 获取最近 x 天内所有监控 UP 主的视频 | 所有人 |
+| `/gameinfo add <UID> <名称>` | 添加（或更新）一个 B 站 UP 主到监控列表 | 群主 / 管理员 / 特殊账号 |
+
+配置文件位于 `plugins/gameinfo/config/config.yaml`，可手动编辑 UP 主列表、目标群号、定时检查间隔等。
 
 ### 部署
 
@@ -231,5 +245,4 @@ nohup python main.py > bot.log 2>&1 &
 Todolist:
 ESP结合
 贴表情功能重构
-游戏资讯推送
 灵活的定时任务

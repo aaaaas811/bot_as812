@@ -42,13 +42,29 @@ class XiaozhiBridge(NcatBotPlugin):
         if not raw_text:
             return
 
+        # 获取发送者昵称
+        sender_name = ""
+        try:
+            sender = getattr(event, "sender", None)
+            if sender is not None:
+                sender_name = getattr(sender, "nickname", "") or ""
+        except Exception:
+            pass
+
+        # 添加桥接前缀，让 LLM 知道这是别人通过 bot 转达的消息
+        bridged_text = f"[QQ转述] 用户{sender_name}({user_id})对你说：{raw_text}"
+
         msg_cfg = self._config.get("messaging", {})
         status_reply = msg_cfg.get("status_reply", "")
         if status_reply:
             await self._qq_post_private_msg(event.user_id, text=status_reply)
 
         try:
-            response = await self._conn_manager.send_message(user_id, raw_text)
+            response = await self._conn_manager.send_message(
+                user_id, bridged_text,
+                sender_id=user_id,
+                sender_name=sender_name,
+            )
             if response:
                 await self._send_private_response(event.user_id, response)
             else:
