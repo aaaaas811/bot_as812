@@ -405,11 +405,11 @@ class as812(NcatBotPlugin):
             await self._send_response(msg.group_id, response, reply_id)
         else:
             # 尝试主动回复
-            active_group_id = self.config_manager.get_active_group_id()
-            if str(msg.group_id) == active_group_id:
+            active_group_ids = self.config_manager.get_active_group_ids()
+            if str(msg.group_id) in active_group_ids:
                 active_response = await self.response_handler.process_active_response(
-                    api_key, 
-                    cat_prompt, 
+                    api_key,
+                    cat_prompt,
                     str(msg.group_id)
                 )
                 if active_response:
@@ -418,7 +418,7 @@ class as812(NcatBotPlugin):
                     _log.info("未发送主动回复：延迟条件未满足或无可用用户消息")
             else:
                 _log.info(
-                    f"未进入主动回复：当前群 {msg.group_id} 不是 active_group_id({active_group_id})"
+                    f"未进入主动回复：当前群 {msg.group_id} 不在 active_group_ids({active_group_ids}) 中"
                 )
     
     @registrar.qq.on_private_message()
@@ -462,7 +462,7 @@ class as812(NcatBotPlugin):
                 # 降级为纯文本转述
                 say_text = f"811说\"{content}\""
                 try:
-                    await self._qq_post_group_msg(active_group_id, text=say_text)
+                    await self._qq_post_group_msg(int(active_group_id), text=say_text)
                     if qq_api is not None and hasattr(qq_api, "post_private_msg"):
                         await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}")
                 except Exception as e:
@@ -488,7 +488,7 @@ class as812(NcatBotPlugin):
 
             if not os.path.exists(base_image_path):
                 _log.error(f"底图文件不存在: {base_image_path}")
-                await self._qq_post_group_msg(active_group_id, text=f"811说\"{content}\"")
+                await self._qq_post_group_msg(int(active_group_id), text=f"811说\"{content}\"")
                 if qq_api is not None and hasattr(qq_api, "post_private_msg"):
                     await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}")
                 return
@@ -502,7 +502,8 @@ class as812(NcatBotPlugin):
                     else None
                 )
 
-                png_bytes = draw_text_auto(
+                png_bytes = await asyncio.to_thread(
+                    draw_text_auto,
                     image_source=base_image_path,
                     top_left=sketch_config.text_box_topleft,
                     bottom_right=sketch_config.image_box_bottomright,
@@ -515,7 +516,7 @@ class as812(NcatBotPlugin):
                 )
 
                 image_base64 = base64.b64encode(png_bytes).decode('utf-8')
-                await self._qq_post_group_msg(active_group_id, image='base64://' + image_base64)
+                await self._qq_post_group_msg(int(active_group_id), image='base64://' + image_base64)
                 if qq_api is not None and hasattr(qq_api, "post_private_msg"):
                     await qq_api.post_private_msg(msg.user_id, text=f"已转述到群 {active_group_id}（表情：{emotion}）")
             except Exception as e:

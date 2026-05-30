@@ -45,6 +45,7 @@ class GameInfo(NcatBotPlugin):
         self._config_path = Path(__file__).parent / "config" / "config.yaml"
         self._data_dir = Path(__file__).parent.parent.parent / "data" / "gameinfo"
         self._sent_path = self._data_dir / "sent_videos.json"
+        self._last_send_path = self._data_dir / "last_send.json"
         self._config: dict = {}
         self._session: aiohttp.ClientSession | None = None
         self._wbi_keys: tuple[str, str] | None = None
@@ -59,17 +60,16 @@ class GameInfo(NcatBotPlugin):
         self._load_bili_credentials()
         self._session = aiohttp.ClientSession()
 
-        interval = self._config.get("check_interval", 0)
-        if interval > 0:
+        # 注册每日 22:22 定时推送
+        try:
             self.add_scheduled_task(
-                name="gameinfo_check",
-                interval=f"{interval}m",
-                callback=self._scheduled_check,
+                name="gameinfo_daily",
+                interval="22:22",
+                callback=self._daily_push,
             )
-            _log.info("[gameinfo] 定时检查已注册，间隔 %s 分钟", interval)
-
-        if self._config.get("send_on_load", False):
-            asyncio.create_task(self._check_and_send())
+            _log.info("[gameinfo] 每日定时推送已注册，时间：22:22")
+        except Exception as e:
+            _log.warning("[gameinfo] 注册定时任务失败: %s", e)
 
         _log.info(
             "[gameinfo] 插件已加载，监控 %s 个UP主，目标 %s 个群",
@@ -147,6 +147,28 @@ class GameInfo(NcatBotPlugin):
         self._sent_path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+
+    # ---- last send time persistence ----
+
+    def _load_last_send(self) -> float:
+        if self._last_send_path.exists():
+            try:
+                data = json.loads(self._last_send_path.read_text(encoding="utf-8"))
+                return float(data.get("last_send", 0))
+            except Exception:
+                return 0.0
+        return 0.0
+
+    def _save_last_send(self, ts: float):
+        self._last_send_path.parent.mkdir(parents=True, exist_ok=True)
+        self._last_send_path.write_text(
+            json.dumps({"last_send": ts}, ensure_ascii=False), encoding="utf-8"
+        )
+
+    async def _daily_push(self):
+        """每日定时推送：发送当日视频到目标群"""
+        _log.info("[gameinfo] 触发每日定时推送（22:22）")
+        await self._check_and_send()
 
     # ---- WBI signing ----
 
@@ -511,10 +533,6 @@ class GameInfo(NcatBotPlugin):
         if days_match:
             _log.info("[gameinfo] 收到 /gameinfo 天数指令，群=%s 用户=%s", event.group_id, event.user_id)
             await self._handle_days_query(event, days_match.group(1))
-
-    async def _scheduled_check(self):
-        _log.info("[gameinfo] 定时检查触发")
-        await self._check_and_send()
 
     @staticmethod
     def _extract_text(msg: GroupMessageEvent) -> str:

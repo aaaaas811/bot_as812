@@ -70,8 +70,20 @@ class ConfigManager:
         return self.get("api_key_image")
     
     def get_active_group_id(self) -> Optional[str]:
-        """获取主动回复群ID"""
-        return self.get("active_group_id")
+        """获取主动回复群ID（兼容旧单值配置）"""
+        val = self.get("active_group_id")
+        if isinstance(val, list):
+            return val[0] if val else None
+        return val
+
+    def get_active_group_ids(self) -> list[str]:
+        """获取所有主动回复群ID列表"""
+        val = self.get("active_group_id")
+        if isinstance(val, list):
+            return [str(g) for g in val]
+        if val:
+            return [str(val)]
+        return []
     
     def get_super_user(self) -> Optional[str]:
         """获取超级用户ID"""
