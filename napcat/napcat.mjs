@@ -6,7 +6,7 @@ import fsProm, { stat as stat$1, readdir, unlink as unlink$1 } from 'fs/promises
 import { ReadableStream as ReadableStream$1 } from 'node:stream/web';
 import * as stream$3 from 'node:stream';
 import stream__default, { Readable, PassThrough, pipeline } from 'node:stream';
-import fs$2, { open, stat, writeFile, constants, unlink, readdir as readdir$1 } from 'node:fs/promises';
+import fs$2, { open, stat, writeFile, constants, unlink, readFile, readdir as readdir$1 } from 'node:fs/promises';
 import { createRequire } from 'module';
 import https$1 from 'node:https';
 import http from 'node:http';
@@ -10372,7 +10372,7 @@ class RkeyManager {
 }
 
 const __vite_import_meta_env__ = {};
-const napCatVersion = typeof (__vite_import_meta_env__) !== "undefined" && "4.18.4" || "1.0.0-dev";
+const napCatVersion = typeof (__vite_import_meta_env__) !== "undefined" && "4.18.5" || "1.0.0-dev";
 const SEMVER_REGEX$1 = /^v?(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$/;
 function parseSemVer(version) {
   if (!version || typeof version !== "string") {
@@ -12914,6 +12914,15 @@ class NTQQMsgApi {
   async fetchFavEmojiList(num) {
     return this.context.session.getMsgService().fetchFavEmojiList("", num, true, true);
   }
+  async addFavEmoji(req) {
+    return this.context.session.getMsgService().addFavEmoji(req);
+  }
+  async deleteFavEmoji(ids) {
+    return this.context.session.getMsgService().deleteFavEmoji(ids);
+  }
+  async modifyFavEmojiDesc(items) {
+    return this.context.session.getMsgService().modifyFavEmojiDesc(items);
+  }
   async queryMsgsWithFilterExWithSeq(peer, msgSeq) {
     return await this.context.session.getMsgService().queryMsgsWithFilterEx("0", "0", msgSeq, {
       chatInfo: peer,
@@ -13946,6 +13955,22 @@ class NTQQWebApi {
       createAlbumFeedPublish(qunId, uin, albumId, batchId)
     );
   }
+  async getDaySignedList(groupCode) {
+    const pSkey = (await this.core.apis.UserApi.getPSkey(["qun.qq.com"])).domainPskeyMap.get("qun.qq.com");
+    const selfUin = this.core.selfInfo.uin;
+    const cookie = `p_uin=o${selfUin}; p_skey=${pSkey}; uin=o${selfUin}`;
+    const post = await RequestUtil.HttpGetJson(`https://qun.qq.com/v2/signin/trpc/GetDaySignedList?g_tk=${this.getBknFromPSKey(pSkey)}`, "POST", {
+      dayYmd: (/* @__PURE__ */ new Date()).toISOString().slice(0, 10).replace(/-/g, ""),
+      offset: 0,
+      limit: 100,
+      uid: selfUin,
+      groupId: groupCode
+    }, {
+      Cookie: cookie,
+      "Content-Type": "application/json"
+    });
+    return post;
+  }
 }
 
 class NTQQSystemApi {
@@ -14038,6 +14063,9 @@ const offset$1 = {
   "3.2.28-48517-arm64": {"send":"3F9C7E4","recv":"14E1AA8"},
   "9.9.30-48762-x64": {"send":"0A9B1BC","recv":"1F0324D"},
   "9.9.31-49599-x64": {"send":"0AF885C","recv":"20058E1"},
+  "9.9.31-49738-x64": {"send":"0AF9FCC","recv":"2007901"},
+  "3.2.29-49738-x64": {"send":"6234600","recv":"33D89D0"},
+  "3.2.29-49738-arm64": {"send":"426AA04","recv":"1596254"},
 };
 
 class Frame {
@@ -61139,6 +61167,8 @@ const AppidTable = {
   "3.2.28-48517": {"appid":537352510,"qua":"V1_LNX_NQ_3.2.28_48517_GW_B"},
   "9.9.30-48762": {"appid":537352525,"qua":"V1_WIN_NQ_9.9.30_48762_GW_B"},
   "9.9.31-49599": {"appid":537355779,"qua":"V1_WIN_NQ_9.9.31_49599_GW_B"},
+  "9.9.31-49738": {"appid":537355830,"qua":"V1_WIN_NQ_9.9.31_49738_GW_B"},
+  "3.2.29-49738": {"appid":537355867,"qua":"V1_LNX_NQ_3.2.29_49738_GW_B"},
 };
 
 class QQBasicInfoWrapper {
@@ -61693,6 +61723,10 @@ const ActionName = {
   _MarkAllMsgAsRead: "_mark_all_as_read",
   GetProfileLike: "get_profile_like",
   FetchCustomFace: "fetch_custom_face",
+  FetchCustomFaceDetail: "fetch_custom_face_detail",
+  AddCustomFace: "add_custom_face",
+  DeleteCustomFace: "delete_custom_face",
+  SetCustomFaceDesc: "set_custom_face_desc",
   FetchEmojiLike: "fetch_emoji_like",
   GetEmojiLikes: "get_emoji_likes",
   SetInputStatus: "set_input_status",
@@ -61738,7 +61772,8 @@ const ActionName = {
   GetOnlineFileMessages: "get_online_file_msg",
   ReceiveOnlineFile: "receive_online_file",
   RefuseOnlineFile: "refuse_online_file",
-  CancelOnlineFile: "cancel_online_file"
+  CancelOnlineFile: "cancel_online_file",
+  GetGroupSignedList: "get_group_signed_list"
 };
 
 var StreamStatus = /* @__PURE__ */ ((StreamStatus2) => {
@@ -93730,7 +93765,7 @@ class OB11HttpServerAdapter extends IOB11NetworkAdapter {
   }
   async httpApiRequest(req, res, request_sse = false) {
     let payload = req.body;
-    if (req.method === "get") {
+    if (req.method === "GET") {
       payload = req.query;
     } else if (req.query) {
       payload = { ...req.body, ...req.query };
@@ -107929,10 +107964,10 @@ class OneBotFileApi {
   }
 }
 
-const PayloadSchema$1g = Type.Object({
+const PayloadSchema$1h = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema$1n = Type.Object({
+const ReturnSchema$1o = Type.Object({
   time: Type.Number({ description: "发送时间" }),
   message_type: Type.String({ description: "消息类型" }),
   message_id: Type.Number({ description: "消息ID" }),
@@ -107948,8 +107983,8 @@ const ReturnSchema$1n = Type.Object({
 }, { description: "OneBot 11 消息" });
 class GetMsg extends OneBotAction {
   actionName = ActionName.GetMsg;
-  payloadSchema = PayloadSchema$1g;
-  returnSchema = ReturnSchema$1n;
+  payloadSchema = PayloadSchema$1h;
+  returnSchema = ReturnSchema$1o;
   actionSummary = "获取消息";
   actionDescription = "根据消息 ID 获取消息详细信息";
   actionTags = ["消息接口"];
@@ -108115,14 +108150,14 @@ const UserActionsExamples = {
     response: [{ user_id: 123456789, nickname: "昵称", remark: "备注" }]
   }};
 
-const PayloadSchema$1f = Type.Object({
+const PayloadSchema$1g = Type.Object({
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$1m = Type.Array(OB11UserSchema, { description: "好友列表" });
+const ReturnSchema$1n = Type.Array(OB11UserSchema, { description: "好友列表" });
 class GetFriendList extends OneBotAction {
   actionName = ActionName.GetFriendList;
-  payloadSchema = PayloadSchema$1f;
-  returnSchema = ReturnSchema$1m;
+  payloadSchema = PayloadSchema$1g;
+  returnSchema = ReturnSchema$1n;
   actionSummary = "获取好友列表";
   actionDescription = "获取当前帐号的好友列表";
   actionTags = ["用户接口"];
@@ -108227,14 +108262,14 @@ const GroupActionsExamples = {
   }
 };
 
-const PayloadSchema$1e = Type.Object({
+const PayloadSchema$1f = Type.Object({
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$1l = Type.Array(OB11GroupSchema, { description: "群列表" });
+const ReturnSchema$1m = Type.Array(OB11GroupSchema, { description: "群列表" });
 class GetGroupList extends OneBotAction {
   actionName = ActionName.GetGroupList;
-  payloadSchema = PayloadSchema$1e;
-  returnSchema = ReturnSchema$1l;
+  payloadSchema = PayloadSchema$1f;
+  returnSchema = ReturnSchema$1m;
   actionSummary = "获取群列表";
   actionDescription = "获取当前帐号的群聊列表";
   actionTags = ["群组接口"];
@@ -108249,14 +108284,14 @@ class GetGroupList extends OneBotAction {
   }
 }
 
-const PayloadSchema$1d = Type.Object({
+const PayloadSchema$1e = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$1k = OB11GroupSchema;
+const ReturnSchema$1l = OB11GroupSchema;
 class GetGroupInfo extends OneBotAction {
   actionName = ActionName.GetGroupInfo;
-  payloadSchema = PayloadSchema$1d;
-  returnSchema = ReturnSchema$1k;
+  payloadSchema = PayloadSchema$1e;
+  returnSchema = ReturnSchema$1l;
   actionSummary = "获取群信息";
   actionDescription = "获取群聊的基本信息";
   actionTags = ["群组接口"];
@@ -108283,16 +108318,16 @@ class GetGroupInfo extends OneBotAction {
   }
 }
 
-const PayloadSchema$1c = Type.Object({
+const PayloadSchema$1d = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "QQ号" }),
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$1j = OB11GroupMemberSchema;
+const ReturnSchema$1k = OB11GroupMemberSchema;
 class GetGroupMemberInfo extends OneBotAction {
   actionName = ActionName.GetGroupMemberInfo;
-  payloadSchema = PayloadSchema$1c;
-  returnSchema = ReturnSchema$1j;
+  payloadSchema = PayloadSchema$1d;
+  returnSchema = ReturnSchema$1k;
   actionSummary = "获取群成员信息";
   actionDescription = "获取群聊中指定成员的信息";
   actionTags = ["群组接口"];
@@ -108365,14 +108400,14 @@ class SendPrivateMsg extends SendMsgBase {
   }
 }
 
-const PayloadSchema$1b = Type.Object({
+const PayloadSchema$1c = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema$1i = Type.Null({ description: "操作结果" });
+const ReturnSchema$1j = Type.Null({ description: "操作结果" });
 class DeleteMsg extends OneBotAction {
   actionName = ActionName.DeleteMsg;
-  payloadSchema = PayloadSchema$1b;
-  returnSchema = ReturnSchema$1i;
+  payloadSchema = PayloadSchema$1c;
+  returnSchema = ReturnSchema$1j;
   actionSummary = "撤回消息";
   actionDescription = "撤回已发送的消息";
   actionTags = ["消息接口"];
@@ -108394,14 +108429,14 @@ class DeleteMsg extends OneBotAction {
   }
 }
 
-const ReturnSchema$1h = Type.Object({
+const ReturnSchema$1i = Type.Object({
   app_name: Type.String({ description: "应用名称" }),
   protocol_version: Type.String({ description: "协议版本" }),
   app_version: Type.String({ description: "应用版本" })
 }, { description: "版本信息" });
 class GetVersionInfo extends OneBotAction {
   actionName = ActionName.GetVersionInfo;
-  returnSchema = ReturnSchema$1h;
+  returnSchema = ReturnSchema$1i;
   actionSummary = "获取版本信息";
   actionDescription = "获取版本信息";
   actionTags = ["系统接口"];
@@ -108627,11 +108662,11 @@ const GoCQHTTPActionsExamples = {
   }
 };
 
-const PayloadSchema$1a = Type.Object({
+const PayloadSchema$1b = Type.Object({
   user_id: Type.String({ description: "用户QQ" }),
   no_cache: Type.Union([Type.Boolean(), Type.String()], { default: false, description: "是否不使用缓存" })
 });
-const ReturnSchema$1g = Type.Object({
+const ReturnSchema$1h = Type.Object({
   user_id: Type.Number({ description: "用户QQ" }),
   uid: Type.String({ description: "UID" }),
   nickname: Type.String({ description: "昵称" }),
@@ -108650,8 +108685,8 @@ const ReturnSchema$1g = Type.Object({
 }, { description: "陌生人信息" });
 class GoCQHTTPGetStrangerInfo extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetStrangerInfo;
-  payloadSchema = PayloadSchema$1a;
-  returnSchema = ReturnSchema$1g;
+  payloadSchema = PayloadSchema$1b;
+  returnSchema = ReturnSchema$1h;
   actionSummary = "获取陌生人信息";
   actionDescription = "获取指定非好友用户的信息";
   actionTags = ["Go-CQHTTP"];
@@ -108719,17 +108754,17 @@ class SendLike extends OneBotAction {
   }
 }
 
-const PayloadSchema$19 = Type.Object({
+const PayloadSchema$1a = Type.Object({
   flag: Type.String({ description: "请求flag" }),
   approve: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否同意" })),
   reason: Type.Optional(Type.Union([Type.String({ default: " " }), Type.Null()], { description: "拒绝理由" })),
   count: Type.Optional(Type.Number({ default: 100, description: "搜索通知数量" }))
 });
-const ReturnSchema$1f = Type.Null({ description: "操作结果" });
+const ReturnSchema$1g = Type.Null({ description: "操作结果" });
 class SetGroupAddRequest extends OneBotAction {
   actionName = ActionName.SetGroupAddRequest;
-  payloadSchema = PayloadSchema$19;
-  returnSchema = ReturnSchema$1f;
+  payloadSchema = PayloadSchema$1a;
+  returnSchema = ReturnSchema$1g;
   actionSummary = "处理加群请求";
   actionDescription = "同意或拒绝加群请求或邀请";
   actionTags = ["群组接口"];
@@ -108766,15 +108801,15 @@ class SetGroupAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$18 = Type.Object({
+const PayloadSchema$19 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   is_dismiss: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否解散" }))
 });
-const ReturnSchema$1e = Type.Null({ description: "操作结果" });
+const ReturnSchema$1f = Type.Null({ description: "操作结果" });
 class SetGroupLeave extends OneBotAction {
   actionName = ActionName.SetGroupLeave;
-  payloadSchema = PayloadSchema$18;
-  returnSchema = ReturnSchema$1e;
+  payloadSchema = PayloadSchema$19;
+  returnSchema = ReturnSchema$1f;
   actionSummary = "退出群组";
   actionDescription = "退出或解散指定群聊";
   actionTags = ["群组接口"];
@@ -108817,15 +108852,15 @@ class SetFriendAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$17 = Type.Object({
+const PayloadSchema$18 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   enable: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否开启全员禁言" }))
 });
-const ReturnSchema$1d = Type.Null({ description: "操作结果" });
+const ReturnSchema$1e = Type.Null({ description: "操作结果" });
 class SetGroupWholeBan extends OneBotAction {
   actionName = ActionName.SetGroupWholeBan;
-  payloadSchema = PayloadSchema$17;
-  returnSchema = ReturnSchema$1d;
+  payloadSchema = PayloadSchema$18;
+  returnSchema = ReturnSchema$1e;
   actionSummary = "全员禁言";
   actionDescription = "开启或关闭指定群聊的全员禁言";
   actionTags = ["群组接口"];
@@ -108841,15 +108876,15 @@ class SetGroupWholeBan extends OneBotAction {
   }
 }
 
-const PayloadSchema$16 = Type.Object({
+const PayloadSchema$17 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   group_name: Type.String({ description: "群名称" })
 });
-const ReturnSchema$1c = Type.Null({ description: "操作结果" });
+const ReturnSchema$1d = Type.Null({ description: "操作结果" });
 class SetGroupName extends OneBotAction {
   actionName = ActionName.SetGroupName;
-  payloadSchema = PayloadSchema$16;
-  returnSchema = ReturnSchema$1c;
+  payloadSchema = PayloadSchema$17;
+  returnSchema = ReturnSchema$1d;
   actionSummary = "设置群名称";
   actionDescription = "修改指定群聊的名称";
   actionTags = ["群组接口"];
@@ -108867,16 +108902,16 @@ class SetGroupName extends OneBotAction {
   }
 }
 
-const PayloadSchema$15 = Type.Object({
+const PayloadSchema$16 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   duration: Type.Union([Type.Number(), Type.String()], { default: 0, description: "禁言时长(秒)" })
 });
-const ReturnSchema$1b = Type.Null({ description: "操作结果" });
+const ReturnSchema$1c = Type.Null({ description: "操作结果" });
 class SetGroupBan extends OneBotAction {
   actionName = ActionName.SetGroupBan;
-  payloadSchema = PayloadSchema$15;
-  returnSchema = ReturnSchema$1b;
+  payloadSchema = PayloadSchema$16;
+  returnSchema = ReturnSchema$1c;
   actionSummary = "群组禁言";
   actionDescription = "禁言群聊中的指定成员";
   actionTags = ["群组接口"];
@@ -108902,16 +108937,16 @@ class SetGroupBan extends OneBotAction {
   }
 }
 
-const PayloadSchema$14 = Type.Object({
+const PayloadSchema$15 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   reject_add_request: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否拒绝加群请求" }))
 });
-const ReturnSchema$1a = Type.Null({ description: "操作结果" });
+const ReturnSchema$1b = Type.Null({ description: "操作结果" });
 class SetGroupKick extends OneBotAction {
   actionName = ActionName.SetGroupKick;
-  payloadSchema = PayloadSchema$14;
-  returnSchema = ReturnSchema$1a;
+  payloadSchema = PayloadSchema$15;
+  returnSchema = ReturnSchema$1b;
   actionSummary = "群组踢人";
   actionDescription = "将指定成员踢出群聊";
   actionTags = ["群组接口"];
@@ -108926,16 +108961,16 @@ class SetGroupKick extends OneBotAction {
   }
 }
 
-const PayloadSchema$13 = Type.Object({
+const PayloadSchema$14 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   enable: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否设置为管理员" }))
 });
-const ReturnSchema$19 = Type.Null({ description: "操作结果" });
+const ReturnSchema$1a = Type.Null({ description: "操作结果" });
 class SetGroupAdmin extends OneBotAction {
   actionName = ActionName.SetGroupAdmin;
-  payloadSchema = PayloadSchema$13;
-  returnSchema = ReturnSchema$19;
+  payloadSchema = PayloadSchema$14;
+  returnSchema = ReturnSchema$1a;
   actionSummary = "设置群管理员";
   actionDescription = "设置或取消群聊中的管理员";
   actionTags = ["群组接口"];
@@ -108950,16 +108985,16 @@ class SetGroupAdmin extends OneBotAction {
   }
 }
 
-const PayloadSchema$12 = Type.Object({
+const PayloadSchema$13 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "用户QQ" }),
   card: Type.Optional(Type.String({ description: "群名片" }))
 });
-const ReturnSchema$18 = Type.Null({ description: "操作结果" });
+const ReturnSchema$19 = Type.Null({ description: "操作结果" });
 class SetGroupCard extends OneBotAction {
   actionName = ActionName.SetGroupCard;
-  payloadSchema = PayloadSchema$12;
-  returnSchema = ReturnSchema$18;
+  payloadSchema = PayloadSchema$13;
+  returnSchema = ReturnSchema$19;
   actionSummary = "设置群名片";
   actionDescription = "设置群聊中指定成员的群名片";
   actionTags = ["群组接口"];
@@ -109108,14 +109143,14 @@ class GetImage extends GetFileBase {
 }
 
 const out_format_list = ["mp3", "amr", "wma", "m4a", "spx", "ogg", "wav", "flac"];
-const PayloadSchema$11 = Type.Object({
+const PayloadSchema$12 = Type.Object({
   file: Type.Optional(Type.String({ description: "文件路径、URL或Base64" })),
   file_id: Type.Optional(Type.String({ description: "文件ID" })),
   out_format: Type.String({ description: "输出格式" })
 });
 class GetRecord extends GetFileBase {
   actionName = ActionName.GetRecord;
-  payloadSchema = PayloadSchema$11;
+  payloadSchema = PayloadSchema$12;
   actionSummary = "获取语音";
   actionDescription = "获取指定语音文件的信息，并支持格式转换";
   actionTags = ["文件接口"];
@@ -109150,12 +109185,12 @@ class GetRecord extends GetFileBase {
   }
 }
 
-const PayloadSchema$10 = Type.Object({
+const PayloadSchema$11 = Type.Object({
   user_id: Type.Optional(Type.Union([Type.String(), Type.Number()], { description: "用户QQ" })),
   group_id: Type.Optional(Type.String({ description: "群号" })),
   message_id: Type.Optional(Type.String({ description: "消息ID" }))
 });
-const ReturnSchema$17 = Type.Null({ description: "操作结果" });
+const ReturnSchema$18 = Type.Null({ description: "操作结果" });
 class MarkMsgAsRead extends OneBotAction {
   actionSummary = "标记消息已读";
   actionDescription = "标记指定渠道的消息为已读";
@@ -109197,20 +109232,20 @@ class MarkMsgAsRead extends OneBotAction {
   }
 }
 class MarkPrivateMsgAsRead extends MarkMsgAsRead {
-  payloadSchema = PayloadSchema$10;
-  returnSchema = ReturnSchema$17;
+  payloadSchema = PayloadSchema$11;
+  returnSchema = ReturnSchema$18;
   actionName = ActionName.MarkPrivateMsgAsRead;
   actionSummary = "标记私聊已读";
 }
 class MarkGroupMsgAsRead extends MarkMsgAsRead {
-  payloadSchema = PayloadSchema$10;
-  returnSchema = ReturnSchema$17;
+  payloadSchema = PayloadSchema$11;
+  returnSchema = ReturnSchema$18;
   actionName = ActionName.MarkGroupMsgAsRead;
   actionSummary = "标记群聊已读";
 }
 class GoCQHTTPMarkMsgAsRead extends MarkMsgAsRead {
-  payloadSchema = PayloadSchema$10;
-  returnSchema = ReturnSchema$17;
+  payloadSchema = PayloadSchema$11;
+  returnSchema = ReturnSchema$18;
   actionName = ActionName.GoCQHTTP_MarkMsgAsRead;
   actionSummary = "标记消息已读 (Go-CQHTTP)";
 }
@@ -109318,14 +109353,14 @@ const ExtendsActionsExamples = {
   }
 };
 
-const PayloadSchema$$ = Type.Object({
+const PayloadSchema$10 = Type.Object({
   file: Type.String({ description: "图片路径、URL或Base64" })
 });
-const ReturnSchema$16 = Type.Null({ description: "设置结果" });
+const ReturnSchema$17 = Type.Null({ description: "设置结果" });
 class SetAvatar extends OneBotAction {
   actionName = ActionName.SetQQAvatar;
-  payloadSchema = PayloadSchema$$;
-  returnSchema = ReturnSchema$16;
+  payloadSchema = PayloadSchema$10;
+  returnSchema = ReturnSchema$17;
   actionSummary = "设置QQ头像";
   actionDescription = "修改当前账号的QQ头像";
   actionTags = ["扩展接口"];
@@ -109356,19 +109391,19 @@ class SetAvatar extends OneBotAction {
   }
 }
 
-const PayloadSchema$_ = Type.Object({
+const PayloadSchema$$ = Type.Object({
   url: Type.Optional(Type.String({ description: "下载链接" })),
   base64: Type.Optional(Type.String({ description: "base64数据" })),
   name: Type.Optional(Type.String({ description: "文件名" })),
   headers: Type.Optional(Type.Union([Type.String(), Type.Array(Type.String())], { description: "请求头" }))
 });
-const ReturnSchema$15 = Type.Object({
+const ReturnSchema$16 = Type.Object({
   file: Type.String({ description: "文件路径" })
 }, { description: "下载结果" });
 class GoCQHTTPDownloadFile extends OneBotAction {
   actionName = ActionName.GoCQHTTP_DownloadFile;
-  payloadSchema = PayloadSchema$_;
-  returnSchema = ReturnSchema$15;
+  payloadSchema = PayloadSchema$$;
+  returnSchema = ReturnSchema$16;
   actionSummary = "下载文件";
   actionDescription = "下载网络文件到本地临时目录";
   actionTags = ["Go-CQHTTP"];
@@ -109425,7 +109460,7 @@ class GoCQHTTPDownloadFile extends OneBotAction {
   }
 }
 
-const PayloadSchema$Z = Type.Object({
+const PayloadSchema$_ = Type.Object({
   group_id: Type.String({ description: "群号" }),
   message_seq: Type.Optional(Type.String({ description: "起始消息序号" })),
   count: Type.Number({ default: 20, description: "获取消息数量" }),
@@ -109435,13 +109470,13 @@ const PayloadSchema$Z = Type.Object({
   quick_reply: Type.Boolean({ default: false, description: "是否快速回复" }),
   reverseOrder: Type.Boolean({ default: false, description: "是否反向排序(旧版本兼容)" })
 });
-const ReturnSchema$14 = Type.Object({
+const ReturnSchema$15 = Type.Object({
   messages: Type.Array(Type.Any(), { description: "消息列表" })
 }, { description: "群历史消息" });
 class GoCQHTTPGetGroupMsgHistory extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupMsgHistory;
-  payloadSchema = PayloadSchema$Z;
-  returnSchema = ReturnSchema$14;
+  payloadSchema = PayloadSchema$_;
+  returnSchema = ReturnSchema$15;
   actionSummary = "获取群历史消息";
   actionDescription = "获取指定群聊的历史聊天记录";
   actionTags = ["Go-CQHTTP"];
@@ -109463,11 +109498,11 @@ class GoCQHTTPGetGroupMsgHistory extends OneBotAction {
   }
 }
 
-const PayloadSchema$Y = Type.Object({
+const PayloadSchema$Z = Type.Object({
   message_id: Type.Optional(Type.String({ description: "消息ID" })),
   id: Type.Optional(Type.String({ description: "消息ID" }))
 });
-const ReturnSchema$13 = Type.Object({
+const ReturnSchema$14 = Type.Object({
   messages: Type.Optional(Type.Array(Type.Unknown(), { description: "消息列表" }))
 }, { description: "合并转发消息" });
 function isForward(msg) {
@@ -109475,8 +109510,8 @@ function isForward(msg) {
 }
 class GoCQHTTPGetForwardMsgAction extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetForwardMsg;
-  payloadSchema = PayloadSchema$Y;
-  returnSchema = ReturnSchema$13;
+  payloadSchema = PayloadSchema$Z;
+  returnSchema = ReturnSchema$14;
   actionSummary = "获取合并转发消息";
   actionDescription = "获取合并转发消息的具体内容";
   actionTags = ["Go-CQHTTP"];
@@ -109599,7 +109634,7 @@ class GoCQHTTPGetForwardMsgAction extends OneBotAction {
   }
 }
 
-const PayloadSchema$X = Type.Object({
+const PayloadSchema$Y = Type.Object({
   user_id: Type.String({ description: "用户QQ" }),
   message_seq: Type.Optional(Type.String({ description: "起始消息序号" })),
   count: Type.Number({ default: 20, description: "获取消息数量" }),
@@ -109609,13 +109644,13 @@ const PayloadSchema$X = Type.Object({
   quick_reply: Type.Boolean({ default: false, description: "是否快速回复" }),
   reverseOrder: Type.Boolean({ default: false, description: "是否反向排序(旧版本兼容)" })
 });
-const ReturnSchema$12 = Type.Object({
+const ReturnSchema$13 = Type.Object({
   messages: Type.Array(Type.Any(), { description: "消息列表" })
 }, { description: "好友历史消息" });
 class GetFriendMsgHistory extends OneBotAction {
   actionName = ActionName.GetFriendMsgHistory;
-  payloadSchema = PayloadSchema$X;
-  returnSchema = ReturnSchema$12;
+  payloadSchema = PayloadSchema$Y;
+  returnSchema = ReturnSchema$13;
   actionSummary = "获取好友历史消息";
   actionDescription = "获取指定好友的历史聊天记录";
   actionTags = ["Go-CQHTTP"];
@@ -109678,12 +109713,12 @@ class GetCookies extends OneBotAction {
   }
 }
 
-const PayloadSchema$W = Type.Object({
+const PayloadSchema$X = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" }),
   emoji_id: Type.Union([Type.Number(), Type.String()], { description: "表情ID" }),
   set: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否设置" }))
 });
-const ReturnSchema$11 = Type.Any({ description: "操作结果" });
+const ReturnSchema$12 = Type.Any({ description: "操作结果" });
 class SetMsgEmojiLike extends OneBotAction {
   actionName = ActionName.SetMsgEmojiLike;
   actionSummary = "设置消息表情点赞";
@@ -109696,8 +109731,8 @@ class SetMsgEmojiLike extends OneBotAction {
   returnExample = {
     result: true
   };
-  payloadSchema = PayloadSchema$W;
-  returnSchema = ReturnSchema$11;
+  payloadSchema = PayloadSchema$X;
+  returnSchema = ReturnSchema$12;
   async _handle(payload) {
     const msg = MessageUnique.getMsgIdAndPeerByShortId(+payload.message_id);
     if (!msg) {
@@ -109720,7 +109755,7 @@ class SetMsgEmojiLike extends OneBotAction {
   }
 }
 
-const ReturnSchema$10 = Type.Array(Type.Any(), { description: "机器人Uin范围列表" });
+const ReturnSchema$11 = Type.Array(Type.Any(), { description: "机器人Uin范围列表" });
 class GetRobotUinRange extends OneBotAction {
   actionName = ActionName.GetRobotUinRange;
   actionSummary = "获取机器人 UIN 范围";
@@ -109730,22 +109765,22 @@ class GetRobotUinRange extends OneBotAction {
     { minUin: "12345678", maxUin: "87654321" }
   ];
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$10;
+  returnSchema = ReturnSchema$11;
   async _handle() {
     return await this.core.apis.UserApi.getRobotUinRange();
   }
 }
 
-const PayloadSchema$V = Type.Object({
+const PayloadSchema$W = Type.Object({
   status: Type.Union([Type.Number(), Type.String()], { description: "在线状态" }),
   ext_status: Type.Union([Type.Number(), Type.String()], { description: "扩展状态" }),
   battery_status: Type.Union([Type.Number(), Type.String()], { description: "电量状态" })
 });
-const ReturnSchema$$ = Type.Null({ description: "设置结果" });
+const ReturnSchema$10 = Type.Null({ description: "设置结果" });
 class SetOnlineStatus extends OneBotAction {
   actionName = ActionName.SetOnlineStatus;
-  payloadSchema = PayloadSchema$V;
-  returnSchema = ReturnSchema$$;
+  payloadSchema = PayloadSchema$W;
+  returnSchema = ReturnSchema$10;
   actionSummary = "设置在线状态";
   actionDescription = statusText;
   actionTags = ["系统扩展"];
@@ -109980,10 +110015,10 @@ const statusText = `
 \`\`\`
 `;
 
-const PayloadSchema$U = Type.Object({
+const PayloadSchema$V = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$_ = Type.Array(Type.Object({
+const ReturnSchema$$ = Type.Array(Type.Object({
   sender_id: Type.Number({ description: "发送者QQ" }),
   publish_time: Type.Number({ description: "发布时间" }),
   notice_id: Type.String({ description: "公告ID" }),
@@ -109997,8 +110032,8 @@ const ReturnSchema$_ = Type.Array(Type.Object({
 }), { description: "群公告列表" });
 class GetGroupNotice extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupNotice;
-  payloadSchema = PayloadSchema$U;
-  returnSchema = ReturnSchema$_;
+  payloadSchema = PayloadSchema$V;
+  returnSchema = ReturnSchema$$;
   actionSummary = "获取群公告";
   actionDescription = "获取指定群聊中的公告列表";
   actionTags = ["群组接口"];
@@ -110037,10 +110072,10 @@ class GetGroupNotice extends OneBotAction {
   }
 }
 
-const PayloadSchema$T = Type.Object({
+const PayloadSchema$U = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$Z = Type.Array(Type.Object({
+const ReturnSchema$_ = Type.Array(Type.Object({
   msg_seq: Type.Number({ description: "消息序号" }),
   msg_random: Type.Number({ description: "消息随机数" }),
   sender_id: Type.Number({ description: "发送者QQ" }),
@@ -110053,8 +110088,8 @@ const ReturnSchema$Z = Type.Array(Type.Object({
 }), { description: "精华消息列表" });
 class GetGroupEssence extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetEssenceMsg;
-  payloadSchema = PayloadSchema$T;
-  returnSchema = ReturnSchema$Z;
+  payloadSchema = PayloadSchema$U;
+  returnSchema = ReturnSchema$_;
   actionSummary = "获取群精华消息";
   actionDescription = "获取指定群聊中的精华消息列表";
   actionTags = ["群组接口"];
@@ -110147,12 +110182,12 @@ class GetGroupEssence extends OneBotAction {
   }
 }
 
-const PayloadSchema$S = Type.Object({
+const PayloadSchema$T = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" }),
   group_id: Type.Optional(Type.String({ description: "目标群号" })),
   user_id: Type.Optional(Type.String({ description: "目标用户QQ" }))
 });
-const ReturnSchema$Y = Type.Null({ description: "操作结果" });
+const ReturnSchema$Z = Type.Null({ description: "操作结果" });
 class ForwardSingleMsg extends OneBotAction {
   actionSummary = "转发单条消息";
   actionDescription = "转发单条消息";
@@ -110190,17 +110225,17 @@ class ForwardSingleMsg extends OneBotAction {
   }
 }
 class ForwardFriendSingleMsg extends ForwardSingleMsg {
-  payloadSchema = PayloadSchema$S;
-  returnSchema = ReturnSchema$Y;
+  payloadSchema = PayloadSchema$T;
+  returnSchema = ReturnSchema$Z;
   actionName = ActionName.ForwardFriendSingleMsg;
 }
 class ForwardGroupSingleMsg extends ForwardSingleMsg {
-  payloadSchema = PayloadSchema$S;
-  returnSchema = ReturnSchema$Y;
+  payloadSchema = PayloadSchema$T;
+  returnSchema = ReturnSchema$Z;
   actionName = ActionName.ForwardGroupSingleMsg;
 }
 
-const ReturnSchema$X = Type.Array(
+const ReturnSchema$Y = Type.Array(
   Type.Object({
     categoryId: Type.Number({ description: "分组ID" }),
     categoryName: Type.String({ description: "分组名称" }),
@@ -110212,7 +110247,7 @@ const ReturnSchema$X = Type.Array(
 class GetFriendWithCategory extends OneBotAction {
   actionName = ActionName.GetFriendsWithCategory;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$X;
+  returnSchema = ReturnSchema$Y;
   actionSummary = "获取带分组的好友列表";
   actionTags = ["用户扩展"];
   payloadExample = {};
@@ -110293,11 +110328,11 @@ class SendGroupNotice extends OneBotAction {
   }
 }
 
-const PayloadSchema$R = Type.Object({
+const PayloadSchema$S = Type.Object({
   group_id: Type.String({ description: "群号" }),
   type: Type.Optional(Type.Enum(WebHonorType, { description: "荣誉类型" }))
 });
-const ReturnSchema$W = Type.Object({
+const ReturnSchema$X = Type.Object({
   group_id: Type.Number({ description: "群号" }),
   current_talkative: Type.Record(Type.String(), Type.Unknown(), { description: "当前龙王" }),
   talkative_list: Type.Array(Type.Unknown(), { description: "龙王列表" }),
@@ -110308,8 +110343,8 @@ const ReturnSchema$W = Type.Object({
 }, { description: "群荣誉信息" });
 class GetGroupHonorInfo extends OneBotAction {
   actionName = ActionName.GetGroupHonorInfo;
-  payloadSchema = PayloadSchema$R;
-  returnSchema = ReturnSchema$W;
+  payloadSchema = PayloadSchema$S;
+  returnSchema = ReturnSchema$X;
   actionSummary = "获取群荣誉信息";
   actionDescription = "获取指定群聊的荣誉信息，如龙王等";
   actionTags = ["Go-CQHTTP"];
@@ -110381,16 +110416,16 @@ class GoCQHTTPHandleQuickAction extends OneBotAction {
   }
 }
 
-const PayloadSchema$Q = Type.Object({}, { description: "群忽略通知负载" });
-const ReturnSchema$V = Type.Object({
+const PayloadSchema$R = Type.Object({}, { description: "群忽略通知负载" });
+const ReturnSchema$W = Type.Object({
   invited_requests: Type.Array(Type.Any(), { description: "邀请请求列表" }),
   InvitedRequest: Type.Array(Type.Any(), { description: "邀请请求列表" }),
   join_requests: Type.Array(Type.Any(), { description: "加入请求列表" })
 }, { description: "群忽略通知结果" });
 class GetGroupIgnoredNotifies extends OneBotAction {
   actionName = ActionName.GetGroupIgnoredNotifies;
-  payloadSchema = PayloadSchema$Q;
-  returnSchema = ReturnSchema$V;
+  payloadSchema = PayloadSchema$R;
+  returnSchema = ReturnSchema$W;
   actionSummary = "获取群忽略通知";
   actionDescription = "获取被忽略的入群申请和邀请通知";
   actionTags = ["群组接口"];
@@ -110429,12 +110464,12 @@ class GetGroupIgnoredNotifies extends OneBotAction {
   }
 }
 
-const PayloadSchema$P = Type.Object({}, { description: "在线客户端负载" });
-const ReturnSchema$U = Type.Array(Type.Any(), { description: "在线客户端列表" });
+const PayloadSchema$Q = Type.Object({}, { description: "在线客户端负载" });
+const ReturnSchema$V = Type.Array(Type.Any(), { description: "在线客户端列表" });
 class GetOnlineClient extends OneBotAction {
   actionName = ActionName.GetOnlineClient;
-  payloadSchema = PayloadSchema$P;
-  returnSchema = ReturnSchema$U;
+  payloadSchema = PayloadSchema$Q;
+  returnSchema = ReturnSchema$V;
   actionSummary = "获取在线客户端";
   actionDescription = "获取当前登录账号的在线客户端列表";
   actionTags = ["Go-CQHTTP"];
@@ -110447,13 +110482,13 @@ class GetOnlineClient extends OneBotAction {
   }
 }
 
-const PayloadSchema$O = Type.Object({
+const PayloadSchema$P = Type.Object({
   image: Type.String({ description: "图片路径、URL或Base64" })
 });
-const ReturnSchema$T = Type.Any({ description: "OCR结果" });
+const ReturnSchema$U = Type.Any({ description: "OCR结果" });
 class OCRImageBase extends OneBotAction {
-  payloadSchema = PayloadSchema$O;
-  returnSchema = ReturnSchema$T;
+  payloadSchema = PayloadSchema$P;
+  returnSchema = ReturnSchema$U;
   actionSummary = "图片 OCR 识别";
   actionDescription = "识别图片中的文字内容(仅Windows端支持)";
   actionTags = ["扩展接口"];
@@ -110489,16 +110524,16 @@ class IOCRImage extends OCRImageBase {
   actionSummary = "图片 OCR 识别 (内部)";
 }
 
-const PayloadSchema$N = Type.Object({
+const PayloadSchema$O = Type.Object({
   words: Type.Array(Type.String(), { description: "待翻译单词列表" })
 });
-const ReturnSchema$S = Type.Object({
+const ReturnSchema$T = Type.Object({
   words: Type.Array(Type.String(), { description: "翻译结果列表" })
 }, { description: "翻译结果" });
 class TranslateEnWordToZn extends OneBotAction {
   actionName = ActionName.TranslateEnWordToZn;
-  payloadSchema = PayloadSchema$N;
-  returnSchema = ReturnSchema$S;
+  payloadSchema = PayloadSchema$O;
+  returnSchema = ReturnSchema$T;
   actionSummary = "英文单词翻译";
   actionDescription = "将英文单词列表翻译为中文";
   actionTags = ["扩展接口"];
@@ -110547,15 +110582,15 @@ class SetQQProfile extends OneBotAction {
   }
 }
 
-const PayloadSchema$M = Type.Object({
+const PayloadSchema$N = Type.Object({
   user_id: Type.Optional(Type.String({ description: "QQ号" })),
   group_id: Type.Optional(Type.String({ description: "群号" })),
   phone_number: Type.String({ default: "", description: "手机号" })
 });
-const ReturnSchema$R = Type.Any({ description: "分享结果" });
+const ReturnSchema$S = Type.Any({ description: "分享结果" });
 class SharePeerBase extends OneBotAction {
-  payloadSchema = PayloadSchema$M;
-  returnSchema = ReturnSchema$R;
+  payloadSchema = PayloadSchema$N;
+  returnSchema = ReturnSchema$S;
   actionSummary = "分享用户 (Ark)";
   actionDescription = "获取用户推荐的 Ark 内容";
   actionTags = ["消息扩展"];
@@ -110606,15 +110641,15 @@ class SendArkShare extends SharePeerBase {
   actionName = ActionName.SendArkShare;
 }
 
-const PayloadSchema$L = Type.Object({
+const PayloadSchema$M = Type.Object({
   rawData: Type.String({ description: "原始数据" }),
   brief: Type.String({ description: "简要描述" })
 });
-const ReturnSchema$Q = Type.Any({ description: "创建结果" });
+const ReturnSchema$R = Type.Any({ description: "创建结果" });
 class CreateCollection extends OneBotAction {
   actionName = ActionName.CreateCollection;
-  payloadSchema = PayloadSchema$L;
-  returnSchema = ReturnSchema$Q;
+  payloadSchema = PayloadSchema$M;
+  returnSchema = ReturnSchema$R;
   actionSummary = "创建收藏";
   actionTags = ["扩展接口"];
   payloadExample = {
@@ -110636,14 +110671,14 @@ class CreateCollection extends OneBotAction {
   }
 }
 
-const PayloadSchema$K = Type.Object({
+const PayloadSchema$L = Type.Object({
   longNick: Type.String({ description: "签名内容" })
 });
-const ReturnSchema$P = Type.Any({ description: "设置结果" });
+const ReturnSchema$Q = Type.Any({ description: "设置结果" });
 class SetLongNick extends OneBotAction {
   actionName = ActionName.SetLongNick;
-  payloadSchema = PayloadSchema$K;
-  returnSchema = ReturnSchema$P;
+  payloadSchema = PayloadSchema$L;
+  returnSchema = ReturnSchema$Q;
   actionSummary = "设置个性签名";
   actionDescription = "修改当前登录帐号的个性签名";
   actionTags = ["扩展接口"];
@@ -110654,17 +110689,17 @@ class SetLongNick extends OneBotAction {
   }
 }
 
-const PayloadSchema$J = Type.Object({
+const PayloadSchema$K = Type.Object({
   message_id: Type.Optional(Type.Union([Type.Number(), Type.String()], { description: "消息ID" })),
   msg_seq: Type.Optional(Type.String({ description: "消息序号" })),
   msg_random: Type.Optional(Type.String({ description: "消息随机数" })),
   group_id: Type.Optional(Type.String({ description: "群号" }))
 });
-const ReturnSchema$O = Type.Any({ description: "操作结果" });
+const ReturnSchema$P = Type.Any({ description: "操作结果" });
 class DelEssenceMsg extends OneBotAction {
   actionName = ActionName.DelEssenceMsg;
-  payloadSchema = PayloadSchema$J;
-  returnSchema = ReturnSchema$O;
+  payloadSchema = PayloadSchema$K;
+  returnSchema = ReturnSchema$P;
   actionSummary = "移出精华消息";
   actionDescription = "将一条消息从群精华消息列表中移出";
   actionTags = ["群组接口"];
@@ -110695,14 +110730,14 @@ class DelEssenceMsg extends OneBotAction {
   }
 }
 
-const PayloadSchema$I = Type.Object({
+const PayloadSchema$J = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema$N = Type.Any({ description: "操作结果" });
+const ReturnSchema$O = Type.Any({ description: "操作结果" });
 class SetEssenceMsg extends OneBotAction {
   actionName = ActionName.SetEssenceMsg;
-  payloadSchema = PayloadSchema$I;
-  returnSchema = ReturnSchema$N;
+  payloadSchema = PayloadSchema$J;
+  returnSchema = ReturnSchema$O;
   actionSummary = "设置精华消息";
   actionDescription = "将一条消息设置为群精华消息";
   actionTags = ["群组接口"];
@@ -110787,12 +110822,12 @@ class GetRecentContact extends OneBotAction {
   }
 }
 
-const PayloadSchema$H = Type.Object({
+const PayloadSchema$I = Type.Object({
   user_id: Type.Optional(Type.String({ description: "QQ号" })),
   start: Type.Union([Type.Number(), Type.String()], { default: 0, description: "起始位置" }),
   count: Type.Union([Type.Number(), Type.String()], { default: 10, description: "获取数量" })
 });
-const ReturnSchema$M = Type.Object({
+const ReturnSchema$N = Type.Object({
   uid: Type.String({ description: "用户UID" }),
   time: Type.String({ description: "时间" }),
   favoriteInfo: Type.Object({
@@ -110811,8 +110846,8 @@ const ReturnSchema$M = Type.Object({
 }, { description: "点赞详情" });
 class GetProfileLike extends OneBotAction {
   actionName = ActionName.GetProfileLike;
-  payloadSchema = PayloadSchema$H;
-  returnSchema = ReturnSchema$M;
+  payloadSchema = PayloadSchema$I;
+  returnSchema = ReturnSchema$N;
   actionSummary = "获取资料点赞";
   actionTags = ["用户扩展"];
   payloadExample = {
@@ -110860,14 +110895,14 @@ const SetGroupPortraitPayloadSchema = Type.Object({
   file: Type.String({ description: "头像文件路径或 URL" }),
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$L = Type.Object({
+const ReturnSchema$M = Type.Object({
   result: Type.Number(),
   errMsg: Type.String()
 }, { description: "设置结果" });
 class SetGroupPortrait extends OneBotAction {
   actionName = ActionName.SetGroupPortrait;
   payloadSchema = SetGroupPortraitPayloadSchema;
-  returnSchema = ReturnSchema$L;
+  returnSchema = ReturnSchema$M;
   actionSummary = "设置群头像";
   actionDescription = "修改指定群聊的头像";
   actionTags = ["Go-CQHTTP"];
@@ -110901,14 +110936,14 @@ class SetGroupPortrait extends OneBotAction {
   }
 }
 
-const PayloadSchema$G = Type.Object({
+const PayloadSchema$H = Type.Object({
   count: Type.Union([Type.Number(), Type.String()], { default: 48, description: "获取数量" })
 });
-const ReturnSchema$K = Type.Array(Type.String(), { description: "表情URL列表" });
+const ReturnSchema$L = Type.Array(Type.String(), { description: "表情URL列表" });
 class FetchCustomFace extends OneBotAction {
   actionName = ActionName.FetchCustomFace;
-  payloadSchema = PayloadSchema$G;
-  returnSchema = ReturnSchema$K;
+  payloadSchema = PayloadSchema$H;
+  returnSchema = ReturnSchema$L;
   actionSummary = "获取自定义表情";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -110920,6 +110955,124 @@ class FetchCustomFace extends OneBotAction {
   async _handle(payload) {
     const ret = await this.core.apis.MsgApi.fetchFavEmojiList(+payload.count);
     return ret.emojiInfoList.map((e) => e.url);
+  }
+}
+
+const FetchCustomFaceDetailPayloadSchema = Type.Object({
+  count: Type.Union([Type.Number(), Type.String()], { default: 48, description: "获取数量" })
+});
+const FetchCustomFaceDetailReturnSchema = Type.Any({ description: "自定义表情详情列表" });
+class FetchCustomFaceDetail extends OneBotAction {
+  actionName = ActionName.FetchCustomFaceDetail;
+  payloadSchema = FetchCustomFaceDetailPayloadSchema;
+  returnSchema = FetchCustomFaceDetailReturnSchema;
+  actionSummary = "获取自定义表情详情";
+  actionTags = ["系统扩展"];
+  payloadExample = {
+    count: 10
+  };
+  returnExample = null;
+  async _handle(payload) {
+    const ret = await this.core.apis.MsgApi.fetchFavEmojiList(+payload.count);
+    return ret.emojiInfoList;
+  }
+}
+const AddCustomFacePayloadSchema = Type.Object({
+  file: Type.String({ description: "本地表情文件路径" }),
+  emoji_id: Type.Optional(Type.Union([Type.String(), Type.Number()], { description: "表情ID，未提供时传空字符串" })),
+  package_id: Type.Optional(Type.Union([Type.String(), Type.Number()], { description: "表情包ID，未提供时传0" })),
+  file_name: Type.Optional(Type.String({ description: "文件名，未提供时从file路径取basename" })),
+  file_size: Type.Optional(Type.Union([Type.String(), Type.Number()], { description: "文件大小，未提供时读取本地文件" })),
+  md5: Type.Optional(Type.String({ description: "文件MD5，未提供时读取本地文件计算" })),
+  is_mark_face: Type.Optional(Type.Boolean({ description: "是否商城表情" })),
+  is_origin: Type.Optional(Type.Boolean({ description: "是否原图" }))
+});
+const AddCustomFaceReturnSchema = Type.Any({ description: "添加结果" });
+class AddCustomFace extends OneBotAction {
+  actionName = ActionName.AddCustomFace;
+  payloadSchema = AddCustomFacePayloadSchema;
+  returnSchema = AddCustomFaceReturnSchema;
+  actionSummary = "添加自定义表情";
+  actionTags = ["系统扩展"];
+  payloadExample = {
+    file: "C:\\Users\\Public\\face.png",
+    is_origin: true
+  };
+  returnExample = null;
+  async _handle(payload) {
+    const fileStat = await stat(payload.file);
+    const md5 = payload.md5 ?? createHash("md5").update(await readFile(payload.file)).digest("hex");
+    return await this.core.apis.MsgApi.addFavEmoji({
+      emojiId: payload.emoji_id?.toString() ?? "",
+      packageId: payload.package_id === void 0 ? 0 : Number(payload.package_id),
+      emojiPath: payload.file,
+      fileSize: payload.file_size?.toString() ?? fileStat.size.toString(),
+      fileName: payload.file_name ?? basename(payload.file),
+      md5,
+      isMarkFace: payload.is_mark_face ?? false,
+      isOrigin: payload.is_origin ?? true
+    });
+  }
+}
+const DeleteCustomFacePayloadSchema = Type.Object({
+  res_id: Type.Optional(Type.Union([
+    Type.String({ description: "fetch_custom_face_detail返回的resId" }),
+    Type.Array(Type.String({ description: "fetch_custom_face_detail返回的resId" }))
+  ])),
+  id: Type.Optional(Type.Union([
+    Type.String({ description: "native deleteFavEmoji字符串ID，通常为resId" }),
+    Type.Array(Type.String({ description: "native deleteFavEmoji字符串ID，通常为resId" }))
+  ])),
+  ids: Type.Optional(Type.Array(Type.String({ description: "native deleteFavEmoji字符串ID列表，通常为resId列表" }))),
+  md5: Type.Optional(Type.Union([
+    Type.String({ description: "表情MD5，不能直接删除，请先通过fetch_custom_face_detail获取resId" }),
+    Type.Array(Type.String({ description: "表情MD5，不能直接删除，请先通过fetch_custom_face_detail获取resId" }))
+  ]))
+});
+const DeleteCustomFaceReturnSchema = Type.Any({ description: "删除结果" });
+class DeleteCustomFace extends OneBotAction {
+  actionName = ActionName.DeleteCustomFace;
+  payloadSchema = DeleteCustomFacePayloadSchema;
+  returnSchema = DeleteCustomFaceReturnSchema;
+  actionSummary = "删除自定义表情";
+  actionTags = ["系统扩展"];
+  payloadExample = {
+    res_id: "2707600964_0_0_0_D8EAA70984B402EE10B0F33DB88F4173_0_0"
+  };
+  returnExample = null;
+  async _handle(payload) {
+    const ids = payload.ids ?? (Array.isArray(payload.res_id) ? payload.res_id : payload.res_id ? [payload.res_id] : void 0) ?? (Array.isArray(payload.id) ? payload.id : payload.id ? [payload.id] : void 0) ?? [];
+    if (ids.length === 0) throw new Error("res_id or ids is required");
+    return await this.core.apis.MsgApi.deleteFavEmoji(ids);
+  }
+}
+const SetCustomFaceDescPayloadSchema = Type.Object({
+  emoji_id: Type.Union([Type.Number(), Type.String()], { description: "表情ID" }),
+  res_id: Type.String({ description: "资源ID" }),
+  md5: Type.String({ description: "表情MD5" }),
+  desc: Type.String({ description: "新的表情描述" })
+});
+const SetCustomFaceDescReturnSchema = Type.Any({ description: "修改结果" });
+class SetCustomFaceDesc extends OneBotAction {
+  actionName = ActionName.SetCustomFaceDesc;
+  payloadSchema = SetCustomFaceDescPayloadSchema;
+  returnSchema = SetCustomFaceDescReturnSchema;
+  actionSummary = "修改自定义表情描述";
+  actionTags = ["系统扩展"];
+  payloadExample = {
+    emoji_id: 1,
+    res_id: "resource-id",
+    md5: "d41d8cd98f00b204e9800998ecf8427e",
+    desc: "新的描述"
+  };
+  returnExample = null;
+  async _handle(payload) {
+    return await this.core.apis.MsgApi.modifyFavEmojiDesc([{
+      emojiId: Number(payload.emoji_id),
+      resId: payload.res_id,
+      md5: payload.md5,
+      desc: payload.desc
+    }]);
   }
 }
 
@@ -110979,14 +111132,14 @@ class GoCQHTTPUploadPrivateFile extends OneBotAction {
   }
 }
 
-const PayloadSchema$F = Type.Object({
+const PayloadSchema$G = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" }),
   emojiId: Type.Union([Type.Number(), Type.String()], { description: "表情ID" }),
   emojiType: Type.Union([Type.Number(), Type.String()], { description: "表情类型" }),
   count: Type.Union([Type.Number(), Type.String()], { default: 20, description: "获取数量" }),
   cookie: Type.String({ default: "", description: "分页Cookie" })
 });
-const ReturnSchema$J = Type.Object({
+const ReturnSchema$K = Type.Object({
   emojiLikesList: Type.Array(Type.Object({
     tinyId: Type.String({ description: "TinyID" }),
     nickName: Type.String({ description: "昵称" }),
@@ -111023,8 +111176,8 @@ class FetchEmojiLike extends OneBotAction {
     result: 0,
     errMsg: ""
   };
-  payloadSchema = PayloadSchema$F;
-  returnSchema = ReturnSchema$J;
+  payloadSchema = PayloadSchema$G;
+  returnSchema = ReturnSchema$K;
   async _handle(payload) {
     const msgIdPeer = MessageUnique.getMsgIdAndPeerByShortId(+payload.message_id);
     if (!msgIdPeer) throw new Error("消息不存在");
@@ -111042,14 +111195,14 @@ class FetchEmojiLike extends OneBotAction {
   }
 }
 
-const PayloadSchema$E = Type.Object({
+const PayloadSchema$F = Type.Object({
   group_id: Type.Optional(Type.String({ description: "群号，短ID可不传" })),
   message_id: Type.String({ description: "消息ID，可以传递长ID或短ID" }),
   emoji_id: Type.String({ description: "表情ID" }),
   emoji_type: Type.Optional(Type.String({ description: "表情类型" })),
   count: Type.Number({ default: 0, description: "数量，0代表全部" })
 });
-const ReturnSchema$I = Type.Object({
+const ReturnSchema$J = Type.Object({
   emoji_like_list: Type.Array(
     Type.Object({
       user_id: Type.String({ description: "点击者QQ号" }),
@@ -111074,8 +111227,8 @@ class GetEmojiLikes extends OneBotAction {
       }
     ]
   };
-  payloadSchema = PayloadSchema$E;
-  returnSchema = ReturnSchema$I;
+  payloadSchema = PayloadSchema$F;
+  returnSchema = ReturnSchema$J;
   async _handle(payload) {
     let peer;
     let msgId;
@@ -111119,15 +111272,15 @@ class GetEmojiLikes extends OneBotAction {
   }
 }
 
-const PayloadSchema$D = Type.Object({
+const PayloadSchema$E = Type.Object({
   user_id: Type.String({ description: "QQ号" }),
   event_type: Type.Number({ description: "事件类型" })
 });
-const ReturnSchema$H = Type.Any({ description: "设置结果" });
+const ReturnSchema$I = Type.Any({ description: "设置结果" });
 class SetInputStatus extends OneBotAction {
   actionName = ActionName.SetInputStatus;
-  payloadSchema = PayloadSchema$D;
-  returnSchema = ReturnSchema$H;
+  payloadSchema = PayloadSchema$E;
+  returnSchema = ReturnSchema$I;
   actionSummary = "设置输入状态";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -111171,15 +111324,15 @@ class GetCSRF extends OneBotAction {
   }
 }
 
-const PayloadSchema$C = Type.Object({
+const PayloadSchema$D = Type.Object({
   group_id: Type.String({ description: "群号" }),
   notice_id: Type.String({ description: "公告ID" })
 });
-const ReturnSchema$G = Type.Any({ description: "操作结果" });
+const ReturnSchema$H = Type.Any({ description: "操作结果" });
 class DelGroupNotice extends OneBotAction {
   actionName = ActionName.DelGroupNotice;
-  payloadSchema = PayloadSchema$C;
-  returnSchema = ReturnSchema$G;
+  payloadSchema = PayloadSchema$D;
+  returnSchema = ReturnSchema$H;
   actionSummary = "删除群公告";
   actionDescription = "删除群聊中的公告";
   actionTags = ["群组接口"];
@@ -111192,10 +111345,10 @@ class DelGroupNotice extends OneBotAction {
   }
 }
 
-const PayloadSchema$B = Type.Object({
+const PayloadSchema$C = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$F = Type.Any({ description: "群扩展信息" });
+const ReturnSchema$G = Type.Any({ description: "群扩展信息" });
 class GetGroupInfoEx extends OneBotAction {
   actionName = ActionName.GetGroupInfoEx;
   actionSummary = "获取群详细信息 (扩展)";
@@ -111204,22 +111357,22 @@ class GetGroupInfoEx extends OneBotAction {
     group_id: "123456"
   };
   returnExample = {};
-  payloadSchema = PayloadSchema$B;
-  returnSchema = ReturnSchema$F;
+  payloadSchema = PayloadSchema$C;
+  returnSchema = ReturnSchema$G;
   async _handle(payload) {
     return (await this.core.apis.GroupApi.getGroupExtFE0Info([payload.group_id.toString()])).result.groupExtInfos.get(payload.group_id.toString());
   }
 }
 
-const PayloadSchema$A = Type.Object({
+const PayloadSchema$B = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$E = Type.Any({ description: "删除结果" });
+const ReturnSchema$F = Type.Any({ description: "删除结果" });
 class DeleteGroupFile extends OneBotAction {
   actionName = ActionName.GOCQHTTP_DeleteGroupFile;
-  payloadSchema = PayloadSchema$A;
-  returnSchema = ReturnSchema$E;
+  payloadSchema = PayloadSchema$B;
+  returnSchema = ReturnSchema$F;
   actionSummary = "删除群文件";
   actionDescription = "在群文件系统中删除指定的文件";
   actionTags = ["Go-CQHTTP"];
@@ -111232,21 +111385,21 @@ class DeleteGroupFile extends OneBotAction {
   }
 }
 
-const PayloadSchema$z = Type.Object({
+const PayloadSchema$A = Type.Object({
   group_id: Type.String({ description: "群号" }),
   // 兼容gocq 与name二选一
   folder_name: Type.Optional(Type.String({ description: "文件夹名称" })),
   // 兼容gocq 与folder_name二选一
   name: Type.Optional(Type.String({ description: "文件夹名称" }))
 });
-const ReturnSchema$D = Type.Object({
+const ReturnSchema$E = Type.Object({
   result: Type.Any({ description: "操作结果" }),
   groupItem: Type.Any({ description: "群项信息" })
 }, { description: "创建文件夹结果" });
 class CreateGroupFileFolder extends OneBotAction {
   actionName = ActionName.GoCQHTTP_CreateGroupFileFolder;
-  payloadSchema = PayloadSchema$z;
-  returnSchema = ReturnSchema$D;
+  payloadSchema = PayloadSchema$A;
+  returnSchema = ReturnSchema$E;
   actionSummary = "创建群文件目录";
   actionDescription = "在群文件系统中创建新的文件夹";
   actionTags = ["Go-CQHTTP"];
@@ -111264,16 +111417,16 @@ class CreateGroupFileFolder extends OneBotAction {
   }
 }
 
-const PayloadSchema$y = Type.Object({
+const PayloadSchema$z = Type.Object({
   group_id: Type.String({ description: "群号" }),
   folder_id: Type.Optional(Type.String({ description: "文件夹ID" })),
   folder: Type.Optional(Type.String({ description: "文件夹ID" }))
 });
-const ReturnSchema$C = Type.Any({ description: "删除结果" });
+const ReturnSchema$D = Type.Any({ description: "删除结果" });
 class DeleteGroupFileFolder extends OneBotAction {
   actionName = ActionName.GoCQHTTP_DeleteGroupFileFolder;
-  payloadSchema = PayloadSchema$y;
-  returnSchema = ReturnSchema$C;
+  payloadSchema = PayloadSchema$z;
+  returnSchema = ReturnSchema$D;
   actionSummary = "删除群文件目录";
   actionDescription = "在群文件系统中删除指定的文件夹";
   actionTags = ["Go-CQHTTP"];
@@ -111287,10 +111440,10 @@ class DeleteGroupFileFolder extends OneBotAction {
   }
 }
 
-const PayloadSchema$x = Type.Object({
+const PayloadSchema$y = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$B = Type.Object({
+const ReturnSchema$C = Type.Object({
   file_count: Type.Number({ description: "文件总数" }),
   limit_count: Type.Number({ description: "文件上限" }),
   used_space: Type.Number({ description: "已使用空间" }),
@@ -111298,8 +111451,8 @@ const ReturnSchema$B = Type.Object({
 }, { description: "群文件系统信息" });
 class GetGroupFileSystemInfo extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupFileSystemInfo;
-  payloadSchema = PayloadSchema$x;
-  returnSchema = ReturnSchema$B;
+  payloadSchema = PayloadSchema$y;
+  returnSchema = ReturnSchema$C;
   actionSummary = "获取群文件系统信息";
   actionDescription = "获取群聊文件系统的空间及状态信息";
   actionTags = ["Go-CQHTTP"];
@@ -111319,18 +111472,18 @@ class GetGroupFileSystemInfo extends OneBotAction {
   }
 }
 
-const PayloadSchema$w = Type.Object({
+const PayloadSchema$x = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_count: Type.Union([Type.Number(), Type.String()], { default: 50, description: "文件数量" })
 });
-const ReturnSchema$A = Type.Object({
+const ReturnSchema$B = Type.Object({
   files: Type.Array(Type.Any(), { description: "文件列表" }),
   folders: Type.Array(Type.Any(), { description: "文件夹列表" })
 }, { description: "群根目录文件列表" });
 class GetGroupRootFiles extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupRootFiles;
-  payloadSchema = PayloadSchema$w;
-  returnSchema = ReturnSchema$A;
+  payloadSchema = PayloadSchema$x;
+  returnSchema = ReturnSchema$B;
   actionSummary = "获取群根目录文件列表";
   actionDescription = "获取群文件根目录下的所有文件和文件夹";
   actionTags = ["Go-CQHTTP"];
@@ -111351,20 +111504,20 @@ class GetGroupRootFiles extends OneBotAction {
   }
 }
 
-const PayloadSchema$v = Type.Object({
+const PayloadSchema$w = Type.Object({
   group_id: Type.String({ description: "群号" }),
   folder_id: Type.Optional(Type.String({ description: "文件夹ID" })),
   folder: Type.Optional(Type.String({ description: "文件夹ID" })),
   file_count: Type.Union([Type.Number(), Type.String()], { default: 50, description: "文件数量" })
 });
-const ReturnSchema$z = Type.Object({
+const ReturnSchema$A = Type.Object({
   files: Type.Array(Type.Unknown(), { description: "文件列表" }),
   folders: Type.Array(Type.Unknown(), { description: "文件夹列表" })
 }, { description: "群文件夹文件列表" });
 class GetGroupFilesByFolder extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupFilesByFolder;
-  payloadSchema = PayloadSchema$v;
-  returnSchema = ReturnSchema$z;
+  payloadSchema = PayloadSchema$w;
+  returnSchema = ReturnSchema$A;
   actionSummary = "获取群文件夹文件列表";
   actionDescription = "获取指定群文件夹下的文件及子文件夹列表";
   actionTags = ["Go-CQHTTP"];
@@ -111463,17 +111616,17 @@ class GetPacketStatus extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$u = Type.Object({
+const PayloadSchema$v = Type.Object({
   user_id: Type.String({ description: "QQ号" })
 });
-const ReturnSchema$y = Type.Object({
+const ReturnSchema$z = Type.Object({
   status: Type.Number({ description: "在线状态" }),
   ext_status: Type.Number({ description: "扩展状态" })
 }, { description: "用户状态" });
 class GetUserStatus extends GetPacketStatusDepends {
   actionName = ActionName.GetUserStatus;
-  payloadSchema = PayloadSchema$u;
-  returnSchema = ReturnSchema$y;
+  payloadSchema = PayloadSchema$v;
+  returnSchema = ReturnSchema$z;
   actionSummary = "获取用户在线状态";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -111492,11 +111645,11 @@ class GetUserStatus extends GetPacketStatusDepends {
   }
 }
 
-const ReturnSchema$x = Type.Array(Type.Any(), { description: "Rkey列表" });
+const ReturnSchema$y = Type.Array(Type.Any(), { description: "Rkey列表" });
 class GetRkey extends GetPacketStatusDepends {
   actionName = ActionName.GetRkey;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$x;
+  returnSchema = ReturnSchema$y;
   actionSummary = "获取 RKey";
   actionTags = ["系统扩展"];
   payloadExample = {};
@@ -111511,16 +111664,16 @@ class GetRkey extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$t = Type.Object({
+const PayloadSchema$u = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.String({ description: "QQ号" }),
   special_title: Type.String({ default: "", description: "专属头衔" })
 });
-const ReturnSchema$w = Type.Void({ description: "设置结果" });
+const ReturnSchema$x = Type.Void({ description: "设置结果" });
 class SetSpecialTitle extends GetPacketStatusDepends {
   actionName = ActionName.SetSpecialTitle;
-  payloadSchema = PayloadSchema$t;
-  returnSchema = ReturnSchema$w;
+  payloadSchema = PayloadSchema$u;
+  returnSchema = ReturnSchema$x;
   actionSummary = "设置专属头衔";
   actionDescription = "设置群聊中指定成员的专属头衔";
   actionTags = ["扩展接口"];
@@ -111533,14 +111686,14 @@ class SetSpecialTitle extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$s = Type.Object({
+const PayloadSchema$t = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$v = Type.Array(Type.Any(), { description: "禁言成员列表" });
+const ReturnSchema$w = Type.Array(Type.Any(), { description: "禁言成员列表" });
 class GetGroupShutList extends OneBotAction {
   actionName = ActionName.GetGroupShutList;
-  payloadSchema = PayloadSchema$s;
-  returnSchema = ReturnSchema$v;
+  payloadSchema = PayloadSchema$t;
+  returnSchema = ReturnSchema$w;
   actionSummary = "获取群禁言列表";
   actionTags = ["群组接口"];
   payloadExample = {
@@ -111558,15 +111711,15 @@ class GetGroupShutList extends OneBotAction {
   }
 }
 
-const PayloadSchema$r = Type.Object({
+const PayloadSchema$s = Type.Object({
   group_id: Type.String({ description: "群号" }),
   no_cache: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否不使用缓存" }))
 });
-const ReturnSchema$u = Type.Array(Type.Any(), { description: "群成员列表" });
+const ReturnSchema$v = Type.Array(Type.Any(), { description: "群成员列表" });
 class GetGroupMemberList extends OneBotAction {
   actionName = ActionName.GetGroupMemberList;
-  payloadSchema = PayloadSchema$r;
-  returnSchema = ReturnSchema$u;
+  payloadSchema = PayloadSchema$s;
+  returnSchema = ReturnSchema$v;
   actionSummary = "获取群成员列表";
   actionDescription = "获取群聊中的所有成员列表";
   actionTags = ["群组接口"];
@@ -111600,17 +111753,17 @@ class GetGroupMemberList extends OneBotAction {
   }
 }
 
-const PayloadSchema$q = Type.Object({
+const PayloadSchema$r = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$t = Type.Object({
+const ReturnSchema$u = Type.Object({
   url: Type.Optional(Type.String({ description: "文件下载链接" }))
 }, { description: "群文件URL信息" });
 class GetGroupFileUrl extends GetPacketStatusDepends {
   actionName = ActionName.GOCQHTTP_GetGroupFileUrl;
-  payloadSchema = PayloadSchema$q;
-  returnSchema = ReturnSchema$t;
+  payloadSchema = PayloadSchema$r;
+  returnSchema = ReturnSchema$u;
   actionSummary = "获取群文件URL";
   actionDescription = "获取指定群文件的下载链接";
   actionTags = ["文件接口"];
@@ -111673,13 +111826,13 @@ class SetRestart extends OneBotAction {
   }
 }
 
-const PayloadSchema$p = Type.Object({
+const PayloadSchema$q = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$s = Type.Void({ description: "打卡结果" });
+const ReturnSchema$t = Type.Void({ description: "打卡结果" });
 class SetGroupSignBase extends GetPacketStatusDepends {
-  payloadSchema = PayloadSchema$p;
-  returnSchema = ReturnSchema$s;
+  payloadSchema = PayloadSchema$q;
+  returnSchema = ReturnSchema$t;
   actionSummary = "群打卡";
   actionTags = ["群组扩展"];
   payloadExample = {
@@ -111697,18 +111850,18 @@ class SendGroupSign extends SetGroupSignBase {
   actionName = ActionName.SendGroupSign;
 }
 
-const PayloadSchema$o = Type.Object({
+const PayloadSchema$p = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$r = Type.Object({
+const ReturnSchema$s = Type.Object({
   can_at_all: Type.Boolean({ description: "是否可以艾特全体" }),
   remain_at_all_count_for_group: Type.Number({ description: "群艾特全体剩余次数" }),
   remain_at_all_count_for_uin: Type.Number({ description: "个人艾特全体剩余次数" })
 }, { description: "群艾特全体剩余次数" });
 class GoCQHTTPGetGroupAtAllRemain extends OneBotAction {
   actionName = ActionName.GoCQHTTP_GetGroupAtAllRemain;
-  payloadSchema = PayloadSchema$o;
-  returnSchema = ReturnSchema$r;
+  payloadSchema = PayloadSchema$p;
+  returnSchema = ReturnSchema$s;
   actionSummary = "获取群艾特全体剩余次数";
   actionDescription = "获取指定群聊中艾特全体成员的剩余次数";
   actionTags = ["Go-CQHTTP"];
@@ -111901,7 +112054,7 @@ class MiniAppInfoHelper {
   }
 }
 
-const PayloadSchema$n = Type.Union([
+const PayloadSchema$o = Type.Union([
   Type.Object({
     type: Type.Union([Type.Literal("bili"), Type.Literal("weibo")], { description: "模板类型" }),
     title: Type.String({ description: "标题" }),
@@ -111930,13 +112083,13 @@ const PayloadSchema$n = Type.Union([
     rawArkData: Type.Optional(Type.String({ description: "是否返回原始Ark数据" }))
   })
 ], { description: "小程序Ark参数" });
-const ReturnSchema$q = Type.Object({
+const ReturnSchema$r = Type.Object({
   data: Type.Any({ description: "Ark数据" })
 }, { description: "获取小程序Ark结果" });
 class GetMiniAppArk extends GetPacketStatusDepends {
   actionName = ActionName.GetMiniAppArk;
-  payloadSchema = PayloadSchema$n;
-  returnSchema = ReturnSchema$q;
+  payloadSchema = PayloadSchema$o;
+  returnSchema = ReturnSchema$r;
   actionSummary = "获取小程序 Ark";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -111998,16 +112151,16 @@ var AIVoiceChatType = /* @__PURE__ */ ((AIVoiceChatType2) => {
   return AIVoiceChatType2;
 })(AIVoiceChatType || {});
 
-const PayloadSchema$m = Type.Object({
+const PayloadSchema$n = Type.Object({
   character: Type.String({ description: "角色ID" }),
   group_id: Type.String({ description: "群号" }),
   text: Type.String({ description: "语音文本内容" })
 });
-const ReturnSchema$p = Type.String({ description: "语音URL" });
+const ReturnSchema$q = Type.String({ description: "语音URL" });
 class GetAiRecord extends GetPacketStatusDepends {
   actionName = ActionName.GetAiRecord;
-  payloadSchema = PayloadSchema$m;
-  returnSchema = ReturnSchema$p;
+  payloadSchema = PayloadSchema$n;
+  returnSchema = ReturnSchema$q;
   actionSummary = "获取 AI 语音";
   actionDescription = "通过 AI 语音引擎获取指定文本的语音 URL";
   actionTags = ["AI 扩展"];
@@ -112026,18 +112179,18 @@ class GetAiRecord extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$l = Type.Object({
+const PayloadSchema$m = Type.Object({
   character: Type.String({ description: "角色ID" }),
   group_id: Type.String({ description: "群号" }),
   text: Type.String({ description: "语音文本内容" })
 });
-const ReturnSchema$o = Type.Object({
+const ReturnSchema$p = Type.Object({
   message_id: Type.Number({ description: "消息ID" })
 }, { description: "发送结果" });
 class SendGroupAiRecord extends GetPacketStatusDepends {
   actionName = ActionName.SendGroupAiRecord;
-  payloadSchema = PayloadSchema$l;
-  returnSchema = ReturnSchema$o;
+  payloadSchema = PayloadSchema$m;
+  returnSchema = ReturnSchema$p;
   actionSummary = "发送群 AI 语音";
   actionDescription = "发送 AI 生成的语音到指定群聊";
   actionTags = ["AI 扩展"];
@@ -112056,11 +112209,11 @@ class SendGroupAiRecord extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$k = Type.Object({
+const PayloadSchema$l = Type.Object({
   group_id: Type.String({ description: "群号" }),
   chat_type: Type.Union([Type.Number(), Type.String()], { default: 1, description: "聊天类型" })
 });
-const ReturnSchema$n = Type.Array(
+const ReturnSchema$o = Type.Array(
   Type.Object({
     type: Type.String({ description: "角色类型" }),
     characters: Type.Array(
@@ -112076,8 +112229,8 @@ const ReturnSchema$n = Type.Array(
 );
 class GetAiCharacters extends GetPacketStatusDepends {
   actionName = ActionName.GetAiCharacters;
-  payloadSchema = PayloadSchema$k;
-  returnSchema = ReturnSchema$n;
+  payloadSchema = PayloadSchema$l;
+  returnSchema = ReturnSchema$o;
   actionSummary = "获取AI角色列表";
   actionDescription = "获取群聊中的AI角色列表";
   actionTags = ["扩展接口"];
@@ -112134,13 +112287,13 @@ class GetGuildProfile extends OneBotAction {
   }
 }
 
-const ReturnSchema$m = Type.Object({
+const ReturnSchema$n = Type.Object({
   clientkey: Type.Optional(Type.String({ description: "客户端Key" }))
 }, { description: "获取ClientKey结果" });
 class GetClientkey extends OneBotAction {
   actionName = ActionName.GetClientkey;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$m;
+  returnSchema = ReturnSchema$n;
   actionSummary = "获取ClientKey";
   actionDescription = "获取当前登录帐号的ClientKey";
   actionTags = ["扩展接口"];
@@ -112151,15 +112304,15 @@ class GetClientkey extends OneBotAction {
   }
 }
 
-const PayloadSchema$j = Type.Object({
+const PayloadSchema$k = Type.Object({
   cmd: Type.String({ description: "命令字" }),
   data: Type.String({ description: "十六进制数据" }),
   rsp: Type.Union([Type.String(), Type.Boolean()], { default: true, description: "是否等待响应" })
 });
-const ReturnSchema$l = Type.Union([Type.String({ description: "响应十六进制数据" }), Type.Undefined()], { description: "发包结果" });
+const ReturnSchema$m = Type.Union([Type.String({ description: "响应十六进制数据" }), Type.Undefined()], { description: "发包结果" });
 class SendPacket extends GetPacketStatusDepends {
-  payloadSchema = PayloadSchema$j;
-  returnSchema = ReturnSchema$l;
+  payloadSchema = PayloadSchema$k;
+  returnSchema = ReturnSchema$m;
   actionName = ActionName.SendPacket;
   actionSummary = "发送原始数据包";
   actionTags = ["系统扩展"];
@@ -112229,17 +112382,17 @@ class FriendPoke extends SendPokeBase {
   actionName = ActionName.FriendPoke;
 }
 
-const PayloadSchema$i = Type.Object({
+const PayloadSchema$j = Type.Object({
   face_id: Type.Union([Type.Number(), Type.String()], { description: "图标ID" }),
   // 参考 face_config.json 的 QSid
   face_type: Type.Union([Type.Number(), Type.String()], { default: "1", description: "图标类型" }),
   wording: Type.String({ default: " ", description: "状态文字内容" })
 });
-const ReturnSchema$k = Type.String({ description: "错误信息（如果有）" });
+const ReturnSchema$l = Type.String({ description: "错误信息（如果有）" });
 class SetDiyOnlineStatus extends OneBotAction {
   actionName = ActionName.SetDiyOnlineStatus;
-  payloadSchema = PayloadSchema$i;
-  returnSchema = ReturnSchema$k;
+  payloadSchema = PayloadSchema$j;
+  returnSchema = ReturnSchema$l;
   actionSummary = "设置自定义在线状态";
   actionDescription = "设置自定义在线状态";
   actionTags = ["用户扩展"];
@@ -112275,18 +112428,18 @@ class BotExit extends OneBotAction {
   }
 }
 
-const PayloadSchema$h = Type.Object({
+const PayloadSchema$i = Type.Object({
   group_id: Type.String({ description: "群号" }),
   bot_appid: Type.String({ description: "机器人AppID" }),
   button_id: Type.String({ default: "", description: "按钮ID" }),
   callback_data: Type.String({ default: "", description: "回调数据" }),
   msg_seq: Type.String({ default: "10086", description: "消息序列号" })
 });
-const ReturnSchema$j = Type.Any({ description: "点击结果" });
+const ReturnSchema$k = Type.Any({ description: "点击结果" });
 class ClickInlineKeyboardButton extends OneBotAction {
   actionName = ActionName.ClickInlineKeyboardButton;
-  payloadSchema = PayloadSchema$h;
-  returnSchema = ReturnSchema$j;
+  payloadSchema = PayloadSchema$i;
+  returnSchema = ReturnSchema$k;
   actionSummary = "点击内联键盘按钮";
   actionTags = ["消息扩展"];
   payloadExample = {
@@ -112310,16 +112463,16 @@ class ClickInlineKeyboardButton extends OneBotAction {
   }
 }
 
-const PayloadSchema$g = Type.Object({
+const PayloadSchema$h = Type.Object({
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$i = Type.Object({
+const ReturnSchema$j = Type.Object({
   url: Type.Optional(Type.String({ description: "文件下载链接" }))
 }, { description: "私聊文件URL信息" });
 class GetPrivateFileUrl extends GetPacketStatusDepends {
   actionName = ActionName.NapCat_GetPrivateFileUrl;
-  payloadSchema = PayloadSchema$g;
-  returnSchema = ReturnSchema$i;
+  payloadSchema = PayloadSchema$h;
+  returnSchema = ReturnSchema$j;
   actionSummary = "获取私聊文件URL";
   actionDescription = "获取指定私聊文件的下载链接";
   actionTags = ["文件接口"];
@@ -112535,7 +112688,7 @@ function X(r, e) {
   return t._fieldId = typeof r == "number" ? r : 0, t;
 }
 
-const ReturnSchema$h = Type.Array(
+const ReturnSchema$i = Type.Array(
   Type.Object({
     uin: Type.Number({ description: "QQ号" }),
     uid: Type.String({ description: "用户UID" }),
@@ -112548,7 +112701,7 @@ const ReturnSchema$h = Type.Array(
 class GetUnidirectionalFriendList extends OneBotAction {
   actionName = ActionName.GetUnidirectionalFriendList;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$h;
+  returnSchema = ReturnSchema$i;
   actionSummary = "获取单向好友列表";
   actionTags = ["用户扩展"];
   payloadExample = {};
@@ -112594,15 +112747,15 @@ class GetUnidirectionalFriendList extends OneBotAction {
   }
 }
 
-const PayloadSchema$f = Type.Object({
+const PayloadSchema$g = Type.Object({
   group_id: Type.String({ description: "群号" }),
   remark: Type.String({ description: "备注" })
 });
-const ReturnSchema$g = Type.Null({ description: "返回结果" });
+const ReturnSchema$h = Type.Null({ description: "返回结果" });
 class SetGroupRemark extends OneBotAction {
   actionName = ActionName.SetGroupRemark;
-  payloadSchema = PayloadSchema$f;
-  returnSchema = ReturnSchema$g;
+  payloadSchema = PayloadSchema$g;
+  returnSchema = ReturnSchema$h;
   actionSummary = "设置群备注";
   actionDescription = "设置群备注";
   actionTags = ["群组扩展"];
@@ -112620,13 +112773,13 @@ class SetGroupRemark extends OneBotAction {
   }
 }
 
-const PayloadSchema$e = Type.Object({
+const PayloadSchema$f = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" }),
   current_parent_directory: Type.String({ description: "当前父目录" }),
   target_parent_directory: Type.String({ description: "目标父目录" })
 });
-const ReturnSchema$f = Type.Object({
+const ReturnSchema$g = Type.Object({
   ok: Type.Boolean({ description: "是否成功" })
 }, { description: "移动文件结果" });
 class MoveGroupFile extends GetPacketStatusDepends {
@@ -112642,8 +112795,8 @@ class MoveGroupFile extends GetPacketStatusDepends {
   returnExample = {
     ok: true
   };
-  payloadSchema = PayloadSchema$e;
-  returnSchema = ReturnSchema$f;
+  payloadSchema = PayloadSchema$f;
+  returnSchema = ReturnSchema$g;
   async _handle(payload) {
     const contextMsgFile = FileNapCatOneBotUUID.decode(payload.file_id) || FileNapCatOneBotUUID.decodeModelId(payload.file_id);
     if (contextMsgFile?.fileUUID) {
@@ -112656,11 +112809,11 @@ class MoveGroupFile extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$d = Type.Object({
+const PayloadSchema$e = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" })
 });
-const ReturnSchema$e = Type.Object({
+const ReturnSchema$f = Type.Object({
   ok: Type.Boolean({ description: "是否成功" })
 }, { description: "转发文件结果" });
 class TransGroupFile extends GetPacketStatusDepends {
@@ -112674,8 +112827,8 @@ class TransGroupFile extends GetPacketStatusDepends {
   returnExample = {
     ok: true
   };
-  payloadSchema = PayloadSchema$d;
-  returnSchema = ReturnSchema$e;
+  payloadSchema = PayloadSchema$e;
+  returnSchema = ReturnSchema$f;
   async _handle(payload) {
     const contextMsgFile = FileNapCatOneBotUUID.decode(payload.file_id) || FileNapCatOneBotUUID.decodeModelId(payload.file_id);
     if (contextMsgFile?.fileUUID) {
@@ -112691,13 +112844,13 @@ class TransGroupFile extends GetPacketStatusDepends {
   }
 }
 
-const PayloadSchema$c = Type.Object({
+const PayloadSchema$d = Type.Object({
   group_id: Type.String({ description: "群号" }),
   file_id: Type.String({ description: "文件ID" }),
   current_parent_directory: Type.String({ description: "当前父目录" }),
   new_name: Type.String({ description: "新文件名" })
 });
-const ReturnSchema$d = Type.Object({
+const ReturnSchema$e = Type.Object({
   ok: Type.Boolean({ description: "是否成功" })
 }, { description: "重命名文件结果" });
 class RenameGroupFile extends GetPacketStatusDepends {
@@ -112713,8 +112866,8 @@ class RenameGroupFile extends GetPacketStatusDepends {
   returnExample = {
     ok: true
   };
-  payloadSchema = PayloadSchema$c;
-  returnSchema = ReturnSchema$d;
+  payloadSchema = PayloadSchema$d;
+  returnSchema = ReturnSchema$e;
   async _handle(payload) {
     const contextMsgFile = FileNapCatOneBotUUID.decode(payload.file_id) || FileNapCatOneBotUUID.decodeModelId(payload.file_id);
     if (contextMsgFile?.fileUUID) {
@@ -112929,13 +113082,13 @@ class GetDoubtFriendsAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$b = Type.Object({
+const PayloadSchema$c = Type.Object({
   group_id: Type.String({ description: "群号" }),
   add_type: Type.Number({ description: "加群方式" }),
   group_question: Type.Optional(Type.String({ description: "加群问题" })),
   group_answer: Type.Optional(Type.String({ description: "加群答案" }))
 });
-const ReturnSchema$c = Type.Null({ description: "返回结果" });
+const ReturnSchema$d = Type.Null({ description: "返回结果" });
 class SetGroupAddOption extends OneBotAction {
   actionName = ActionName.SetGroupAddOption;
   actionSummary = "设置群加群选项";
@@ -112945,8 +113098,8 @@ class SetGroupAddOption extends OneBotAction {
     add_type: 1
   };
   returnExample = null;
-  payloadSchema = PayloadSchema$b;
-  returnSchema = ReturnSchema$c;
+  payloadSchema = PayloadSchema$c;
+  returnSchema = ReturnSchema$d;
   async _handle(payload) {
     const ret = await this.core.apis.GroupApi.setGroupAddOption(payload.group_id, {
       addOption: payload.add_type,
@@ -112960,12 +113113,12 @@ class SetGroupAddOption extends OneBotAction {
   }
 }
 
-const PayloadSchema$a = Type.Object({
+const PayloadSchema$b = Type.Object({
   group_id: Type.String({ description: "群号" }),
   no_code_finger_open: Type.Optional(Type.Number({ description: "未知" })),
   no_finger_open: Type.Optional(Type.Number({ description: "未知" }))
 });
-const ReturnSchema$b = Type.Null({ description: "返回结果" });
+const ReturnSchema$c = Type.Null({ description: "返回结果" });
 class SetGroupSearch extends OneBotAction {
   actionName = ActionName.SetGroupSearch;
   actionSummary = "设置群搜索选项";
@@ -112974,8 +113127,8 @@ class SetGroupSearch extends OneBotAction {
     group_id: "123456"
   };
   returnExample = null;
-  payloadSchema = PayloadSchema$a;
-  returnSchema = ReturnSchema$b;
+  payloadSchema = PayloadSchema$b;
+  returnSchema = ReturnSchema$c;
   async _handle(payload) {
     const ret = await this.core.apis.GroupApi.setGroupSearch(payload.group_id, {
       noCodeFingerOpenFlag: payload.no_code_finger_open,
@@ -112988,12 +113141,12 @@ class SetGroupSearch extends OneBotAction {
   }
 }
 
-const PayloadSchema$9 = Type.Object({
+const PayloadSchema$a = Type.Object({
   group_id: Type.String({ description: "群号" }),
   robot_member_switch: Type.Optional(Type.Number({ description: "机器人成员开关" })),
   robot_member_examine: Type.Optional(Type.Number({ description: "机器人成员审核" }))
 });
-const ReturnSchema$a = Type.Null({ description: "返回结果" });
+const ReturnSchema$b = Type.Null({ description: "返回结果" });
 class SetGroupRobotAddOption extends OneBotAction {
   actionName = ActionName.SetGroupRobotAddOption;
   actionSummary = "设置群机器人加群选项";
@@ -113002,8 +113155,8 @@ class SetGroupRobotAddOption extends OneBotAction {
     group_id: "123456"
   };
   returnExample = null;
-  payloadSchema = PayloadSchema$9;
-  returnSchema = ReturnSchema$a;
+  payloadSchema = PayloadSchema$a;
+  returnSchema = ReturnSchema$b;
   async _handle(payload) {
     const ret = await this.core.apis.GroupApi.setGroupRobotAddOption(
       payload.group_id,
@@ -113017,16 +113170,16 @@ class SetGroupRobotAddOption extends OneBotAction {
   }
 }
 
-const PayloadSchema$8 = Type.Object({
+const PayloadSchema$9 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   user_id: Type.Array(Type.String(), { description: "QQ号列表" }),
   reject_add_request: Type.Optional(Type.Union([Type.Boolean(), Type.String()], { description: "是否拒绝加群请求" }))
 });
-const ReturnSchema$9 = Type.Null({ description: "返回结果" });
+const ReturnSchema$a = Type.Null({ description: "返回结果" });
 class SetGroupKickMembers extends OneBotAction {
   actionName = ActionName.SetGroupKickMembers;
-  payloadSchema = PayloadSchema$8;
-  returnSchema = ReturnSchema$9;
+  payloadSchema = PayloadSchema$9;
+  returnSchema = ReturnSchema$a;
   actionSummary = "批量踢出群成员";
   actionDescription = "从指定群聊中批量踢出多个成员";
   actionTags = ["扩展接口"];
@@ -113040,10 +113193,10 @@ class SetGroupKickMembers extends OneBotAction {
   }
 }
 
-const PayloadSchema$7 = Type.Object({
+const PayloadSchema$8 = Type.Object({
   group_id: Type.String({ description: "群号" })
 });
-const ReturnSchema$8 = Type.Object({
+const ReturnSchema$9 = Type.Object({
   group_id: Type.Number({ description: "群号" }),
   group_name: Type.String({ description: "群名称" }),
   member_count: Type.Number({ description: "成员数量" }),
@@ -113053,8 +113206,8 @@ const ReturnSchema$8 = Type.Object({
 }, { description: "群详细信息" });
 class GetGroupDetailInfo extends OneBotAction {
   actionName = ActionName.GetGroupDetailInfo;
-  payloadSchema = PayloadSchema$7;
-  returnSchema = ReturnSchema$8;
+  payloadSchema = PayloadSchema$8;
+  returnSchema = ReturnSchema$9;
   actionSummary = "获取群详细信息";
   actionDescription = "获取群聊的详细信息，包括成员数、最大成员数等";
   actionTags = ["群组接口"];
@@ -113074,7 +113227,7 @@ class GetGroupDetailInfo extends OneBotAction {
   }
 }
 
-const ReturnSchema$7 = Type.Array(
+const ReturnSchema$8 = Type.Array(
   Type.Object({
     request_id: Type.Number({ description: "请求ID" }),
     invitor_uin: Type.Number({ description: "邀请者QQ" }),
@@ -113091,7 +113244,7 @@ const ReturnSchema$7 = Type.Array(
 class GetGroupAddRequest extends OneBotAction {
   actionName = ActionName.GetGroupIgnoreAddRequest;
   payloadSchema = Type.Object({});
-  returnSchema = ReturnSchema$7;
+  returnSchema = ReturnSchema$8;
   actionSummary = "获取群被忽略的加群请求";
   actionTags = ["群组接口"];
   payloadExample = {};
@@ -113133,15 +113286,15 @@ class GetGroupAddRequest extends OneBotAction {
   }
 }
 
-const PayloadSchema$6 = Type.Object({
+const PayloadSchema$7 = Type.Object({
   category: Type.String({ description: "分类ID" }),
   count: Type.String({ default: "50", description: "获取数量" })
 });
-const ReturnSchema$6 = Type.Any({ description: "收藏列表" });
+const ReturnSchema$7 = Type.Any({ description: "收藏列表" });
 class GetCollectionList extends OneBotAction {
   actionName = ActionName.GetCollectionList;
-  payloadSchema = PayloadSchema$6;
-  returnSchema = ReturnSchema$6;
+  payloadSchema = PayloadSchema$7;
+  returnSchema = ReturnSchema$7;
   actionSummary = "获取收藏列表";
   actionTags = ["系统扩展"];
   payloadExample = {
@@ -113267,11 +113420,11 @@ class SetGroupTodo extends BaseGroupTodoAction {
   }
 }
 
-const PayloadSchema$5 = Type.Object({
+const PayloadSchema$6 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   attach_info: Type.Optional(Type.String({ default: "", description: "附加信息（用于分页，从上一次返回结果中获取）" }))
 });
-const ReturnSchema$5 = Type.Object({
+const ReturnSchema$6 = Type.Object({
   album_list: Type.Array(Type.Any(), { description: "群相册列表" }),
   attach_info: Type.String({ description: "分页附加信息，传入下一次请求以获取更多数据" }),
   has_more: Type.Boolean({ description: "是否有更多数据" })
@@ -113296,8 +113449,8 @@ class GetQunAlbumList extends OneBotAction {
     attach_info: "",
     has_more: false
   };
-  payloadSchema = PayloadSchema$5;
-  returnSchema = ReturnSchema$5;
+  payloadSchema = PayloadSchema$6;
+  returnSchema = ReturnSchema$6;
   async _handle(payload) {
     const resp = (await this.core.apis.WebApi.getAlbumListByNTQQ(payload.group_id, payload.attach_info)).response;
     return {
@@ -113308,13 +113461,13 @@ class GetQunAlbumList extends OneBotAction {
   }
 }
 
-const PayloadSchema$4 = Type.Object({
+const PayloadSchema$5 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   album_name: Type.String({ description: "相册名称" }),
   file: Type.String({ description: "图片路径、URL或Base64" })
 });
-const ReturnSchema$4 = Type.Any({ description: "上传结果" });
+const ReturnSchema$5 = Type.Any({ description: "上传结果" });
 class UploadImageToQunAlbum extends OneBotAction {
   actionName = ActionName.UploadImageToQunAlbum;
   actionSummary = "上传图片到群相册";
@@ -113328,8 +113481,8 @@ class UploadImageToQunAlbum extends OneBotAction {
   returnExample = {
     result: null
   };
-  payloadSchema = PayloadSchema$4;
-  returnSchema = ReturnSchema$4;
+  payloadSchema = PayloadSchema$5;
+  returnSchema = ReturnSchema$5;
   async _handle(payload) {
     const downloadResult = await uriToLocalFile(this.core.NapCatTempPath, payload.file);
     try {
@@ -113373,12 +113526,12 @@ class DoGroupAlbumComment extends OneBotAction {
   }
 }
 
-const PayloadSchema$3 = Type.Object({
+const PayloadSchema$4 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   attach_info: Type.Optional(Type.String({ default: "", description: "附加信息（用于分页）" }))
 });
-const ReturnSchema$3 = Type.Any({ description: "相册媒体列表" });
+const ReturnSchema$4 = Type.Any({ description: "相册媒体列表" });
 class GetGroupAlbumMediaList extends OneBotAction {
   actionName = ActionName.GetGroupAlbumMediaList;
   actionSummary = "获取群相册媒体列表";
@@ -113392,8 +113545,8 @@ class GetGroupAlbumMediaList extends OneBotAction {
       { media_id: "media_id_1", url: "http://example.com/1.jpg" }
     ]
   };
-  payloadSchema = PayloadSchema$3;
-  returnSchema = ReturnSchema$3;
+  payloadSchema = PayloadSchema$4;
+  returnSchema = ReturnSchema$4;
   async _handle(payload) {
     return await this.core.apis.WebApi.getAlbumMediaListByNTQQ(
       payload.group_id,
@@ -113403,13 +113556,13 @@ class GetGroupAlbumMediaList extends OneBotAction {
   }
 }
 
-const PayloadSchema$2 = Type.Object({
+const PayloadSchema$3 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   batch_id: Type.String({ description: "batch_id" }),
   lloc: Type.Optional(Type.String({ description: "lloc，若对整个上传操作则不填" }))
 });
-const ReturnSchema$2 = Type.Any({ description: "操作结果" });
+const ReturnSchema$3 = Type.Any({ description: "操作结果" });
 class SetGroupAlbumMediaLike extends OneBotAction {
   actionName = ActionName.SetGroupAlbumMediaLike;
   actionSummary = "点赞群相册媒体";
@@ -113423,8 +113576,8 @@ class SetGroupAlbumMediaLike extends OneBotAction {
   returnExample = {
     result: {}
   };
-  payloadSchema = PayloadSchema$2;
-  returnSchema = ReturnSchema$2;
+  payloadSchema = PayloadSchema$3;
+  returnSchema = ReturnSchema$3;
   async _handle(payload) {
     return await this.core.apis.WebApi.doAlbumMediaLikeByNTQQ(
       payload.group_id,
@@ -113450,8 +113603,8 @@ class CancelGroupAlbumMediaLike extends OneBotAction {
   returnExample = {
     result: {}
   };
-  payloadSchema = PayloadSchema$2;
-  returnSchema = ReturnSchema$2;
+  payloadSchema = PayloadSchema$3;
+  returnSchema = ReturnSchema$3;
   async _handle(payload) {
     return await this.core.apis.WebApi.doAlbumMediaLikeByNTQQ(
       payload.group_id,
@@ -113463,12 +113616,12 @@ class CancelGroupAlbumMediaLike extends OneBotAction {
   }
 }
 
-const PayloadSchema$1 = Type.Object({
+const PayloadSchema$2 = Type.Object({
   group_id: Type.String({ description: "群号" }),
   album_id: Type.String({ description: "相册ID" }),
   lloc: Type.String({ description: "媒体ID (lloc)" })
 });
-const ReturnSchema$1 = Type.Any({ description: "删除结果" });
+const ReturnSchema$2 = Type.Any({ description: "删除结果" });
 class DelGroupAlbumMedia extends OneBotAction {
   actionName = ActionName.DelGroupAlbumMedia;
   actionSummary = "删除群相册媒体";
@@ -113481,8 +113634,8 @@ class DelGroupAlbumMedia extends OneBotAction {
   returnExample = {
     result: {}
   };
-  payloadSchema = PayloadSchema$1;
-  returnSchema = ReturnSchema$1;
+  payloadSchema = PayloadSchema$2;
+  returnSchema = ReturnSchema$2;
   async _handle(payload) {
     return await this.core.apis.WebApi.deleteAlbumMediaByNTQQ(
       payload.group_id,
@@ -114418,18 +114571,18 @@ class GetFilesetId extends OneBotAction {
   }
 }
 
-const PayloadSchema = Type.Object({
+const PayloadSchema$1 = Type.Object({
   message_id: Type.Union([Type.Number(), Type.String()], { description: "消息ID" })
 });
-const ReturnSchema = Type.Object({ text: Type.String({ description: "得到的文本" }) });
+const ReturnSchema$1 = Type.Object({ text: Type.String({ description: "得到的文本" }) });
 class FetchPttText extends OneBotAction {
   actionName = ActionName.FetchPttText;
   actionSummary = "获取语音转文字结果";
   actionTags = ["消息扩展"];
   payloadExample = MsgActionsExamples.FetchPttText.payload;
   returnExample = MsgActionsExamples.FetchPttText.response;
-  payloadSchema = PayloadSchema;
-  returnSchema = ReturnSchema;
+  payloadSchema = PayloadSchema$1;
+  returnSchema = ReturnSchema$1;
   async _handle(payload) {
     if (!payload.message_id) {
       throw Error("参数message_id不能为空");
@@ -114490,6 +114643,40 @@ class FetchPttText extends OneBotAction {
   }
 }
 
+const PayloadSchema = Type.Object({
+  group_id: Type.Union([Type.String(), Type.Number()], { description: "群号" })
+});
+const ReturnSchema = Type.Array(
+  Type.Object({
+    user_id: Type.Number({ description: "打卡者QQ" }),
+    nick: Type.String({ description: "打卡者昵称" }),
+    time: Type.Number({ description: "打卡时间" }),
+    rank: Type.Number({ description: "打卡排名" })
+  }),
+  { description: "群组今日打卡列表" }
+);
+class GetGroupSignedList extends OneBotAction {
+  actionName = ActionName.GetGroupSignedList;
+  actionSummary = "获取群组今日打卡列表";
+  actionTags = ["群组扩展"];
+  payloadExample = {
+    group_id: "123456"
+  };
+  returnExample = {};
+  payloadSchema = PayloadSchema;
+  returnSchema = ReturnSchema;
+  async _handle(payload) {
+    const data = await this.core.apis.WebApi.getDaySignedList(payload.group_id.toString());
+    if (!data.response.page) throw new Error("无法获取该群组打卡列表");
+    return data.response.page[0]?.infos?.map((info) => ({
+      user_id: +info.uid,
+      nick: info.uidGroupNick,
+      time: +info.signedTimeStamp,
+      rank: (info.signInRank - 1) / 2 + 1
+    })) ?? [];
+  }
+}
+
 function getAllHandlers(obContext, core) {
   const actionHandlers = [
     new CleanStreamTempFile(obContext, core),
@@ -114544,6 +114731,7 @@ function getAllHandlers(obContext, core) {
     new MoveGroupFile(obContext, core),
     new RenameGroupFile(obContext, core),
     new TransGroupFile(obContext, core),
+    new GetGroupSignedList(obContext, core),
     // onebot11
     new SendLike(obContext, core),
     new GetMsg(obContext, core),
@@ -114608,6 +114796,10 @@ function getAllHandlers(obContext, core) {
     new GetProfileLike(obContext, core),
     new SetGroupPortrait(obContext, core),
     new FetchCustomFace(obContext, core),
+    new FetchCustomFaceDetail(obContext, core),
+    new AddCustomFace(obContext, core),
+    new DeleteCustomFace(obContext, core),
+    new SetCustomFaceDesc(obContext, core),
     new GoCQHTTPUploadPrivateFile(obContext, core),
     new GetGuildProfile(obContext, core),
     new GoCQHTTPGetModelShow(obContext, core),
@@ -115877,6 +116069,9 @@ const offset = {
   "3.2.28-48517-arm64": {"send":"6F48B70","recv":"6F4C520"},
   "9.9.30-48762-x64": {"send":"2F3B960","recv":"2F3EEE0"},
   "9.9.31-49599-x64": {"send":"3082C40","recv":"30861C8"},
+  "9.9.31-49738-x64": {"send":"3086C80","recv":"308A208"},
+  "3.2.29-49738-x64": {"send":"B3B20A0","recv":"B3B5B40"},
+  "3.2.29-49738-arm64": {"send":"7342800","recv":"73461B0"},
 };
 
 const typedOffset = offset;

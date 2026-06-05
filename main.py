@@ -70,7 +70,7 @@ def _run_update_checks() -> None:
             [venv_python, str(update_script)],
             capture_output=True,
             text=True,
-            timeout=300,
+            timeout=30,
             cwd=str(PROJECT_ROOT),
         )
         print(result.stdout, flush=True)
@@ -126,8 +126,13 @@ if __name__ == "__main__":
                 print("[startup] applied ncatbot runtime patch (missing confirm)")
 
 import sdk_compat  # noqa: F401
+import bot_state
 from ncatbot.app import BotClient
 
+# --t 调试模式：只在 1042029905 群活跃
+if "--t" in sys.argv:
+    bot_state.set_debug_mode(True)
+    print(f"[startup] 调试模式已开启，仅群 {bot_state.get_debug_group()} 活跃")
 
 bot = BotClient()
 

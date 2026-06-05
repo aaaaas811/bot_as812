@@ -89,7 +89,7 @@ def _detect_ncatbot_package(python: str) -> str:
 def _get_pypi_latest(package: str) -> Optional[str]:
     """Get latest version for *package* from PyPI JSON."""
     try:
-        resp = requests.get(PYPI_JSON_TEMPLATE.format(package=package), timeout=15)
+        resp = requests.get(PYPI_JSON_TEMPLATE.format(package=package), timeout=8)
         resp.raise_for_status()
         return resp.json()["info"]["version"]
     except Exception:
@@ -155,7 +155,7 @@ def check_napcat() -> tuple[Optional[str], Optional[str]]:
 
     # Fetch latest from GitHub API
     try:
-        resp = requests.get(NAPCAT_RELEASES_API, timeout=15)
+        resp = requests.get(NAPCAT_RELEASES_API, timeout=8)
         resp.raise_for_status()
         releases = resp.json()
         if releases and isinstance(releases, list) and len(releases) > 0:
@@ -165,7 +165,7 @@ def check_napcat() -> tuple[Optional[str], Optional[str]]:
     except Exception:
         # Fallback: redirect
         try:
-            r = requests.head(NAPCAT_LATEST_URL, allow_redirects=True, timeout=10)
+            r = requests.head(NAPCAT_LATEST_URL, allow_redirects=True, timeout=5)
             latest = r.url.rsplit("/", 1)[-1].lstrip("v")
         except Exception:
             latest = None
@@ -174,7 +174,13 @@ def check_napcat() -> tuple[Optional[str], Optional[str]]:
 
 
 def update_napcat() -> bool:
-    """Download and extract latest NapCat.Shell.zip into ./napcat/. Returns True on success."""
+    """Download and extract latest NapCat.Shell.zip into ./napcat/.
+
+    Uses a staging directory to ensure the old napcat is only replaced after
+    a fully successful download + extraction. Config files are preserved.
+    """
+    import shutil
+
     _, latest = check_napcat()
     if not latest:
         print("[napcat] could not determine latest version, aborting update")
@@ -182,13 +188,15 @@ def update_napcat() -> bool:
 
     download_url = NAPCAT_DOWNLOAD_TEMPLATE.format(version=latest)
     zip_path = PROJECT_ROOT / f"napcat_v{latest}.zip"
+    stage_dir = PROJECT_ROOT / "_napcat_stage"
 
+    # 1) Download
     print(f"[napcat] downloading {download_url} ...")
     try:
-        resp = requests.get(download_url, stream=True, timeout=120)
+        resp = requests.get(download_url, stream=True, timeout=300)
         resp.raise_for_status()
         with open(zip_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=8192):
+            for chunk in resp.iter_content(chunk_size=65536):
                 f.write(chunk)
     except Exception as e:
         print(f"[napcat] download failed: {e}")
@@ -196,8 +204,27 @@ def update_napcat() -> bool:
             zip_path.unlink()
         return False
 
-    print(f"[napcat] extracting to {NAPCAT_DIR} ...")
-    config_backup: dict[str, str] = {}
+    # 2) Extract to staging directory
+    try:
+        if stage_dir.exists():
+            shutil.rmtree(stage_dir, ignore_errors=True)
+        stage_dir.mkdir(parents=True, exist_ok=True)
+
+        with zipfile.ZipFile(zip_path, "r") as zf:
+            zf.extractall(stage_dir)
+    except Exception as e:
+        print(f"[napcat] extraction failed: {e}")
+        if stage_dir.exists():
+            shutil.rmtree(stage_dir, ignore_errors=True)
+        if zip_path.exists():
+            zip_path.unlink()
+        return False
+    finally:
+        if zip_path.exists():
+            zip_path.unlink()
+
+    # 3) Backup config, swap directories, restore config
+    config_backup: dict[str, bytes] = {}
     config_dir = NAPCAT_DIR / "config"
     if config_dir.exists():
         for f in config_dir.iterdir():
@@ -205,30 +232,30 @@ def update_napcat() -> bool:
                 config_backup[f.name] = f.read_bytes()
 
     try:
-        import shutil
-
         if NAPCAT_DIR.exists():
-            shutil.rmtree(NAPCAT_DIR, ignore_errors=True)
-        NAPCAT_DIR.mkdir(parents=True, exist_ok=True)
-
-        with zipfile.ZipFile(zip_path, "r") as zf:
-            zf.extractall(NAPCAT_DIR)
-
-        # Restore backed-up config files
-        if config_backup:
-            config_dir.mkdir(parents=True, exist_ok=True)
-            for name, data in config_backup.items():
-                (config_dir / name).write_bytes(data)
-
-        _set_napcat_local_version(latest)
-        print(f"[napcat] updated to v{latest}")
+            # Windows: rename() fails if target exists; copy files instead
+            for item in stage_dir.rglob("*"):
+                rel = item.relative_to(stage_dir)
+                dest = NAPCAT_DIR / rel
+                if item.is_dir():
+                    dest.mkdir(parents=True, exist_ok=True)
+                elif not dest.exists():
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(str(item), str(dest))
+            shutil.rmtree(stage_dir, ignore_errors=True)
+        else:
+            stage_dir.rename(NAPCAT_DIR)
     except Exception as e:
-        print(f"[napcat] extraction failed: {e}")
+        print(f"[napcat] directory swap failed: {e}")
         return False
-    finally:
-        if zip_path.exists():
-            zip_path.unlink()
 
+    if config_backup:
+        (NAPCAT_DIR / "config").mkdir(parents=True, exist_ok=True)
+        for name, data in config_backup.items():
+            (NAPCAT_DIR / "config" / name).write_bytes(data)
+
+    _set_napcat_local_version(latest)
+    print(f"[napcat] updated to v{latest}")
     return True
 
 

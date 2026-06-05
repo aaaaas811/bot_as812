@@ -42,6 +42,10 @@ class XiaozhiBridge(NcatBotPlugin):
         if not raw_text:
             return
 
+        # 跳过转述命令，避免与 as812 插件冲突
+        if raw_text.startswith("帮我说") or raw_text.startswith("安安帮我说"):
+            return
+
         # 获取发送者昵称
         sender_name = ""
         try:

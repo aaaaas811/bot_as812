@@ -443,8 +443,12 @@ class as812(NcatBotPlugin):
                 await self._qq_post_private_msg(msg.user_id, text="私聊模式已关闭")
                 return
 
-        match = re.match(r"^帮我说[：:]\s*(.+)$", raw_text)
+        # 安安帮我说：xxx（图片模式）| 帮我说：xxx（纯文本模式）
+        img_match = re.match(r"^安安帮我说[：:]\s*(.+)$", raw_text)
+        txt_match = re.match(r"^帮我说[：:]\s*(.+)$", raw_text)
+        match = img_match or txt_match
         if match:
+            use_image = bool(img_match)
             active_group_id = self.config_manager.get_active_group_id()
             qq_api = getattr(self.api, "qq", None)
             if not active_group_id:
@@ -455,11 +459,11 @@ class as812(NcatBotPlugin):
             content = match.group(1).strip()
             if not content:
                 if qq_api is not None and hasattr(qq_api, "post_private_msg"):
-                    await qq_api.post_private_msg(msg.user_id, text="格式错误，请使用：帮我说：内容")
+                    await qq_api.post_private_msg(msg.user_id, text="格式错误，请使用：帮我说：内容 或 安安帮我说：内容")
                 return
 
-            if not _SKETCHBOOK_AVAILABLE:
-                # 降级为纯文本转述
+            # 纯文本模式（帮我说）
+            if not use_image or not _SKETCHBOOK_AVAILABLE:
                 say_text = f"811说\"{content}\""
                 try:
                     await self._qq_post_group_msg(int(active_group_id), text=say_text)
@@ -471,7 +475,7 @@ class as812(NcatBotPlugin):
                         await qq_api.post_private_msg(msg.user_id, text=f"转述失败: {e}")
                 return
 
-            # 随机选择表情，生成素描本风格图片
+            # 图片模式（安安帮我说）
             emotion_list = ["base", "开心", "生气", "无语", "脸红", "病娇",
                             "哭泣", "害怕", "惊讶", "激动", "闭眼", "难受"]
             emotion = random.choice(emotion_list)

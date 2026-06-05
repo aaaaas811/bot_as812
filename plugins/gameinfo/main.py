@@ -11,6 +11,7 @@ import aiohttp
 import yaml
 
 import sdk_compat  # noqa: F401
+import bot_state
 from ncatbot.core import registrar
 from ncatbot.event.qq import GroupMessageEvent
 from ncatbot.plugin import NcatBotPlugin
@@ -308,7 +309,7 @@ class GameInfo(NcatBotPlugin):
     # ---- build forward message ----
 
     def _build_forward(self, all_videos: dict, date_label: str | None = None):
-        """构造嵌套合并转发：外层按 UP 主分组，每个 UP 主内层是该 UP 主的视频列表。"""
+        """构造合并转发：每个视频作为独立节点，节点昵称为 UP 主名称。"""
         if date_label is None:
             date_label = f"今日 ({datetime.now(CST).strftime('%Y-%m-%d')})"
 
@@ -316,8 +317,8 @@ class GameInfo(NcatBotPlugin):
         all_names = list(dict.fromkeys(uid_names.values()))
         names_str = "，".join(all_names) if all_names else "暂无"
 
-        outer = ForwardConstructor(user_id="bilibili", nickname="B站UP主动态")
-        outer.attach_text(
+        fwd = ForwardConstructor(user_id="bilibili", nickname="B站UP主动态")
+        fwd.attach_text(
             f"{date_label} 的游戏资讯就由812呈上！(目前包括：{names_str})"
         )
 
@@ -326,8 +327,6 @@ class GameInfo(NcatBotPlugin):
             name = info["name"]
             node_uid = f"b_{uid}"
 
-            # 为每个 UP 主构造内层合并转发
-            inner = ForwardConstructor(user_id=node_uid, nickname=name)
             for video in data["videos"]:
                 pub_time = datetime.fromtimestamp(video["pubdate"], tz=CST).strftime(
                     "%Y-%m-%d %H:%M"
@@ -345,12 +344,9 @@ class GameInfo(NcatBotPlugin):
                 if video["pic"]:
                     msg.add_image(video["pic"])
 
-                inner.attach_message(msg, user_id=node_uid, nickname=name)
+                fwd.attach_message(msg, user_id=node_uid, nickname=name)
 
-            # 将内层转发作为一个节点挂到外层
-            outer.attach_forward(inner.build(), user_id=node_uid, nickname=name)
-
-        return outer.build()
+        return fwd.build()
 
     # ---- core logic ----
 
@@ -369,8 +365,10 @@ class GameInfo(NcatBotPlugin):
         full_report=False (定时检查): 发送到配置的目标群，仅返回新视频。
         start_ts/end_ts: 指定时间范围（时间戳）。
         """
+        _log.info("[gameinfo] _check_and_send 开始, full_report=%s", full_report)
         uids = self._get_uids()
         target_groups = self._get_target_groups()
+        _log.info("[gameinfo] uids=%s, target_groups=%s", uids, target_groups)
 
         if not uids:
             msg = "[gameinfo] 未配置监控 UID，请检查 config.yaml"
@@ -384,24 +382,40 @@ class GameInfo(NcatBotPlugin):
         else:
             send_to = target_groups
 
+        # 调试模式：只发送到指定群
+        if bot_state.is_debug_mode():
+            debug_gid = bot_state.get_debug_group()
+            send_to = [g for g in send_to if str(g) == debug_gid]
+            _log.info("[gameinfo] 调试模式: send_to=%s (debug_gid=%s)", send_to, debug_gid)
+            if not send_to:
+                return
+
         if not send_to:
             msg = "[gameinfo] 未配置目标群，请检查 config.yaml"
             if source_event:
                 await self.api.qq.post_group_msg(source_event.group_id, text=msg)
             return
 
+        _log.info("[gameinfo] 加载已发送记录...")
         sent_videos = self._load_sent_videos()
+        _log.info("[gameinfo] 已发送记录加载完成, 开始获取视频")
         all_result: dict = {}
         total_count = 0
 
         for uid in uids:
-            videos = await self._get_user_videos(uid, start_ts, end_ts)
+            _log.info("[gameinfo] 正在获取 UID %s 的视频...", uid)
+            try:
+                videos = await self._get_user_videos(uid, start_ts, end_ts)
+            except Exception as e:
+                _log.error("[gameinfo] 获取 UID %s 视频失败: %s", uid, e)
+                continue
+            _log.info("[gameinfo] UID %s 获取到 %d 个视频", uid, len(videos) if videos else 0)
             if not videos:
                 continue
 
             if full_report:
-                # /gameinfo: 返回全部视频，不检查去重
-                selected = videos
+                # /gameinfo: 返回全部视频，不检查去重，但限制数量避免超时
+                selected = videos[:10]
             else:
                 # 定时检查: 只返回尚未发送的视频
                 sent_set: set[str] = set(sent_videos.get(str(uid), []))
@@ -431,6 +445,7 @@ class GameInfo(NcatBotPlugin):
             self._save_sent_videos(sent_videos)
 
         forward = self._build_forward(all_result, date_label)
+        _log.info("[gameinfo] 转发消息构建完成, 共 %d 个节点, %d 个视频", len(forward.content) if forward.content else 0, total_count)
 
         for gid in send_to:
             try:
@@ -517,7 +532,12 @@ class GameInfo(NcatBotPlugin):
 
     @registrar.qq.on_group_message()
     async def _on_group_msg(self, event: GroupMessageEvent):
+        # 调试模式：只允许指定群
+        if bot_state.is_debug_mode() and str(event.group_id) != bot_state.get_debug_group():
+            _log.info("[gameinfo] 调试模式过滤: 群=%s (仅允许 %s)", event.group_id, bot_state.get_debug_group())
+            return
         text = self._extract_text(event)
+        _log.info("[gameinfo] 收到群消息: 群=%s 文本=%r", event.group_id, text)
         if text == "/gameinfo":
             _log.info("[gameinfo] 收到 /gameinfo 指令，群=%s 用户=%s", event.group_id, event.user_id)
             await self._check_and_send(event, full_report=True)

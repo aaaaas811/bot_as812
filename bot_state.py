@@ -3,7 +3,12 @@ MASTER_UIN = "3196611630"
 MARIA_UIN = "1634483575"
 HUNGRY_UIN = "249638876"
 ADMIN_UINS = {MASTER_UIN, MARIA_UIN, HUNGRY_UIN}
+
 _sleeping = False
+_debug_mode = False
+_debug_group = "1042029905"
+
+
 def set_sleep(flag: bool):
     global _sleeping
     _sleeping = bool(flag)
@@ -13,8 +18,22 @@ def is_sleeping() -> bool:
     return _sleeping
 
 
+def set_debug_mode(flag: bool):
+    global _debug_mode
+    _debug_mode = bool(flag)
+
+
+def is_debug_mode() -> bool:
+    return _debug_mode
+
+
+def get_debug_group() -> str:
+    return _debug_group
+
+
 from functools import wraps
 from typing import Iterable, Optional
+
 
 def ignore_if_sleeping(allow_uins: Optional[Iterable[str]] = None, user_attr: str = "user_id", allow_group_admins: bool = False):
     """
@@ -32,6 +51,13 @@ def ignore_if_sleeping(allow_uins: Optional[Iterable[str]] = None, user_attr: st
                 if hasattr(a, user_attr):
                     msg = a
                     break
+
+            # 调试模式：只允许指定群活跃
+            if _debug_mode and msg is not None:
+                gid = getattr(msg, "group_id", None)
+                if gid is not None and str(gid) != _debug_group:
+                    return
+
             if is_sleeping():
                 uid = getattr(msg, user_attr, None)
                 # 首先按显式白名单判断
