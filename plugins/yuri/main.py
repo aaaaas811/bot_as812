@@ -1,7 +1,8 @@
 import sdk_compat  # noqa: F401
+import json
 from ncatbot.plugin import NcatBotPlugin
 from ncatbot.core import registrar
-from ncatbot.event.qq import GroupMessageEvent
+from ncatbot.event.qq import GroupMessageEvent, PrivateMessageEvent
 from ncatbot.utils.logger import get_log
 import bot_state
 import requests
@@ -36,12 +37,31 @@ class Yuri(NcatBotPlugin):
         super().__init__(*args, **kwargs)
         self.image_cache_dir = Path(__file__).parent / "image_cache"
         self.data_dir = Path(__file__).parent / "data"
+        self._settings_path = Path(__file__).parent / "settings.json"
         self.image_cache_dir.mkdir(parents=True, exist_ok=True)
+        self._scheduled_enabled = self._load_settings().get("scheduled_enabled", False)
+
+    def _load_settings(self) -> dict:
+        if self._settings_path.exists():
+            try:
+                return json.loads(self._settings_path.read_text(encoding="utf-8"))
+            except Exception as e:
+                _log.warning(f"读取 yuri 设置失败: {e}")
+        return {}
+
+    def _save_settings(self):
+        settings = self._load_settings()
+        settings["scheduled_enabled"] = self._scheduled_enabled
+        self._settings_path.write_text(
+            json.dumps(settings, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
 
     async def on_load(self):
         print(f"{self.name} 插件已加载")
         print(f"插件版本: {self.version}")
-        
+        state = "启用" if self._scheduled_enabled else "禁用"
+        print(f"定时任务状态: {state}")
+
         # 注册定时任务：每隔3小时发布一次，从00:00开始
         time_interval = 3  # 小时
         try:
@@ -50,11 +70,26 @@ class Yuri(NcatBotPlugin):
                 self.add_scheduled_task(
                     name=f"daily_task_{i}",
                     interval=time_str,
+                    conditions=[lambda: self._scheduled_enabled],
                     callback=self.daily_task,
                 )
             print(f"已注册定时任务：每隔{time_interval}小时发布一次")
         except Exception as e:
             print(f"注册定时任务失败: {e}")
+    @registrar.qq.on_private_message()
+    async def on_private_message(self, event: PrivateMessageEvent):
+        text = (event.raw_message or "").strip()
+        if text == "/开启定时任务":
+            self._scheduled_enabled = True
+            self._save_settings()
+            await self.api.qq.post_private_msg(event.user_id, text="✅ 定时任务已开启")
+            _log.info("定时任务已通过私聊开启")
+        elif text == "/关闭定时任务":
+            self._scheduled_enabled = False
+            self._save_settings()
+            await self.api.qq.post_private_msg(event.user_id, text="❌ 定时任务已关闭")
+            _log.info("定时任务已通过私聊关闭")
+
     @bot_state.ignore_if_sleeping()
     async def daily_task(self):
         """定时任务：随机执行一个指令"""
