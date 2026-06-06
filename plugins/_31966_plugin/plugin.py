@@ -28,12 +28,12 @@ try:
     from as812.core.config_manager import ConfigManager
     from as812.core.log_manager import LogManager
     from as812.models.message_models import BotResponse
-    from as812.responses.CatCatRes import cat_cat_response
+    from as812.responses.CatCatRes import cat_cat_response, get_reply_lock
 except ModuleNotFoundError:
     from plugins.as812.core.config_manager import ConfigManager
     from plugins.as812.core.log_manager import LogManager
     from plugins.as812.models.message_models import BotResponse
-    from plugins.as812.responses.CatCatRes import cat_cat_response
+    from plugins.as812.responses.CatCatRes import cat_cat_response, get_reply_lock
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -186,6 +186,13 @@ class PluginPlugin(NcatBotPlugin):
                 await self.api.qq.send_poke(event.group_id, event.user_id)
             await asyncio.sleep(self.cyc_wait_time)
 
+        # 阻塞机制：若该群已有回复正在生成中，跳过本次戳一戳 AI 回复
+        group_id = str(event.group_id)
+        reply_lock = get_reply_lock(group_id)
+        if reply_lock.locked():
+            self.logger.info(f"群 {group_id} 正在生成回复中，跳过戳一戳 AI 回复")
+            return
+
         try:
             config_path = AS812_DIR / "config" / "config.yaml"
             with open(config_path, "r", encoding="utf-8") as f:
@@ -213,7 +220,8 @@ class PluginPlugin(NcatBotPlugin):
                 }
             )
 
-            response = await cat_cat_response(api_key, chat_history, cat_prompt)
+            async with reply_lock:
+                response = await cat_cat_response(api_key, chat_history, cat_prompt)
             if response:
                 await self._send_response_like_as812(event.group_id, response)
         except Exception as exc:

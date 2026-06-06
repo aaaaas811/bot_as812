@@ -1,10 +1,22 @@
 from ..utils.api_utils import call_deepseek_chat_api, call_local_chat_api, call_image_recognition
 from ncatbot.utils.logger import get_log
+import asyncio
 import re
 import json
 import os
 import aiohttp
 _log = get_log()
+
+# 跨插件共享的回复阻塞锁：key=group_id, value=asyncio.Lock
+# 当 LLM 正在为某个群生成回复时，同群的其他触发源（被动、主动、戳一戳）将被跳过
+_reply_locks: dict[str, asyncio.Lock] = {}
+
+
+def get_reply_lock(group_id: str) -> asyncio.Lock:
+    """获取或创建群组对应的回复阻塞锁（跨插件共享）"""
+    if group_id not in _reply_locks:
+        _reply_locks[group_id] = asyncio.Lock()
+    return _reply_locks[group_id]
 # 每次回复输入的内容为：
 # bot人设
 # 回复规则

@@ -8,7 +8,7 @@ from ..models.message_models import ChatMessage, BotResponse
 from ..core.config_manager import ConfigManager
 from ..core.log_manager import LogManager
 from .message_handler import MessageHandler
-from ..responses.CatCatRes import cat_cat_response
+from ..responses.CatCatRes import cat_cat_response, get_reply_lock as _get_shared_reply_lock
 
 _log = get_log()
 
@@ -26,6 +26,10 @@ class ResponseHandler:
         # 按群组维护主动回复互斥锁，避免并发消息导致主动回复重复触发
         self._active_reply_locks = {}
     
+    def _get_reply_lock(self, group_id: str) -> asyncio.Lock:
+        """获取或创建群组对应的回复阻塞锁（跨插件共享）"""
+        return _get_shared_reply_lock(group_id)
+
     async def process_passive_response(self, 
                                       api_key: str, 
                                       msg: ChatMessage, 
@@ -35,7 +39,13 @@ class ResponseHandler:
         # 关键判断：只有被@或消息中包含812时才回复
         if not msg.force_reply:
             return None
-        
+
+        # 阻塞机制：若该群已有回复正在生成中，跳过本次触发
+        reply_lock = self._get_reply_lock(group_id)
+        if reply_lock.locked():
+            _log.info(f"群 {group_id} 正在生成回复中，跳过本次被动触发")
+            return None
+
         user_qq = msg.user.qq
         
         # 加载个人数据
@@ -59,16 +69,17 @@ class ResponseHandler:
         if self.rag_manager and self.rag_manager.should_retrieve(msg.message):
             rag_context, _ = self.rag_manager.retrieve(msg.message)
 
-        # 生成回复
+        # 生成回复（加锁，阻塞期间同群新消息不会再次触发）
         _log.info("开始生成回复……")
         image_api_key = self.config_manager.get_image_api_key()
-        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
-        
+        async with reply_lock:
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+
         if not response:
             return None
-        
+
         _log.info(f"812：{response}")
-        
+
         # 保存机器人回复
         bot_qq = self.config_manager.get_bt_uin()
         bot_response = BotResponse(
@@ -76,23 +87,29 @@ class ResponseHandler:
             message=response,
             qq=bot_qq
         )
-        
+
         # 记录内存中的最后回复时间，优先使用此时间判断主动回复延迟
         try:
             self._last_bot_message_time[group_id] = bot_response.timestamp
         except Exception:
             pass
-        
+
         # 保存到个人日志
         self._append_to_personal_chat_history(personal_log_file, f"812：{response}")
-        
+
         return response
     
-    async def process_active_response(self, 
-                                     api_key: str, 
-                                     cat_prompt: str, 
+    async def process_active_response(self,
+                                     api_key: str,
+                                     cat_prompt: str,
                                      group_id: str) -> Optional[str]:
         """处理主动回复"""
+        # 阻塞机制：若该群已有回复正在生成中，跳过本次触发
+        reply_lock = self._get_reply_lock(group_id)
+        if reply_lock.locked():
+            _log.info(f"群 {group_id} 正在生成回复中，跳过本次主动触发")
+            return None
+
         group_lock = self._active_reply_locks.get(group_id)
         if group_lock is None:
             group_lock = asyncio.Lock()
@@ -173,10 +190,11 @@ class ResponseHandler:
             if self.rag_manager and self.rag_manager.should_retrieve(current_message.get("message", "")):
                 rag_context, _ = self.rag_manager.retrieve(current_message.get("message", ""))
 
-            # 生成回复
+            # 生成回复（加锁，阻塞期间同群新消息不会再次触发）
             _log.info("开始主动生成回复……")
             image_api_key = self.config_manager.get_image_api_key()
-            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+            async with reply_lock:
+                response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
         
             if not response:
                 return None
