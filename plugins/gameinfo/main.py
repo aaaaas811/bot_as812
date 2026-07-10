@@ -341,8 +341,8 @@ class GameInfo(NcatBotPlugin):
 
                 msg = MessageArray()
                 msg.add_text(text)
-                if video["pic"]:
-                    msg.add_image(video["pic"])
+                # if video["pic"]:
+                #     msg.add_image(video["pic"])
 
                 fwd.attach_message(msg, user_id=node_uid, nickname=name)
 
@@ -415,7 +415,7 @@ class GameInfo(NcatBotPlugin):
 
             if full_report:
                 # /gameinfo: 返回全部视频，不检查去重，但限制数量避免超时
-                selected = videos[:10]
+                selected = videos[:5]
             else:
                 # 定时检查: 只返回尚未发送的视频
                 sent_set: set[str] = set(sent_videos.get(str(uid), []))

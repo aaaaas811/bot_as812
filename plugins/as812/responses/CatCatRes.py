@@ -180,7 +180,11 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
             obj = json.loads(tool_json)
             tc = obj.get('tool_call', {})
             if tc.get('name') == 'vision_recognize':
-                idx = int(tc.get('image_index', 0))
+                raw_idx = tc.get('image_index', 0)
+                # 兼容 image_index 为列表的情况（如 [0]）
+                if isinstance(raw_idx, list):
+                    raw_idx = raw_idx[0] if raw_idx else 0
+                idx = int(raw_idx)
 
                 # 从 messages 中寻找被列出的图片 url（我们在 build_chat_history 中以 system 行列出）
                 img_url = None
@@ -335,6 +339,6 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
                 return response2.strip('"')
         except Exception:
             _log.exception('处理工具调用失败')
-            return response.strip('"')
+            return ""
     except Exception as e:
         print(f"as812响应生成错误: {str(e)}")

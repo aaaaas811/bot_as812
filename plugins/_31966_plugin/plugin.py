@@ -54,9 +54,22 @@ class PluginPlugin(NcatBotPlugin):
         self.emoji_wait_time = 0.1
         self.poke_back_times = 1
         self.poke_back_enabled = True
+        self.poke_delay = self._load_poke_delay()
+        self._last_poke_time: dict[str, float] = {}
         self.famous_words_time = 3600
         self.config_manager = ConfigManager()
         self.log_manager = LogManager()
+
+    @staticmethod
+    def _load_poke_delay() -> int:
+        """从 config.yaml 读取戳一戳冷却时间，读取失败时返回 0（不限制）。"""
+        try:
+            config_path = AS812_DIR / "config" / "config.yaml"
+            with open(config_path, "r", encoding="utf-8") as f:
+                cfg = yaml.safe_load(f) or {}
+            return int(cfg.get("poke_delay", 60))
+        except Exception:
+            return 60
 
     async def on_load(self):
         self.logger.info(f"{self.name} 已加载")
@@ -180,6 +193,18 @@ class PluginPlugin(NcatBotPlugin):
         target_id = getattr(event.data, "target_id", None)
         if str(target_id) != str(event.self_id) or not self.poke_back_enabled:
             return
+
+        # 戳一戳冷却：poke_delay 秒内同一群不允许再次触发
+        if self.poke_delay > 0:
+            group_key = str(event.group_id)
+            now = time.time()
+            last = self._last_poke_time.get(group_key, 0)
+            if now - last < self.poke_delay:
+                self.logger.info(
+                    f"群 {group_key} 戳一戳冷却中（{self.poke_delay}s），跳过本次触发"
+                )
+                return
+            self._last_poke_time[group_key] = now
 
         for _ in range(self.poke_back_times):
             if event.group_id and event.user_id:
