@@ -22,6 +22,7 @@ from .core.log_manager import LogManager
 from .handlers.message_handler import MessageHandler
 from .handlers.response_handler import ResponseHandler
 from .handlers.mood_handler import MoodHandler
+from .handlers.sender import ResponseSender
 from .handlers.command_handler import CommandHandler
 from .handlers.bilibili_handler import BilibiliHandler
 from .models.message_models import BotResponse
@@ -118,13 +119,25 @@ class as812(NcatBotPlugin):
             self.rag_manager = None
 
         self.message_handler = MessageHandler(self.config_manager, self.log_manager)
+        self.mood_handler = MoodHandler(self.config_manager)
         self.response_handler = ResponseHandler(
             self.config_manager,
             self.log_manager,
             self.message_handler,
-            self.rag_manager
+            self.rag_manager,
+            self.mood_handler
         )
-        self.mood_handler = MoodHandler(self.config_manager)
+        # 展示层：发送/渲染回复（表情包、指令、节奏）
+        self.sender = ResponseSender(
+            self.config_manager,
+            self.log_manager,
+            self.mood_handler,
+            self._assets_dir,
+            self._qq_post_group_msg,
+            self._qq_post_private_msg,
+            self._qq_delete_msg,
+            self._set_emotion,
+        )
         self.command_handler = CommandHandler(
             self.config_manager,
             self.prompt_manager,
@@ -239,6 +252,9 @@ class as812(NcatBotPlugin):
             private_group_id, chat_message
         )
 
+        # 注入当前心情（若已设置），让回复带有情绪
+        self.mood_handler.inject_mood(chat_history, private_group_id)
+
         # RAG 检索
         rag_context = ""
         if self.rag_manager and self.rag_manager.should_retrieve(chat_message.message):
@@ -265,7 +281,7 @@ class as812(NcatBotPlugin):
         self.log_manager.save_bot_response(private_group_id, bot_response)
 
         # 发送回复
-        await self._send_private_response(msg.user_id, response)
+        await self.sender.send_private_response(msg.user_id, response)
 
     @registrar.qq.on_group_command("测试as812")
     @bot_state.ignore_if_sleeping()
@@ -323,63 +339,7 @@ class as812(NcatBotPlugin):
         chat_message = self.message_handler.parse_group_message(msg)
 
         # 若消息引用了其他消息，尝试通过 API 展开引用内容后再保存
-        try:
-            if getattr(chat_message, "reply_id", None):
-                try:
-                    orig_event = await self._qq_get_msg(chat_message.reply_id)
-                    # 优先使用 raw_message（若存在），否则尝试展平 message 段数组
-                    orig_text = None
-                    if hasattr(orig_event, "raw_message") and orig_event.raw_message:
-                        orig_text = orig_event.raw_message
-                    else:
-                        # 尝试 message 属性（可能为列表）
-                        if hasattr(orig_event, "message") and orig_event.message:
-                            parts = []
-                            for seg in orig_event.message:
-                                try:
-                                    if isinstance(seg, dict):
-                                        if seg.get("type") == "text":
-                                            parts.append(seg.get("data", {}).get("text", ""))
-                                    else:
-                                        if getattr(seg, "msg_seg_type", None) == "text":
-                                            parts.append(getattr(seg, "text", ""))
-                                except Exception:
-                                    continue
-                            orig_text = "".join(parts).strip()
-
-                    if orig_text:
-                        # 尝试获取被引用消息的用户 card（优先）或昵称作为标识
-                        try:
-                            sender = getattr(orig_event, "sender", None)
-                            card = None
-                            if sender is not None:
-                                card = getattr(sender, "card", None) or getattr(sender, "nickname", None) or getattr(sender, "user_id", None)
-                            if not card:
-                                # 兼容字典式 sender
-                                try:
-                                    card = orig_event.get("sender", {}).get("card") or orig_event.get("sender", {}).get("nickname")
-                                except Exception:
-                                    card = None
-                        except Exception:
-                            card = None
-
-                        # 格式化引用为 [引用:card:内容]，若 card 为空则省略 card
-                        if card:
-                            expanded = f"[引用:{card}:{orig_text}]"
-                        else:
-                            expanded = f"[引用:{orig_text}]"
-
-                        # 如果解析阶段意外已将简单引用文本加入（如 [引用:efrfr]），先移除简单占位，避免重复
-                        import re
-                        chat_msg = chat_message.message or ""
-                        # 删除形如 [引用:... ] 的最前面一项（只删除第一个匹配），以便用 expanded 替换
-                        chat_msg = re.sub(r'^\[引用:[^\]]+\]\s*', '', chat_msg, count=1)
-
-                        chat_message.message = f"{expanded} " + chat_msg
-                except Exception as e:
-                    _log.debug(f"拉取引用消息失败: {e}")
-        except Exception:
-            pass
+        await self._expand_reply_content(chat_message)
 
         # 保存用户消息到群历史
         self.log_manager.save_group_message(str(msg.group_id), chat_message)
@@ -402,7 +362,7 @@ class as812(NcatBotPlugin):
             random_response_way = self.config_manager.get_random_response_way()
             if random.random() < random_response_way:
                 reply_id = msg.message_id
-            await self._send_response(msg.group_id, response, reply_id)
+            await self.sender.send_group_response(msg.group_id, response, reply_id)
         else:
             # 尝试主动回复
             active_group_ids = self.config_manager.get_active_group_ids()
@@ -413,7 +373,7 @@ class as812(NcatBotPlugin):
                     str(msg.group_id)
                 )
                 if active_response:
-                    await self._send_response(msg.group_id, active_response)
+                    await self.sender.send_group_response(msg.group_id, active_response)
                 else:
                     _log.info("未发送主动回复：延迟条件未满足或无可用用户消息")
             else:
@@ -585,315 +545,83 @@ class as812(NcatBotPlugin):
             return
         await self.bilibili_handler.handle_dynamic_new(event)
     
-    async def _send_response(self, group_id: int, response: str, reply_id: str = None):
-        """发送回复消息"""
+    async def _set_emotion(self, group_id: int, mood: str) -> None:
+        """##set_emotion 指令副作用：保存心情文件并更新群名片（不发送到群）"""
         try:
-            pause_multiplier, line_pause_multiplier = self.config_manager.get_pause_multipliers()
-            
-            # 将回复按空行分段
-            paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", response) if p.strip()]
-            last_sent_id = None
-            is_first_message = True  # 标记是否为第一条消息
-            
-            for para in paragraphs:
-                # 段内若有多行，则按行分别发送
-                lines = [l.strip() for l in para.splitlines() if l.strip()]
-                
-                for line in lines:
-                    # 处理发表情包指令：支持两种格式：[EMOJI]名称 或 ##emoji 名称（支持可选中括号）
-                    m_em_bracket = re.match(r"^\[EMOJI\]\s*([^\s\]]+)$", line)
-                    m_em_hash = re.match(r"^##emoji\s*\[?([^\]\s]+)\]?$", line, flags=re.IGNORECASE)
-                    m = m_em_bracket or m_em_hash
-                    if m:
-                        emoji_name = m.group(1)
-                        try:
-                            # 只在 assests 根目录查找（不递归子目录）
-                            sent = False
-                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
-                                img_path = self._assets_dir / f"{emoji_name}{ext}"
-                                if img_path.exists() and img_path.is_file():
-                                    try:
-                                        data = img_path.read_bytes()
-                                        b64 = base64.b64encode(data).decode()
-                                        res = await self._qq_post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
-                                    except Exception as e:
-                                        _log.error(f"发送表情包失败: {e}")
-                                        res = None
-
-                                    if res:
-                                        last_sent_id = str(res)
-                                        try:
-                                            import time as _time
-                                            bot_qq = self.config_manager.get_bt_uin() or "812"
-                                            bot_resp = BotResponse(timestamp=float(_time.time()), message=f"[EMOJI]{emoji_name}", qq=str(bot_qq))
-                                            self.log_manager.save_bot_response(str(group_id), bot_resp)
-                                        except Exception as e:
-                                            _log.warning(f"保存机器人回复日志失败: {e}")
-                                        is_first_message = False  # 发送成功后，标记不再是第一条消息
-
-                                    sent = True
-                                    break
-
-                            if not sent:
-                                # 未找到对应文件，发送提示文本
-                                try:
-                                    res = await self._qq_post_group_msg(group_id, text=f"表情包不存在: {emoji_name}", reply=reply_id if is_first_message else None)
-                                except Exception as e:
-                                    _log.error(f"发送消息失败: {e}")
-                                    res = None
-
-                                if res:
-                                    last_sent_id = str(res)
-                                    is_first_message = False  # 发送成功后，标记不再是第一条消息
-
-                            # 表情包指令处理完毕，继续下一行
-                        except Exception as e:
-                            _log.warning(f"处理表情包指令失败: {e}")
-                        continue
-
-                    # 处理行内表情：例如“唔...我不太懂呢[奶龙大笑]”
-                    # 仅当中括号内容能匹配到本地表情文件时，才拆分为文本+表情发送。
-                    inline_matches = list(re.finditer(r"\[([^\[\]\s]+)\]", line))
-                    if inline_matches:
-                        cursor = 0
-                        handled_inline_emoji = False
-
-                        for inline_match in inline_matches:
-                            emoji_name = inline_match.group(1)
-                            emoji_path = None
-                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
-                                candidate = self._assets_dir / f"{emoji_name}{ext}"
-                                if candidate.exists() and candidate.is_file():
-                                    emoji_path = candidate
-                                    break
-
-                            # 未命中本地表情文件时，保留原文本，不将 [] 视为表情指令。
-                            if emoji_path is None:
-                                continue
-
-                            text_chunk = line[cursor:inline_match.start()].strip()
-                            if text_chunk:
-                                try:
-                                    res = await self._qq_post_group_msg(group_id, text=text_chunk, reply=reply_id if is_first_message else None)
-                                except Exception as e:
-                                    _log.error(f"发送消息失败: {e}")
-                                    res = None
-
-                                if res:
-                                    last_sent_id = str(res)
-                                    try:
-                                        import time as _time
-                                        bot_qq = self.config_manager.get_bt_uin() or "812"
-                                        bot_resp = BotResponse(timestamp=float(_time.time()), message=text_chunk, qq=str(bot_qq))
-                                        self.log_manager.save_bot_response(str(group_id), bot_resp)
-                                    except Exception as e:
-                                        _log.warning(f"保存机器人回复日志失败: {e}")
-                                    is_first_message = False
-
-                            try:
-                                data = emoji_path.read_bytes()
-                                b64 = base64.b64encode(data).decode()
-                                res = await self._qq_post_group_msg(group_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
-                            except Exception as e:
-                                _log.error(f"发送表情包失败: {e}")
-                                res = None
-
-                            if res:
-                                last_sent_id = str(res)
-                                try:
-                                    import time as _time
-                                    bot_qq = self.config_manager.get_bt_uin() or "812"
-                                    bot_resp = BotResponse(timestamp=float(_time.time()), message=f"[EMOJI]{emoji_name}", qq=str(bot_qq))
-                                    self.log_manager.save_bot_response(str(group_id), bot_resp)
-                                except Exception as e:
-                                    _log.warning(f"保存机器人回复日志失败: {e}")
-                                is_first_message = False
-
-                            handled_inline_emoji = True
-                            cursor = inline_match.end()
-
-                        if handled_inline_emoji:
-                            tail_text = line[cursor:].strip()
-                            if tail_text:
-                                try:
-                                    res = await self._qq_post_group_msg(group_id, text=tail_text, reply=reply_id if is_first_message else None)
-                                except Exception as e:
-                                    _log.error(f"发送消息失败: {e}")
-                                    res = None
-
-                                if res:
-                                    last_sent_id = str(res)
-                                    try:
-                                        import time as _time
-                                        bot_qq = self.config_manager.get_bt_uin() or "812"
-                                        bot_resp = BotResponse(timestamp=float(_time.time()), message=tail_text, qq=str(bot_qq))
-                                        self.log_manager.save_bot_response(str(group_id), bot_resp)
-                                    except Exception as e:
-                                        _log.warning(f"保存机器人回复日志失败: {e}")
-                                    is_first_message = False
-
-                            await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
-                            continue
-
-                    if line == "##revoke":
-                        if last_sent_id:
-                            try:
-                                await self._qq_delete_msg(last_sent_id)
-                            except Exception as e:
-                                _log.error(f"撤回消息失败: {e}")
-                        continue
-                    if line == "##should not say":
-                        break
-                    if line.startswith("##set_emotion "):
-                        # 心情设置指令：提取心情并保存到日志文件（不发送到群）
-                        try:
-                            mood_val = line[len("##set_emotion "):].strip()
-                            # 保存到 plugins/as812/logs/{group_id}_mood.json
-                            try:
-                                self.mood_handler.save_mood_state(str(group_id), {"mood": mood_val})
-                            except Exception as e:
-                                _log.warning(f"保存心情文件失败: {e}")
-                            # 尝试通过 mood_handler 更新群名片（异步方法）
-                            try:
-                                await self.mood_handler._update_group_card(self.api, group_id, mood_val)
-                            except Exception as e:
-                                _log.warning(f"设置群名片失败: {e}")
-                        except Exception as e:
-                            _log.warning(f"处理 ##set_emotion 指令失败: {e}")
-                        continue
-                    try:
-                        res = await self._qq_post_group_msg(group_id, text=line, reply=reply_id if is_first_message else None)
-                    except Exception as e:
-                        _log.error(f"发送消息失败: {e}")
-                        res = None
-                    
-                    # 保存消息ID
-                    if res:
-                        last_sent_id = str(res)
-                        # 记录机器人发送的回复到群历史
-                        try:
-                            import time as _time
-                            bot_qq = self.config_manager.get_bt_uin() or "812"
-                            bot_resp = BotResponse(timestamp=float(_time.time()), message=line, qq=str(bot_qq))
-                            self.log_manager.save_bot_response(str(group_id), bot_resp)
-                        except Exception as e:
-                            _log.warning(f"保存机器人回复日志失败: {e}")
-                        is_first_message = False  # 发送成功后，标记不再是第一条消息
-                    
-                    await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
-                
-                # 段间短暂停顿
-                await asyncio.sleep(pause_multiplier * len(para))
-                
+            try:
+                self.mood_handler.save_mood_state(str(group_id), {"mood": mood})
+            except Exception as e:
+                _log.warning(f"保存心情文件失败: {e}")
+            try:
+                await self.mood_handler._update_group_card(self.api, group_id, mood)
+            except Exception as e:
+                _log.warning(f"设置群名片失败: {e}")
         except Exception as e:
-            _log.error(f"发送回复消息失败: {e}")
+            _log.warning(f"处理 ##set_emotion 指令失败: {e}")
 
-    async def _send_private_response(self, user_id: int, response: str, reply_id: str = None):
-        """发送私聊回复消息"""
+    async def _expand_reply_content(self, chat_message) -> None:
+        """尝试拉取被引用消息的原文，展开为 [引用:昵称:内容] 供模型理解上下文。"""
         try:
-            pause_multiplier, line_pause_multiplier = self.config_manager.get_pause_multipliers()
+            reply_id = getattr(chat_message, "reply_id", None)
+            if not reply_id:
+                return
+            try:
+                orig_event = await self._qq_get_msg(reply_id)
+                orig_text = self._extract_referenced_text(orig_event)
+                if not orig_text:
+                    return
+                label = self._extract_referenced_sender(orig_event)
+                expanded = f"[引用:{label}:{orig_text}]" if label else f"[引用:{orig_text}]"
+                # 若解析阶段已将简单引用占位加入（如 [引用:efrfr]），先移除，避免重复
+                chat_msg = chat_message.message or ""
+                chat_msg = re.sub(r'^\[引用:[^\]]+\]\s*', '', chat_msg, count=1)
+                chat_message.message = f"{expanded} " + chat_msg
+            except Exception as e:
+                _log.debug(f"拉取引用消息失败: {e}")
+        except Exception:
+            pass
 
-            paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", response) if p.strip()]
-            is_first_message = True
+    @staticmethod
+    def _extract_referenced_text(event) -> str:
+        """从被引用消息事件中提取文本（兼容 raw_message 与 message 段数组）。"""
+        try:
+            if getattr(event, "raw_message", None):
+                return str(event.raw_message)
+        except Exception:
+            pass
+        try:
+            parts = []
+            for seg in getattr(event, "message", None) or []:
+                try:
+                    if isinstance(seg, dict):
+                        if seg.get("type") == "text":
+                            parts.append(seg.get("data", {}).get("text", ""))
+                    elif getattr(seg, "msg_seg_type", None) == "text":
+                        parts.append(getattr(seg, "text", ""))
+                except Exception:
+                    continue
+            return "".join(parts).strip()
+        except Exception:
+            return ""
+        return ""
 
-            for para in paragraphs:
-                lines = [l.strip() for l in para.splitlines() if l.strip()]
+    @staticmethod
+    def _extract_referenced_sender(event) -> str:
+        """从被引用消息事件中提取发送者标识（card 优先，其次昵称、QQ）。"""
+        try:
+            sender = getattr(event, "sender", None)
+            if sender is not None:
+                card = getattr(sender, "card", None) or getattr(sender, "nickname", None) or getattr(sender, "user_id", None)
+                if card:
+                    return str(card)
+            try:
+                sender = event.get("sender", {}) if isinstance(event, dict) else {}
+                card = sender.get("card") or sender.get("nickname")
+                if card:
+                    return str(card)
+            except Exception:
+                pass
+        except Exception:
+            pass
+        return ""
 
-                for line in lines:
-                    # 表情包指令
-                    m_em_bracket = re.match(r"^\[EMOJI\]\s*([^\s\]]+)$", line)
-                    m_em_hash = re.match(r"^##emoji\s*\[?([^\]\s]+)\]?$", line, flags=re.IGNORECASE)
-                    m = m_em_bracket or m_em_hash
-                    if m:
-                        emoji_name = m.group(1)
-                        try:
-                            sent = False
-                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
-                                img_path = self._assets_dir / f"{emoji_name}{ext}"
-                                if img_path.exists() and img_path.is_file():
-                                    try:
-                                        data = img_path.read_bytes()
-                                        b64 = base64.b64encode(data).decode()
-                                        await self._qq_post_private_msg(user_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
-                                    except Exception as e:
-                                        _log.error(f"发送表情包失败: {e}")
-                                    sent = True
-                                    is_first_message = False
-                                    break
-
-                            if not sent:
-                                try:
-                                    await self._qq_post_private_msg(user_id, text=f"表情包不存在: {emoji_name}", reply=reply_id if is_first_message else None)
-                                except Exception as e:
-                                    _log.error(f"发送消息失败: {e}")
-                                is_first_message = False
-                        except Exception as e:
-                            _log.warning(f"处理表情包指令失败: {e}")
-                        continue
-
-                    # 行内表情
-                    inline_matches = list(re.finditer(r"\[([^\[\]\s]+)\]", line))
-                    if inline_matches:
-                        cursor = 0
-                        handled_inline_emoji = False
-
-                        for inline_match in inline_matches:
-                            emoji_name = inline_match.group(1)
-                            emoji_path = None
-                            for ext in (".png", ".jpg", ".jpeg", ".gif"):
-                                candidate = self._assets_dir / f"{emoji_name}{ext}"
-                                if candidate.exists() and candidate.is_file():
-                                    emoji_path = candidate
-                                    break
-
-                            if emoji_path is None:
-                                continue
-
-                            text_chunk = line[cursor:inline_match.start()].strip()
-                            if text_chunk:
-                                try:
-                                    await self._qq_post_private_msg(user_id, text=text_chunk, reply=reply_id if is_first_message else None)
-                                except Exception as e:
-                                    _log.error(f"发送消息失败: {e}")
-                                is_first_message = False
-
-                            try:
-                                data = emoji_path.read_bytes()
-                                b64 = base64.b64encode(data).decode()
-                                await self._qq_post_private_msg(user_id, image=f"base64://{b64}", reply=reply_id if is_first_message else None)
-                            except Exception as e:
-                                _log.error(f"发送表情包失败: {e}")
-                            is_first_message = False
-
-                            handled_inline_emoji = True
-                            cursor = inline_match.end()
-
-                        if handled_inline_emoji:
-                            tail_text = line[cursor:].strip()
-                            if tail_text:
-                                try:
-                                    await self._qq_post_private_msg(user_id, text=tail_text, reply=reply_id if is_first_message else None)
-                                except Exception as e:
-                                    _log.error(f"发送消息失败: {e}")
-                                is_first_message = False
-
-                            await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
-                            continue
-
-                    if line == "##should not say":
-                        break
-                    if line == "##revoke":
-                        continue
-
-                    try:
-                        await self._qq_post_private_msg(user_id, text=line, reply=reply_id if is_first_message else None)
-                    except Exception as e:
-                        _log.error(f"发送消息失败: {e}")
-
-                    is_first_message = False
-                    await asyncio.sleep(line_pause_multiplier * max(1, len(line)))
-
-                await asyncio.sleep(pause_multiplier * len(para))
-
-        except Exception as e:
-            _log.error(f"发送私聊回复消息失败: {e}")

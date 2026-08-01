@@ -16,19 +16,28 @@ _log = get_log()
 class ResponseHandler:
     """响应处理器类"""
 
-    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, message_handler: MessageHandler, rag_manager=None):
+    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, message_handler: MessageHandler, rag_manager=None, mood_handler=None):
         self.config_manager = config_manager
         self.log_manager = log_manager
         self.message_handler = message_handler
         self.rag_manager = rag_manager
+        self.mood_handler = mood_handler
         # 缓存每个群组机器人最后一条消息的时间戳，避免每次从日志中遍历查找
         self._last_bot_message_time = {}
         # 按群组维护主动回复互斥锁，避免并发消息导致主动回复重复触发
         self._active_reply_locks = {}
-    
+
     def _get_reply_lock(self, group_id: str) -> asyncio.Lock:
         """获取或创建群组对应的回复阻塞锁（跨插件共享）"""
         return _get_shared_reply_lock(group_id)
+
+    def _inject_mood(self, chat_history: list, group_id: str) -> None:
+        """将当前心情注入聊天上下文，让回复语气带有情绪（未设置时零 token 开销）。"""
+        try:
+            if self.mood_handler is not None:
+                self.mood_handler.inject_mood(chat_history, group_id)
+        except Exception:
+            pass
 
     async def process_passive_response(self, 
                                       api_key: str, 
@@ -62,8 +71,10 @@ class ResponseHandler:
         chat_history = self.message_handler.build_chat_history(
             group_id, msg
         )
-        
-        
+
+        # 注入当前心情（若已设置），让回复带有情绪
+        self._inject_mood(chat_history, group_id)
+
         # RAG 检索
         rag_context = ""
         if self.rag_manager and self.rag_manager.should_retrieve(msg.message):
@@ -136,24 +147,20 @@ class ResponseHandler:
         
             # 记录用户消息到个人日志
             self._append_to_personal_chat_history(personal_log_file, current_message["message"])
-        
-            # 更新用户信息
-            current_user_info = (
-                f"QQ昵称: {current_message['nickname']}, "
-                f"QQ号: {current_message['qq']}, "
-                f"群昵称: {current_message['card']}, "
-                f"群权限: {self.message_handler.map_role(current_message['role'])}, "
-                f"群头衔: {current_message['title']}"
-            )
-        
+
+            # 构建聊天历史（复用统一格式化的用户信息，保持与被动回复一致）
+            chat_message = ChatMessage.from_dict(current_message)
+            current_user_info = self.message_handler.get_user_info_string(chat_message)
+
             if user_info_str != current_user_info:
                 self.log_manager.update_personal_log_header(personal_log_file, current_user_info)
-        
-            # 构建聊天历史
-            chat_message = ChatMessage.from_dict(current_message)
+
             chat_history = self.message_handler.build_chat_history(
                 group_id, chat_message
             )
+
+            # 注入当前心情（若已设置），让回复带有情绪
+            self._inject_mood(chat_history, group_id)
 
             # 主动回复场景：若当前消息无文本但包含图片/表情段，提示模型优先考虑识图工具。
             try:
@@ -229,11 +236,9 @@ class ResponseHandler:
     
     async def _load_personal_data(self, group_id: str, user_qq: str) -> Tuple[list, str, str]:
         """加载个人数据（异步包装）"""
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(
-            None, 
-            self.log_manager.load_personal_log, 
-            group_id, 
+        return await asyncio.to_thread(
+            self.log_manager.load_personal_log,
+            group_id,
             user_qq
         )
 
@@ -263,11 +268,13 @@ class ResponseHandler:
                         last_bot_message_time = float(timestamp)
                         break
 
-        # 如果从未发送过消息，跳过本次主动回复
+        # 如果从未发送过消息，以当前时间为基准开始计时：
+        # 本次触发仅建立基准（未达到延迟，跳过），后续触发按"从现在起"的间隔判断
         if last_bot_message_time == 0:
-            _log.info("主动回复跳过：未找到机器人历史回复时间")
-            return False
-        
+            last_bot_message_time = time.time()
+            self._last_bot_message_time[group_id] = last_bot_message_time
+            _log.info("主动回复：未找到历史回复时间，从现在开始计时")
+
         # 检查延迟
         current_time = time.time()
         time_since_last_reply = current_time - last_bot_message_time

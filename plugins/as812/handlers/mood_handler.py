@@ -1,5 +1,4 @@
 """心情处理器"""
-import yaml
 import time
 import json
 import os
@@ -38,18 +37,8 @@ class MoodHandler:
         return None
 
     def _get_bot_uin(self) -> Optional[str]:
-        """获取机器人 QQ 号，兼容 bot_uin / bt_uin 两种配置键。"""
-        try:
-            with open("config.yaml", "r", encoding="utf-8") as f:
-                root_config = yaml.safe_load(f) or {}
-        except Exception as e:
-            _log.warning(f"读取根配置失败: {e}")
-            root_config = {}
-
-        bot_uin = root_config.get("bot_uin") or root_config.get("bt_uin")
-        if not bot_uin:
-            bot_uin = self.config_manager.get_bt_uin()
-
+        """获取机器人 QQ 号（统一由 ConfigManager 归口，兼容 bot_uin / bt_uin 与根配置兜底）。"""
+        bot_uin = self.config_manager.get_bt_uin()
         if not bot_uin:
             _log.warning("未找到机器人 QQ 配置（bot_uin/bt_uin）")
             return None
@@ -86,18 +75,28 @@ class MoodHandler:
                 return False
             
             for member in members:
-                if isinstance(member, dict) and member.get('uin') == bot_uin:
-                    shut_up_time = member.get('shutUpTime', 0)
-                    _log.debug(f"找到机器人成员，shutUpTime={shut_up_time}, current_time={time.time()}")
-                    if shut_up_time > time.time():
-                        _log.info(f"812 {bot_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
-                        return True
-                elif hasattr(member, 'user_id') and str(member.user_id) == bot_uin:
-                    shut_up_time = getattr(member, 'shut_up_timestamp', 0)
-                    _log.debug(f"找到机器人成员，shut_up_timestamp={shut_up_time}, current_time={time.time()}")
-                    if shut_up_time > time.time():
-                        _log.info(f"812 {bot_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
-                        return True
+                # 兼容多种成员形态：
+                # - dict（NapCat 原生：uin / shutUpTime）
+                # - pydantic 对象（ncatbot GroupShutInfo：uin / shutUpTime）
+                # - 旧式对象（user_id / shut_up_timestamp）
+                if isinstance(member, dict):
+                    uin = member.get('uin')
+                    shut_up_time = member.get('shutUpTime', 0) or 0
+                else:
+                    uin = getattr(member, 'uin', None) or getattr(member, 'user_id', None)
+                    shut_up_time = getattr(member, 'shutUpTime', 0) or getattr(member, 'shut_up_timestamp', 0) or 0
+
+                if uin is None or str(uin) != bot_uin:
+                    continue
+
+                # 兼容时间戳单位：QQ 协议原生为毫秒（13位），部分实现为秒（10位）
+                if isinstance(shut_up_time, (int, float)) and shut_up_time > 1e12:
+                    shut_up_time = shut_up_time / 1000
+
+                _log.debug(f"找到机器人成员，解禁时间={shut_up_time}, current_time={time.time()}")
+                if shut_up_time > time.time():
+                    _log.info(f"812 {bot_uin} 被禁言至 {time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(shut_up_time))}")
+                    return True
         except Exception as e:
             _log.warning(f"检查禁言状态失败: {e}")
         return False
@@ -150,44 +149,25 @@ class MoodHandler:
         except Exception as e:
             _log.warning(f"保存心情状态失败: {e}")
 
-    def maybe_insert_mood_instruction(self, chat_history, gid: str):
-        """保留接口兼容性：当前不再通过计数插入心情生成指令。
+    def inject_mood(self, chat_history: list, gid: str) -> None:
+        """将当前心情注入聊天上下文；未设置心情时不做任何事（零 token 开销）。
 
-        使用者应当在构建 prompt 时调用 `get_current_mood_system_prompt` 将当前心情作为一条 `system` 提示加入。
-        返回原始 chat_history 且标记为未插入。
+        这是心情注入的唯一入口（被动/主动/私聊均调用它）。
         """
-        try:
-            # 读取本地配置以返回 base_name（兼容调用方期望的返回值）
-            local_cfg = {}
-            base_name = "as812（bot）"
-            cfg_path = "plugins/as812/config/config.yaml"
-            try:
-                if os.path.exists(cfg_path):
-                    with open(cfg_path, "r", encoding="utf-8") as f:
-                        local_cfg = yaml.safe_load(f) or {}
-                        base_name = local_cfg.get("bot_base_name", base_name)
-            except Exception:
-                pass
-            return chat_history, False, (local_cfg if isinstance(local_cfg, dict) else {}), base_name
-        except Exception as e:
-            _log.warning(f"maybe_insert_mood_instruction 异常: {e}")
-            return chat_history, False, {}, "as812（bot）"
+        mood = self.get_current_mood(gid)
+        if mood:
+            chat_history.append({
+                "role": "system",
+                "content": f"你当前的心情是：{mood}。回复时要自然流露出这个心情。",
+            })
 
-
-    def get_current_mood_system_prompt(self, gid: str) -> dict:
-        """返回一条 system 提示，内容为当前机器人心情（从日志文件读取）。
-
-        返回格式：{"role": "system", "content": "当前的机器人心情为：xxx"}
-        """
+    def get_current_mood(self, gid: str) -> str:
+        """返回当前心情字符串；未设置心情时返回空字符串（调用方据此决定是否注入上下文）。"""
         try:
             state = self.load_mood_state(str(gid))
-            mood = state.get("mood", "")
-            if mood:
-                return {"role": "system", "content": f"当前的机器人心情为：{mood}"}
-            else:
-                return {"role": "system", "content": "当前的机器人心情未设置。"}
+            return str(state.get("mood", "") or "").strip()
         except Exception:
-            return {"role": "system", "content": "当前的机器人心情未设置。"}
+            return ""
     
     async def _update_group_card(self, api, group_id: int, mood: str) -> None:
         """更新群名片"""

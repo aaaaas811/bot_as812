@@ -4,6 +4,8 @@ import asyncio
 import re
 import json
 import os
+import io
+import base64
 import aiohttp
 _log = get_log()
 
@@ -17,68 +19,99 @@ def get_reply_lock(group_id: str) -> asyncio.Lock:
     if group_id not in _reply_locks:
         _reply_locks[group_id] = asyncio.Lock()
     return _reply_locks[group_id]
-# 每次回复输入的内容为：
-# bot人设
-# 回复规则
-# 用户个人信息
-# 历史记录（格式化后）
-# 当前消息
-def format_group_chat(messages):
-    # 将每条历史拆成独立的 message，解析新格式：
-    # 可接受的行格式例子：
-    #   166658.6419105 manager(10101)[][member][效绿]: init catcat
-    #   166658.6430702 何山(7894652)[小何][admin][]: @812 你是谁,
-    # 或者带有前置分值：
-    #   0.852 166658.6419105 manager(10101)[][member][效绿]: init catcat
-    out = []
-    # 正则：可选分值，时间戳，昵称(qq)，三个方括号字段，冒号后消息
-    pattern = re.compile(r"^\s*(?:(?P<score>\d+\.\d+)\s+)?(?P<ts>\d+(?:\.\d+)?)\s+(?P<nick>[^()\[]+)\((?P<qq>\d+)\)\[(?P<card>[^\]]*)\]\[(?P<role>[^\]]*)\]\[(?P<title>[^\]]*)\]\s*:\s*(?P<msg>.*)$")
-    for i, message in enumerate(messages):
+
+
+async def _fetch_image_b64(u: str) -> list[str]:
+    """将图片 URL/本地路径/base64 转为 data URL 列表（GIF 会抽样拆帧）。"""
+    def _ext_to_mime(path_or_url: str) -> str:
+        low = (path_or_url or "").lower()
+        if ".gif" in low:
+            return "image/gif"
+        if ".png" in low:
+            return "image/png"
+        if ".webp" in low:
+            return "image/webp"
+        if ".jpeg" in low or ".jpg" in low:
+            return "image/jpeg"
+        return "image/jpeg"
+    def _gif_to_frame_data_urls(data: bytes, max_frames: int = 4) -> list[str]:
+        """将 GIF 均匀抽样拆帧，转成 PNG data URL 列表。"""
         try:
-            line = message.strip()
-            content = None
-            # 如果是 JSON 行，先解析
-            try:
-                obj = json.loads(line)
-                nick = obj.get('nickname', '').strip()
-                qq = str(obj.get('qq', '')).strip()
-                card = str(obj.get('card', '')).strip()
-                role = str(obj.get('role', '')).strip()
-                title = str(obj.get('title', '')).strip()
-                msg = str(obj.get('message', '')).strip()
-                content = f"QQ昵称: {nick}, QQ号: {qq}, 群昵称: {card}, 群权限: {role}, 群头衔: {title}: {msg}"
-            except Exception:
-                # 不是 JSON，再尝试正则匹配旧/新文本格式
-                m = pattern.match(line)
-                if m:
-                    nick = m.group('nick').strip()
-                    qq = m.group('qq').strip()
-                    card = m.group('card').strip()
-                    role = m.group('role').strip()
-                    title = m.group('title').strip()
-                    msg = m.group('msg').strip()
-                    content = f"QQ昵称: {nick}, QQ号: {qq}, 群昵称: {card}, 群权限: {role}, 群头衔: {title}: {msg}"
+            from PIL import Image
+            urls: list[str] = []
+            with Image.open(io.BytesIO(data)) as im:
+                n_frames = max(1, int(getattr(im, "n_frames", 1) or 1))
+                sample_count = min(max_frames, n_frames)
+                if sample_count == 1:
+                    frame_indexes = [0]
                 else:
-                    # 回退：如果不匹配新格式，尝试按旧规则处理（去掉首个 token）
-                    parts = line.split()
-                    content = ' '.join(parts[1:]) if len(parts) > 1 else line
-
-            if content:
-                # 除了最后一个，其他都设为system
-                msg_role = "system" if i < len(messages) - 1 else "user"
-                out.append({"role": msg_role, "content": content})
+                    step = (n_frames - 1) / (sample_count - 1)
+                    frame_indexes = sorted({int(round(i * step)) for i in range(sample_count)})
+                for frame_idx in frame_indexes:
+                    im.seek(frame_idx)
+                    rgb = im.convert("RGB")
+                    out = io.BytesIO()
+                    rgb.save(out, format="PNG")
+                    b64 = base64.b64encode(out.getvalue()).decode("utf-8")
+                    urls.append(f"data:image/png;base64,{b64}")
+            return urls
         except Exception:
-            continue
-    return out
-
-
+            return []
+    def _bytes_to_data_urls(data: bytes, mime_hint: str = "image/jpeg") -> list[str]:
+        if not data:
+            return []
+        if "gif" in (mime_hint or "").lower():
+            frames = _gif_to_frame_data_urls(data)
+            if frames:
+                return frames
+        b64 = base64.b64encode(data).decode("utf-8")
+        return [f"data:{mime_hint or 'image/jpeg'};base64,{b64}"]
+    u = u or ''
+    u = u.strip()
+    if not u:
+        return []
+    # 已经是 data URL，直接返回。
+    if u.startswith('data:image'):
+        return [u]
+    # 兼容 base64:// 前缀。
+    if u.startswith('base64://'):
+        raw = u[len('base64://'):]
+        if raw:
+            return [f"data:image/jpeg;base64,{raw}"]
+    # 已是 base64（较长且无 http 开头），直接返回
+    if len(u) > 100 and not u.startswith('http') and not u.startswith('/'):
+        return [f"data:image/jpeg;base64,{u}"]
+    # HTTP 下载
+    if u.startswith('http'):
+        try:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(u, timeout=15) as resp:
+                    if resp.status == 200:
+                        data = await resp.read()
+                        ctype = (resp.headers.get('Content-Type') or '').split(';', 1)[0].strip().lower()
+                        mime = ctype if ctype.startswith('image/') else _ext_to_mime(u)
+                        return _bytes_to_data_urls(data, mime)
+        except Exception:
+            return []
+    # 本地文件
+    try:
+        # 相对路径优先到 assests 目录
+        base = os.path.join(os.path.dirname(__file__), '..', 'assests')
+        fp = os.path.join(base, u) if not os.path.isabs(u) else u
+        if os.path.exists(fp):
+            with open(fp, 'rb') as f:
+                data = f.read()
+                return _bytes_to_data_urls(data, _ext_to_mime(fp))
+    except Exception:
+        return []
+    return []
 async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, rag_context=""):
     try:
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复。"
         
-        instruction = "请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。不直接输出识图结果。"
-        responsetimes = "每行只说一句话。根据问题确定回复多少行。尽量不超过五行。##之后的内容表示特殊行为，不算做回复内容。不要复读。"
+        instruction = "请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。不直接输出识图结果。回复要自然口语化，像真人聊天，避免模板化开头（如“好的呢”“没问题”“收到”），不要机械复述用户的话。"
+        responsetimes = "每行只说一句话。根据问题确定回复多少行。尽量不超过五行。偶尔可以只回一句很短的话或一个语气词，不必每次都说满。##之后的内容表示特殊行为，不算做回复内容。不要复读。"
         
         # 构建消息列表：固定前缀部分在前（最大化缓存命中），可变部分在后
         messages = [{"role": "system", "content": persona}]
@@ -138,7 +171,9 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
         if chat_history and isinstance(chat_history[0], dict):
             messages.extend(chat_history)
         else:
-            messages.extend(format_group_chat(chat_history))
+            # 兜底：非结构化历史按文本行追加（当前所有调用方均传入结构化 dict，此分支仅为防御）
+            for line in chat_history or []:
+                messages.append({"role": "user", "content": str(line)})
 
         # 将内部的 tool 角色消息转换为对外 API 可接受的 assistant 角色
         def _prepare_for_api(orig_msgs):
@@ -169,8 +204,6 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
             return ""
 
         # 检查模型是否请求工具调用（寻找 tool_call JSON）
-        import re, json
-
         m = re.search(r"\{\s*\"tool_call\"\s*:\s*\{.*?\}\s*\}", response)
         if not m:
             return response.strip('"')
@@ -207,104 +240,6 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
                     tool_result = "[识图失败：未找到对应图片]"
                 else:
                     # 获取图片数据：支持 http(s) 下载或本地文件读取或直接 base64 字符串
-                    async def _fetch_image_b64(u: str) -> list[str]:
-                        import base64
-                        import io
-
-                        def _ext_to_mime(path_or_url: str) -> str:
-                            low = (path_or_url or "").lower()
-                            if ".gif" in low:
-                                return "image/gif"
-                            if ".png" in low:
-                                return "image/png"
-                            if ".webp" in low:
-                                return "image/webp"
-                            if ".jpeg" in low or ".jpg" in low:
-                                return "image/jpeg"
-                            return "image/jpeg"
-
-                        def _gif_to_frame_data_urls(data: bytes, max_frames: int = 4) -> list[str]:
-                            """将 GIF 均匀抽样拆帧，转成 PNG data URL 列表。"""
-                            try:
-                                from PIL import Image
-
-                                urls: list[str] = []
-                                with Image.open(io.BytesIO(data)) as im:
-                                    n_frames = max(1, int(getattr(im, "n_frames", 1) or 1))
-                                    sample_count = min(max_frames, n_frames)
-                                    if sample_count == 1:
-                                        frame_indexes = [0]
-                                    else:
-                                        step = (n_frames - 1) / (sample_count - 1)
-                                        frame_indexes = sorted({int(round(i * step)) for i in range(sample_count)})
-
-                                    for frame_idx in frame_indexes:
-                                        im.seek(frame_idx)
-                                        rgb = im.convert("RGB")
-                                        out = io.BytesIO()
-                                        rgb.save(out, format="PNG")
-                                        b64 = base64.b64encode(out.getvalue()).decode("utf-8")
-                                        urls.append(f"data:image/png;base64,{b64}")
-
-                                return urls
-                            except Exception:
-                                return []
-
-                        def _bytes_to_data_urls(data: bytes, mime_hint: str = "image/jpeg") -> list[str]:
-                            if not data:
-                                return []
-
-                            if "gif" in (mime_hint or "").lower():
-                                frames = _gif_to_frame_data_urls(data)
-                                if frames:
-                                    return frames
-
-                            b64 = base64.b64encode(data).decode("utf-8")
-                            return [f"data:{mime_hint or 'image/jpeg'};base64,{b64}"]
-
-                        u = u or ''
-                        u = u.strip()
-                        if not u:
-                            return []
-
-                        # 已经是 data URL，直接返回。
-                        if u.startswith('data:image'):
-                            return [u]
-
-                        # 兼容 base64:// 前缀。
-                        if u.startswith('base64://'):
-                            raw = u[len('base64://'):]
-                            if raw:
-                                return [f"data:image/jpeg;base64,{raw}"]
-
-                        # 已是 base64（较长且无 http 开头），直接返回
-                        if len(u) > 100 and not u.startswith('http') and not u.startswith('/'):
-                            return [f"data:image/jpeg;base64,{u}"]
-                        # HTTP 下载
-                        if u.startswith('http'):
-                            try:
-                                async with aiohttp.ClientSession() as session:
-                                    async with session.get(u, timeout=15) as resp:
-                                        if resp.status == 200:
-                                            data = await resp.read()
-                                            ctype = (resp.headers.get('Content-Type') or '').split(';', 1)[0].strip().lower()
-                                            mime = ctype if ctype.startswith('image/') else _ext_to_mime(u)
-                                            return _bytes_to_data_urls(data, mime)
-                            except Exception:
-                                return []
-                        # 本地文件
-                        try:
-                            # 相对路径优先到 assests 目录
-                            base = os.path.join(os.path.dirname(__file__), '..', 'assests')
-                            fp = os.path.join(base, u) if not os.path.isabs(u) else u
-                            if os.path.exists(fp):
-                                with open(fp, 'rb') as f:
-                                    data = f.read()
-                                    return _bytes_to_data_urls(data, _ext_to_mime(fp))
-                        except Exception:
-                            return []
-                        return []
-
                     img_inputs = await _fetch_image_b64(img_url)
                     if img_inputs:
                         tool_result = await call_image_recognition(image_api_key or api_key, img_inputs)
@@ -314,11 +249,11 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
                 # 将识图结果注入对话：作为 system 内容以便模型在生成回复时参考
                 # 同时保留 tool 记录用于审计或后续处理
                 try:
-                        # 指令明确要求：将识图信息自然地融入回复中，不要复读识图列表，不要以“图片识别结果”开头
+                    # 指令明确要求：将识图信息自然地融入回复中，不要复读识图列表，不要以“图片识别结果”开头
                     sys_msg = (
-                        "==================================\n" +
+                        "==================================\n"
                         "识图信息（仅供参考）：\n" + str(tool_result) +
-                        "\n【重要】不要直输出识图信息，而是根据当前人设，以自然语言输出，可适当概括。"+
+                        "\n【重要】不要直输出识图信息，而是根据当前人设，以自然语言输出，可适当概括。" +
                         "\n=================================="
                     )
                     messages.append({"role": "system", "content": sys_msg})
