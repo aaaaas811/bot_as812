@@ -1,11 +1,39 @@
 """命令处理器"""
+import re
 import time
-from typing import Dict, Any
+from datetime import datetime
+from typing import Dict, Any, Optional
 from ncatbot.utils.logger import get_log
 from ..core.config_manager import ConfigManager, PromptManager
 from ..core.log_manager import LogManager
 
 _log = get_log()
+
+# Unicode emoji 字符（手机键盘表情，如 🍬😂），用于 /贴表情 直接透传
+EMOJI_CHAR_RE = re.compile(
+    r"^[\U0001F000-\U0001FAFF☀-➿⬀-⯿️‍⃣\U0001F1E6-\U0001F1FF]+$"
+)
+
+# QQ 原生表情 ID 映射（OneBot 通用表，0-79）
+EMOJI_LIKE_MAP: Dict[str, int] = {
+    "惊讶": 0, "撇嘴": 1, "色": 2, "发呆": 3, "得意": 4, "流泪": 5, "害羞": 6,
+    "闭嘴": 7, "睡": 8, "大哭": 9, "尴尬": 10, "发怒": 11, "调皮": 12, "呲牙": 13,
+    "微笑": 14, "酷": 15, "抓狂": 16, "吐": 17, "偷笑": 18, "愉快": 19, "白眼": 20,
+    "傲慢": 21, "饥饿": 22, "困": 23, "惊恐": 24, "流汗": 25, "憨笑": 26, "悠闲": 27,
+    "奋斗": 28, "咒骂": 29, "疑问": 30, "嘘": 31, "晕": 32, "疯了": 33, "衰": 34,
+    "骷髅": 35, "敲打": 36, "再见": 37, "擦汗": 38, "抠鼻": 39, "鼓掌": 40, "糗大了": 41,
+    "坏笑": 42, "左哼哼": 43, "右哼哼": 44, "哈欠": 45, "鄙视": 46, "委屈": 47,
+    "快哭了": 48, "阴险": 49, "亲亲": 50, "吓": 51, "可怜": 52, "菜刀": 53, "西瓜": 54,
+    "啤酒": 55, "篮球": 56, "乒乓": 57, "咖啡": 58, "饭": 59, "猪头": 60, "玫瑰": 61,
+    "凋谢": 62, "嘴唇": 63, "爱心": 64, "心碎": 65, "蛋糕": 66, "闪电": 67, "炸弹": 68,
+    "刀": 69, "足球": 70, "便便": 71, "兔": 72, "药丸": 73, "祈祷": 74, "彩带": 75,
+    "庆祝": 76, "礼物": 77, "加油": 78, "赞": 79,
+}
+EMOJI_LIKE_HINT = "、".join(sorted(EMOJI_LIKE_MAP, key=lambda n: EMOJI_LIKE_MAP[n])[:40])
+# 口语化别名 → 最接近的 QQ 表情 ID
+EMOJI_LIKE_ALIASES: Dict[str, int] = {
+    "大笑": 13, "哈哈": 13, "笑哭": 53, "哭": 9, "点赞": 79, "无语": 21, "裂开": 53,
+}
 
 
 class CommandHandler:
@@ -180,6 +208,150 @@ class CommandHandler:
             )
             await api.post_group_msg(group_id, text=help_text, reply=True)
             return
+
+    # -- 群交互命令 --
+
+    @staticmethod
+    def _resolve_emoji_id(emoji_name: str) -> Optional[int]:
+        """将表情名称或数字 ID 解析为 QQ 表情 ID（支持口语化别名）。"""
+        name = (emoji_name or "").strip()
+        if not name:
+            return None
+        if name.isdigit():
+            return int(name)
+        if name in EMOJI_LIKE_ALIASES:
+            return EMOJI_LIKE_ALIASES[name]
+        return EMOJI_LIKE_MAP.get(name)
+
+    @staticmethod
+    def _extract_face_id(message_array) -> Optional[int]:
+        """从消息段中提取用户直接发送的 QQ 表情 ID（face/emoji 段）。"""
+        for seg in message_array or []:
+            try:
+                if str(seg.get("type", "")).lower() not in ("face", "emoji"):
+                    continue
+                fid = seg.get("id") or seg.get("face_id")
+                if fid is not None:
+                    return int(fid)
+            except (TypeError, ValueError):
+                continue
+        return None
+
+    @staticmethod
+    def _extract_emoji_char(message_array) -> Optional[str]:
+        """从文本段中提取 /贴表情 之后的 Unicode emoji 字符（如 🍬）。"""
+        try:
+            texts = [
+                str(seg.get("text", "") or "")
+                for seg in (message_array or [])
+                if str(seg.get("type", "")).lower() == "text"
+            ]
+            combined = "".join(texts)
+            if "/贴表情" not in combined:
+                return None
+            rest = combined.replace("/贴表情", "").strip()
+            if rest and EMOJI_CHAR_RE.match(rest):
+                return rest
+        except Exception:
+            pass
+        return None
+
+    @staticmethod
+    def _emoji_to_dec_value(emoji_char: str) -> str:
+        """Unicode emoji → QQ NT 协议要求的十进制码点字符串（emojiType=2 的 emojiId 形态）。
+
+        NapCat 按 emojiId 长度判定类型：>3 位视为 unicode dec 值。
+        例：🍬 (U+1F36C) → "127852"；😂 → "128514"。
+        """
+        try:
+            for ch in emoji_char:
+                cp = ord(ch)
+                # 跳过变体选择符/零宽连接符/键帽等附加码点，取主 emoji 码点
+                if cp in (0xFE0F, 0x200D, 0x20E3):
+                    continue
+                return str(cp)
+        except Exception:
+            pass
+        return str(ord(emoji_char[0]))
+
+    async def _set_emoji_like(self, api, message_id, emoji_id: int) -> None:
+        """对指定消息贴表情（兼容不同 SDK 调用路径）。"""
+        qq_api = api
+        if hasattr(qq_api, "set_msg_emoji_like"):
+            await qq_api.set_msg_emoji_like(message_id, str(emoji_id))
+            return
+        messaging = getattr(qq_api, "messaging", None)
+        if messaging is not None and hasattr(messaging, "set_msg_emoji_like"):
+            await messaging.set_msg_emoji_like(message_id, str(emoji_id))
+            return
+        raise AttributeError("当前 SDK 未提供 set_msg_emoji_like 接口")
+
+    async def handle_group_emoji_like(self, api, group_id: str, user_id: str, text: str,
+                                      reply_id: Optional[str] = None, message_array=None) -> None:
+        """处理 /贴表情 [QQ表情] [消息ID]：把命令中的表情贴到目标消息。
+
+        - 表情优先取用户直接发送的 QQ 表情（face 段），如 /贴表情 [大笑]
+        - 也支持数字 ID 或表情名称（/贴表情 32、/贴表情 大笑）作为兜底
+        - 目标消息：命令后跟的消息 ID > 引用（回复）的消息
+        """
+        # 表情来源：face 段（QQ 原生表情）> Unicode emoji 字符（如 🍬）> 数字 ID > 名称映射
+        emoji_id = self._extract_face_id(message_array)
+        emoji_char = None if emoji_id is not None else self._extract_emoji_char(message_array)
+        target_id = None
+        parts = text[len("/贴表情"):].strip().split() if text.startswith("/贴表情") else []
+
+        if emoji_id is None and emoji_char is None and parts:
+            if parts[0].isdigit():
+                emoji_id = int(parts[0])
+            else:
+                emoji_id = self._resolve_emoji_id(parts[0])
+            target_id = parts[1] if len(parts) > 1 else None
+
+        if emoji_id is None and emoji_char is None:
+            await api.post_group_msg(
+                group_id,
+                text="请带上一个表情：/贴表情 [QQ表情] 或 /贴表情 [emoji]（也可以 /贴表情 32 或 /贴表情 大笑）",
+                reply=True,
+            )
+            return
+
+        # 目标消息：显式 ID > 引用消息 > 报错
+        if target_id is None:
+            target_id = reply_id
+        if not target_id:
+            await api.post_group_msg(group_id, text="需要指定目标消息：引用一条消息后发送，或 /贴表情 <表情> <消息ID>", reply=True)
+            return
+
+        # 贴表情：Unicode emoji 需转成十进制码点（NapCat 按长度判定 emojiType，字符会被误判），
+        # QQ 原生表情/数字 ID 直接传字符串
+        like_value = self._emoji_to_dec_value(emoji_char) if emoji_char is not None else str(emoji_id)
+        try:
+            await self._set_emoji_like(api, str(target_id), like_value)
+        except Exception as e:
+            _log.error(f"贴表情失败: {e}")
+
+    async def handle_group_revoked_history(self, api, group_id: str, limit: int = 5) -> None:
+        """处理 /撤回记录：放出最近 limit 条被撤回的消息。"""
+        records = self.log_manager.load_revoked_messages(group_id, limit=limit)
+        if not records:
+            await api.post_group_msg(group_id, text="暂时没有撤回记录喵", reply=True)
+            return
+
+        lines = [f"最近被撤回的 {len(records)} 条消息："]
+        for r in records:
+            ts = r.get("timestamp")
+            time_str = ""
+            if ts:
+                try:
+                    time_str = datetime.fromtimestamp(float(ts)).strftime("%H:%M")
+                except Exception:
+                    time_str = ""
+            who = r.get("card") or r.get("nickname") or f"QQ号{r.get('qq', '?')}"
+            content = str(r.get("message", "") or "")
+            if len(content) > 50:
+                content = content[:50] + "…"
+            lines.append(f"[{time_str}] {who}: {content}")
+        await api.post_group_msg(group_id, text="\n".join(lines), reply=True)
 
     # -- RAG 命令处理 --
 

@@ -25,6 +25,68 @@ class LogManager:
         os.makedirs(group_dir, exist_ok=True)
         return os.path.join(group_dir, f"{user_qq}.log")
 
+    def get_revoked_log_path(self, group_id: str) -> str:
+        """获取撤回消息记录文件路径"""
+        return os.path.join(self.base_log_dir, f"{group_id}_revoked.log")
+
+    def find_message_by_id(self, group_id: str, message_id: str) -> Dict[str, Any] | None:
+        """按 message_id 在群历史中查找消息记录（撤回后用于恢复内容）。
+
+        从最新往旧找，命中即返回；找不到返回 None。
+        """
+        target = str(message_id)
+        log_path = self.get_group_history_path(group_id)
+        if not os.path.exists(log_path):
+            return None
+        try:
+            content = self._read_text_with_fallback(log_path)
+            for line in reversed(content.splitlines()):
+                try:
+                    msg = json.loads(line.strip())
+                    if str(msg.get("message_id", "")) == target:
+                        return msg
+                except json.JSONDecodeError:
+                    continue
+        except Exception as e:
+            _log.error(f"按 ID 查找消息失败: {e}")
+        return None
+
+    def save_revoked_message(self, group_id: str, record: Dict[str, Any], keep: int = 20) -> bool:
+        """记录一条被撤回的消息（JSONL 追加），并裁剪为最近 keep 条。"""
+        try:
+            path = self.get_revoked_log_path(group_id)
+            records = self.load_revoked_messages(group_id, limit=keep)
+            records.append(record)
+            records = records[-keep:]
+            with open(path, "w", encoding="utf-8") as f:
+                for r in records:
+                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+            return True
+        except Exception as e:
+            _log.error(f"保存撤回消息记录失败: {e}")
+            return False
+
+    def load_revoked_messages(self, group_id: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """加载最近 limit 条被撤回的消息记录（时间从旧到新）。"""
+        if limit <= 0:
+            return []
+        path = self.get_revoked_log_path(group_id)
+        if not os.path.exists(path):
+            return []
+        records = []
+        try:
+            content = self._read_text_with_fallback(path)
+            for line in reversed(content.splitlines()):
+                try:
+                    records.append(json.loads(line.strip()))
+                    if len(records) >= limit:
+                        break
+                except json.JSONDecodeError:
+                    continue
+        except Exception as e:
+            _log.error(f"加载撤回消息记录失败: {e}")
+        return list(reversed(records))
+
     def _read_text_with_fallback(self, file_path: str) -> str:
         """读取文本文件，优先 UTF-8，失败时回退到常见中文编码。"""
         with open(file_path, "rb") as f:

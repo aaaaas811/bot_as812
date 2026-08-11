@@ -6,7 +6,6 @@ Root entry only starts the framework; business logic is implemented as plugins.
 from __future__ import annotations
 
 import os
-import subprocess
 import sys
 from pathlib import Path
 
@@ -51,50 +50,7 @@ def _maybe_reexec_in_project_venv() -> None:
 _maybe_reexec_in_project_venv()
 
 
-# ---- auto-update check (runs on every startup) ----
-def _run_update_checks() -> None:
-    """Check for NcatBot & NapCat updates and apply if available.
-
-    If ncatbot was updated the process is restarted so the new version is loaded.
-    NapCat updates are applied in-place.
-    """
-    update_script = PROJECT_ROOT / "check_n_update.py"
-    if not update_script.exists():
-        return
-
-    print("[startup] running auto-update check ...")
-    venv_python = sys.executable
-
-    try:
-        result = subprocess.run(
-            [venv_python, str(update_script)],
-            capture_output=True,
-            text=True,
-            timeout=30,
-            cwd=str(PROJECT_ROOT),
-        )
-        print(result.stdout, flush=True)
-        if result.stderr:
-            print(result.stderr, flush=True)
-
-        # If ncatbot/ncatbot5 was updated, restart so we import the new version
-        updated = False
-        for line in result.stdout.splitlines():
-            if "[ncatbot]" in line.lower() and "updated" in line.lower():
-                updated = True
-                break
-        if updated:
-            print("[startup] ncatbot was updated, restarting to load new version ...")
-            os.execv(venv_python, [venv_python] + sys.argv)
-    except subprocess.TimeoutExpired:
-        print("[startup] update check timed out, continuing ...")
-    except Exception as e:
-        print(f"[startup] update check failed ({e}), continuing ...")
-
-
 if __name__ == "__main__":
-    _run_update_checks()
-
     # Runtime patch: ncatbot 4.4.1.post1 缺少 confirm 导出
     # 在导入 ncatbot 之前确保 confirm 存在于 ncatbot.utils 中
     _utils_init = (

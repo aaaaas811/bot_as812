@@ -304,14 +304,61 @@ class as812(NcatBotPlugin):
         # 检查机器人是否被禁言
         if await self.mood_handler.is_bot_muted(self.api, msg.group_id):
             return
-        text = msg.raw_message
-        if text.startswith("/"):
-            # 群内 RAG 命令
+        text = msg.raw_message or ""
+        # 群内命令路由。
+        # 注意：/贴表情 的消息带 QQ 表情段时 raw_message 顺序可能不固定（face CQ 码在前），
+        # 因此"贴表情"按"文本含 /贴表情 字样"判定，而非仅匹配开头。
+        if text.startswith("/") or "/贴表情" in text:
+            # 群内命令路由
             if text.startswith("/记忆") or text.startswith("/rag_"):
                 await self.command_handler.handle_group_rag_command(
                     self.api.qq, str(msg.group_id), str(msg.sender.user_id), text, msg.sender.role
                 )
+            elif "/贴表情" in text:
+                # 需要引用消息 ID 与表情段：先解析消息
+                try:
+                    chat_message = self.message_handler.parse_group_message(msg)
+                    await self.command_handler.handle_group_emoji_like(
+                        self.api.qq, str(msg.group_id), str(msg.sender.user_id),
+                        text, chat_message.reply_id, chat_message.message_array
+                    )
+                except Exception as e:
+                    _log.error(f"处理 /贴表情 失败: {e}")
+                    try:
+                        await self.api.qq.post_group_msg(msg.group_id, text=f"贴表情出错了…（{e}）")
+                    except Exception:
+                        pass
+            elif text == "/撤回记录":
+                await self.command_handler.handle_group_revoked_history(
+                    self.api.qq, str(msg.group_id)
+                )
             return  # 其他 / 命令直接跳过
+
+        # 兜底：raw_message 不含 /贴表情 时（纯表情+引用消息 raw_message 可能为空），
+        # 若消息含 face 段则解析后判断文本是否包含命令字样。
+        if "/贴表情" not in text:
+            has_face = False
+            for seg in getattr(event, "message", None) or []:
+                try:
+                    seg_type = seg.get("type") if isinstance(seg, dict) else (
+                        getattr(seg, "msg_seg_type", None) or seg.__class__.__name__.lower()
+                    )
+                    if str(seg_type).lower() in ("face", "emoji"):
+                        has_face = True
+                        break
+                except Exception:
+                    continue
+            if has_face:
+                try:
+                    chat_message = self.message_handler.parse_group_message(msg)
+                    if "/贴表情" in (chat_message.message or ""):
+                        await self.command_handler.handle_group_emoji_like(
+                            self.api.qq, str(msg.group_id), str(msg.sender.user_id),
+                            text, chat_message.reply_id, chat_message.message_array
+                        )
+                        return
+                except Exception as e:
+                    _log.error(f"处理 /贴表情（兜底）失败: {e}")
 
         # 812记忆 命令（群内自然语言添加知识）
         if text.startswith("812记忆") or text.startswith("812记一下") or text.startswith("812学习"):
@@ -544,7 +591,36 @@ class as812(NcatBotPlugin):
         if self.bilibili_handler is None:
             return
         await self.bilibili_handler.handle_dynamic_new(event)
-    
+
+    @registrar.qq.on_group_recall()
+    @bot_state.ignore_if_sleeping()
+    async def on_group_recall(self, event):
+        """群消息撤回：记录被撤回的消息内容（供 /撤回记录 查询）"""
+        try:
+            group_id = str(event.group_id)
+            message_id = str(event.message_id)
+            user_id = str(getattr(event, "user_id", "") or "")
+            operator_id = str(getattr(event, "operator_id", "") or "")
+            _log.info(f"收到撤回事件: group={group_id} msg={message_id} user={user_id} operator={operator_id}")
+
+            # 机器人自己撤回（##revoke）不记录，避免噪音
+            bot_uin = self.config_manager.get_bt_uin()
+            if bot_uin and operator_id == bot_uin:
+                _log.info(f"撤回者为机器人自身，跳过记录: {message_id}")
+                return
+
+            # 撤回事件本身不含消息内容，从本地历史按 message_id 找回
+            record = self.log_manager.find_message_by_id(group_id, message_id)
+            if not record:
+                _log.info(f"撤回消息无本地记录（可能早于 bot 启动或 message_id 不匹配），跳过: {message_id}")
+                return
+
+            record.setdefault("revoked_at", time.time())
+            self.log_manager.save_revoked_message(group_id, record)
+            _log.info(f"已记录撤回消息 {message_id}（{group_id}）")
+        except Exception as e:
+            _log.warning(f"记录撤回消息失败: {e}")
+
     async def _set_emotion(self, group_id: int, mood: str) -> None:
         """##set_emotion 指令副作用：保存心情文件并更新群名片（不发送到群）"""
         try:
