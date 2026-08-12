@@ -3,11 +3,11 @@ from ncatbot.plugin import NcatBotPlugin
 from ncatbot.core import registrar
 from ncatbot.event.qq import GroupMessageEvent
 from ncatbot.utils import get_log
-from ncatbot.types import Image  # MessageChain (ncatbot5: MessageArray) unused in this module
 import re
 import json
 import os
 import sys
+import subprocess
 import bot_state
 import aiohttp
 import asyncio
@@ -139,19 +139,13 @@ class mh(NcatBotPlugin):
                 text_lines.append(line)
         text_reply = '\n'.join(text_lines)
 
-        msg_chain = []
         cache_path = None
-        if image_url and image_url != "":
+        if image_url:
             cache_path = await self._download_image(image_url)
-            if cache_path:
-                msg_chain.append(Image(str(cache_path)))
 
-        if text_reply.strip():
-            msg_chain.append(text_reply)
-
-        if msg_chain:
-            has_image = cache_path is not None
-            has_text = bool(text_reply.strip())
+        has_image = cache_path is not None
+        has_text = bool(text_reply.strip())
+        if has_image or has_text:
             try:
                 await self.api.qq.post_group_msg(
                     group_id=msg.group_id,
@@ -450,11 +444,11 @@ class mh(NcatBotPlugin):
             "/删除mhw 删除最近一个 MHW 集会码\n" \
             "/删除mhr 删除最近一个 MHR 集会码\n" \
             "/清空 清空所有集会码\n"\
-            "/爬取ws(wi) 更新最新数据\n" \
-            "/怪物列表 列出已收录的怪物名称\n" \
-            "/ws(wi)简介 怪物名字 查询该怪物的信息\n" \
-            "/ws(wi)弱点 怪物名字 查询该怪物的弱点简析\n" \
-            "/ws(wi)肉质 怪物名字 查询 mhws(mhwi) 数据源的肉质表"
+            "/爬取ws(wi,rs) 更新最新数据\n" \
+            "/怪物列表 列出所有数据源的怪物\n/ws(wi,rs)怪物列表 只列对应源的怪物\n" \
+            "/ws(wi,rs)简介 怪物名字 查询该怪物的信息\n" \
+            "/ws(wi,rs)弱点 怪物名字 查询该怪物的弱点简析\n" \
+            "/ws(wi,rs)肉质 怪物名字 查询 mhws(mhwi,mhrs) 数据源的肉质表"
             await self.api.qq.post_group_msg(group_id=msg.group_id, text=menu_text)
         if self.is_mhw_team_code.match(text):
             self.mhw.append(text)
@@ -484,28 +478,40 @@ class mh(NcatBotPlugin):
             await self.api.qq.post_group_msg(group_id=msg.group_id,text="已清空所有集会码喵~")
         if text == "/爬取ws":
             # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
-            os.system(f"{sys.executable} plugins/mh/mhws_Wiki_Crawler/src/mhws_crawler.py")
+            subprocess.Popen([sys.executable, "plugins/mh/mhws_Wiki_Crawler/src/mhws_crawler.py"])
             self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
             await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新ws肉质表数据")
             return
         if text == "/爬取wi":
             # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
-            os.system(f"{sys.executable} plugins/mh/mhwi_Wiki_Crawler/src/mhwi_crawler.py")
+            subprocess.Popen([sys.executable, "plugins/mh/mhwi_Wiki_Crawler/src/mhwi_crawler.py"])
             self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
             await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新wi肉质表数据")
             return
-        if text.strip() == "/怪物列表":
-            # 按数据源分组输出，优先显示 mhwi，然后 mhws
+        if text == "/爬取rs":
+            # 动态调用 mhrs 爬虫主函数
+            subprocess.Popen([sys.executable, "plugins/mh/mhrs_Wiki_Crawler/src/mhrs_crawler.py"])
+            self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新rs肉质表数据")
+            return
+        # 支持按数据源过滤：/怪物列表 显示全部，/ws|wi|rs怪物列表 只显示对应源
+        list_match = re.match(r"^/(ws|wi|rs)怪物列表$", text.strip())
+        if text.strip() == "/怪物列表" or list_match:
+            source_filter = {'ws': 'mhws', 'wi': 'mhwi', 'rs': 'mhrs'}.get(list_match.group(1)) if list_match else None
+
+            # 按数据源分组输出，优先显示 mhwi，然后 mhws，然后 mhrs
             grouped = {}
             for m in (self.analyzer.monster_list or []):
                 name = m.get('name','')
                 if not name:
                     continue
                 src = m.get('source','unknown')
+                if source_filter and src != source_filter:
+                    continue
                 grouped.setdefault(src, []).append(name)
 
             parts = []
-            for src in ['mhwi', 'mhws']:
+            for src in ['mhwi', 'mhws', 'mhrs']:
                 if src in grouped:
                     # 去重但保持原顺序
                     seen = set()
@@ -518,7 +524,7 @@ class mh(NcatBotPlugin):
                     parts.append(' '.join(uniq))
 
             # 如果还有其它来源，按字母序附加
-            other_srcs = sorted(k for k in grouped.keys() if k not in ('mhwi','mhws'))
+            other_srcs = sorted(k for k in grouped.keys() if k not in ('mhwi','mhws','mhrs'))
             for src in other_srcs:
                 seen = set()
                 uniq = []
@@ -544,6 +550,11 @@ class mh(NcatBotPlugin):
             reply = self._build_intro_for_source(monster_name, 'mhwi')
             await self._send_intro_reply(msg, reply)
             return
+        if text.startswith("/rs简介 "):
+            monster_name = text[len("/rs简介 "):].strip()
+            reply = self._build_intro_for_source(monster_name, 'mhrs')
+            await self._send_intro_reply(msg, reply)
+            return
         # 支持按数据源查询弱点
         if text.startswith("/ws弱点 "):
             monster_name = text[len("/ws弱点 "):].strip()
@@ -553,6 +564,11 @@ class mh(NcatBotPlugin):
         if text.startswith("/wi弱点 "):
             monster_name = text[len("/wi弱点 "):].strip()
             reply = self.analyzer.get_monster_weakness(monster_name, source='mhwi')
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
+            return
+        if text.startswith("/rs弱点 "):
+            monster_name = text[len("/rs弱点 "):].strip()
+            reply = self.analyzer.get_monster_weakness(monster_name, source='mhrs')
             await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
             return
         # 向后兼容旧命令 /简介 —— 映射到 mhws 并给出提示
@@ -577,6 +593,10 @@ class mh(NcatBotPlugin):
         if text.startswith("/wi肉质 "):
             monster_name = text[len("/wi肉质 "):].strip()
             await self._send_meat_table_image(msg, monster_name, source='mhwi')
+            return
+        if text.startswith("/rs肉质 "):
+            monster_name = text[len("/rs肉质 "):].strip()
+            await self._send_meat_table_image(msg, monster_name, source='mhrs')
             return
         # 向后兼容旧命令 /肉质 —— 映射到 mhws 并给出提示
         if text.startswith("/肉质 "):
