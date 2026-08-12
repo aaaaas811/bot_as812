@@ -452,10 +452,12 @@ class mh(NcatBotPlugin):
             await self.api.qq.post_group_msg(group_id=msg.group_id, text=menu_text)
         if self.is_mhw_team_code.match(text):
             self.mhw.append(text)
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
+            self._save_team_codes()
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~")
         if self.is_mhr_team_code.match(text):
-                self.mhr.append(text)
-                await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHR 集会码：\n{text}\n输入 /查询 获取集会列表喵~") 
+            self.mhr.append(text)
+            self._save_team_codes()
+            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHR 集会码：\n{text}\n输入 /查询 获取集会列表喵~")
         if text == "/查询":
             mhw_codes = "\n".join(self.mhw) if len(self.mhw) > 0 else "暂无 MHW 集会码"
             mhr_codes = "\n".join(self.mhr) if len(self.mhr) > 0 else "暂无 MHR 集会码"
@@ -466,15 +468,18 @@ class mh(NcatBotPlugin):
                 return
             await self.api.qq.post_group_msg(group_id=msg.group_id,text="已删除一个 MHW 集会码"+self.mhw[-1]+"喵~")
             self.mhw.pop()
+            self._save_team_codes()
         if text == "/删除mhr":
             if len(self.mhr) == 0:
                 await self.api.qq.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHR 集会码喵~")
                 return
             await self.api.qq.post_group_msg(group_id=msg.group_id,text="已删除一个 MHR 集会码"+self.mhr[-1]+"喵~")
             self.mhr.pop()
+            self._save_team_codes()
         if text == "/清空":
             self.mhw.clear()
             self.mhr.clear()
+            self._save_team_codes()
             await self.api.qq.post_group_msg(group_id=msg.group_id,text="已清空所有集会码喵~")
         if text == "/爬取ws":
             # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
@@ -610,7 +615,20 @@ class mh(NcatBotPlugin):
         try:
             self.mhw.clear()
             self.mhr.clear()
+            self._save_team_codes()
             LOG.info("mh 插件：定时任务已清空所有集会码")
         except Exception as e:
             LOG.error(f"mh 插件：定时清空集会码失败: {e}")
+
+    def _save_team_codes(self):
+        """将当前集会码写入 JSON 文件，供面板读取。"""
+        try:
+            out_path = Path(__file__).parent / "data" / "_team_codes.json"
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            import json
+            out_path.write_text(json.dumps({
+                "mhw": list(self.mhw), "mhr": list(self.mhr),
+            }, ensure_ascii=False), encoding="utf-8")
+        except Exception as e:
+            LOG.warning(f"保存集会码文件失败: {e}")
 

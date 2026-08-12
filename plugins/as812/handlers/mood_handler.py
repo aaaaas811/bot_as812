@@ -113,15 +113,16 @@ class MoodHandler:
         except Exception as e:
             _log.warning(f"process_mood_on_message 失败: {e}")
 
-    def _mood_state_path(self, gid: str) -> str:
+    def _mood_state_path(self, gid: str = "") -> str:
+        """心情文件路径（全群共用一个文件）。"""
         d = "plugins/as812/logs"
         try:
             os.makedirs(d, exist_ok=True)
         except Exception:
             pass
-        return os.path.join(d, f"{gid}_mood.json")
+        return os.path.join(d, "_mood.json")
 
-    def load_mood_state(self, gid: str) -> dict:
+    def load_mood_state(self, gid: str = "") -> dict:
         p = self._mood_state_path(gid)
         if os.path.exists(p):
             try:

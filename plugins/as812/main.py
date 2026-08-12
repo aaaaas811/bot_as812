@@ -2,6 +2,7 @@
 import sdk_compat  # noqa: F401
 
 import asyncio
+import json
 import re
 import os
 import base64
@@ -25,7 +26,7 @@ from .handlers.mood_handler import MoodHandler
 from .handlers.sender import ResponseSender
 from .handlers.command_handler import CommandHandler
 from .handlers.bilibili_handler import BilibiliHandler
-from .models.message_models import BotResponse
+from .models.message_models import BotResponse, ChatMessage, UserInfo
 from .responses.CatCatRes import cat_cat_response
 from .rag import RAGManager, RAGConfig
 
@@ -148,12 +149,54 @@ class as812(NcatBotPlugin):
         await self.bilibili_handler.on_load(self.api)
         
         _log.info(f"{self.name} 插件已加载 (v{self.version})")
+
+        # 写入连接状态文件供面板读取
+        try:
+            conn_file = Path(__file__).parent / "logs" / "_connection.json"
+            conn_file.write_text(json.dumps({
+                "qq": True, "bilibili": True, "updated_at": time.time(),
+            }, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+
+        # 启动面板指令轮询（读取面板写入的 _panel_cmd.json）
+        self._panel_cmd_path = Path(__file__).parent / "logs" / "_panel_cmd.json"
+        self._panel_cmd_mtime = 0.0
+        # 写入启动确认（面板可据此判断 bot 端轮询是否就绪）
+        try:
+            result_file = Path(__file__).parent / "logs" / "_panel_result.json"
+            result_file.write_text(json.dumps({
+                "cmd": "系统", "result": "面板指令轮询已启动，等待指令…",
+                "time": time.time(),
+            }, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self._poll_panel_commands())
+            _log.info("[面板] 指令轮询任务已创建")
+        except RuntimeError:
+            _log.warning("[面板] 无法获取事件循环，面板交互功能不可用")
+
         # 以子进程方式启动可视化面板，避免在主进程导入 tkinter/PIL
         try:
             script_path = Path(__file__).parent / "visual_panel.py"
-            args = [sys.executable, str(script_path), str(self._assets_dir), str(Path(__file__).parent / "logs"), str(os.getpid())]
+            args_str = f'"{script_path}" "{self._assets_dir}" "{Path(__file__).parent / "logs"}" "{Path(__file__).parent / "config"}" {os.getpid()}'
             try:
-                subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                if os.name == "nt":
+                    # Windows: 用 cmd /c start 完全独立启动，与父进程无任何关联
+                    subprocess.Popen(
+                        f'start "" "{sys.executable}" {args_str}',
+                        shell=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                    )
+                else:
+                    subprocess.Popen(
+                        [sys.executable, str(script_path), str(self._assets_dir),
+                         str(Path(__file__).parent / "logs"), str(Path(__file__).parent / "config"),
+                         str(os.getpid())],
+                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, stdin=subprocess.DEVNULL,
+                        start_new_session=True,
+                    )
                 _log.info("as812 可视化面板已以子进程启动")
             except Exception as e:
                 _log.warning(f"启动 as812 可视化面板失败: {e}")
@@ -283,89 +326,133 @@ class as812(NcatBotPlugin):
         # 发送回复
         await self.sender.send_private_response(msg.user_id, response)
 
+    # ==================== 群命令注册（SDK 装饰器） ====================
+
     @registrar.qq.on_group_command("测试as812")
     @bot_state.ignore_if_sleeping()
-    async def on_group_event(self, event: GroupMessageEvent):
-        """群事件处理"""
+    async def cmd_test(self, event: GroupMessageEvent):
+        """测试命令"""
         msg = self._adapt_group_event(event)
-        if msg.raw_message == "测试as812" and msg.user_id == bot_state.MASTER_UIN:
+        if msg.user_id == bot_state.MASTER_UIN:
+            await self._qq_post_group_msg(msg.group_id, text="NCatBot插件as812测试成功喵")
+
+    @registrar.qq.on_group_command("/记忆", "812记忆", "812记一下", "812学习")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_memory(self, event: GroupMessageEvent):
+        """添加知识到 RAG"""
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_rag_command(
+            self.api.qq, str(msg.group_id), str(msg.sender.user_id), msg.raw_message, msg.sender.role
+        )
+
+    @registrar.qq.on_group_command("/rag_stats")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_rag_stats(self, event: GroupMessageEvent):
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_rag_command(
+            self.api.qq, str(msg.group_id), str(msg.sender.user_id), "/rag_stats", msg.sender.role
+        )
+
+    @registrar.qq.on_group_command("/rag_list")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_rag_list(self, event: GroupMessageEvent):
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_rag_command(
+            self.api.qq, str(msg.group_id), str(msg.sender.user_id), "/rag_list", msg.sender.role
+        )
+
+    @registrar.qq.on_group_command("/rag_help")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_rag_help(self, event: GroupMessageEvent):
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_rag_command(
+            self.api.qq, str(msg.group_id), str(msg.sender.user_id), "/rag_help", msg.sender.role
+        )
+
+    @registrar.qq.on_group_command("/rag_remove")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_rag_remove(self, event: GroupMessageEvent):
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_rag_command(
+            self.api.qq, str(msg.group_id), str(msg.sender.user_id), msg.raw_message, msg.sender.role
+        )
+
+    @registrar.qq.on_group_command("/rag_enable", "/rag_disable")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_rag_toggle(self, event: GroupMessageEvent):
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_rag_command(
+            self.api.qq, str(msg.group_id), str(msg.sender.user_id), msg.raw_message, msg.sender.role
+        )
+
+    @registrar.qq.on_group_command("/撤回记录")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_revoked(self, event: GroupMessageEvent):
+        msg = self._adapt_group_event(event)
+        await self.command_handler.handle_group_revoked_history(
+            self.api.qq, str(msg.group_id)
+        )
+
+    @registrar.qq.on_group_command("/贴表情")
+    @bot_state.ignore_if_sleeping()
+    async def cmd_emoji_like(self, event: GroupMessageEvent):
+        """贴表情命令（需要引用消息和表情段）"""
+        msg = self._adapt_group_event(event)
+        try:
+            chat_message = self.message_handler.parse_group_message(msg)
+            await self.command_handler.handle_group_emoji_like(
+                self.api.qq, str(msg.group_id), str(msg.sender.user_id),
+                msg.raw_message, chat_message.reply_id, chat_message.message_array
+            )
+        except Exception as e:
+            _log.error(f"处理 /贴表情 失败: {e}")
             try:
-                await self._qq_post_group_msg(msg.group_id, text="NCatBot插件as812测试成功喵")
-            except Exception as e:
-                _log.error(f"发送测试消息失败: {e}")
-    
+                await self.api.qq.post_group_msg(msg.group_id, text=f"贴表情出错了…（{e}）")
+            except Exception:
+                pass
+
+    # ==================== 群消息处理（非命令） ====================
+
     @registrar.qq.on_group_message()
     @bot_state.ignore_if_sleeping()
     async def on_group_message(self, event: GroupMessageEvent):
-        """群消息处理"""
+        """群消息处理（仅处理非命令消息：被动/主动回复）"""
         msg = self._adapt_group_event(event)
         _log.info(f"{msg.sender.nickname}({msg.sender.user_id}): {msg.raw_message[:10]}")
-        
-        # 检查机器人是否被禁言
-        if await self.mood_handler.is_bot_muted(self.api, msg.group_id):
-            return
-        text = msg.raw_message or ""
-        # 群内命令路由。
-        # 注意：/贴表情 的消息带 QQ 表情段时 raw_message 顺序可能不固定（face CQ 码在前），
-        # 因此"贴表情"按"文本含 /贴表情 字样"判定，而非仅匹配开头。
-        if text.startswith("/") or "/贴表情" in text:
-            # 群内命令路由
-            if text.startswith("/记忆") or text.startswith("/rag_"):
-                await self.command_handler.handle_group_rag_command(
-                    self.api.qq, str(msg.group_id), str(msg.sender.user_id), text, msg.sender.role
-                )
-            elif "/贴表情" in text:
-                # 需要引用消息 ID 与表情段：先解析消息
-                try:
-                    chat_message = self.message_handler.parse_group_message(msg)
-                    await self.command_handler.handle_group_emoji_like(
-                        self.api.qq, str(msg.group_id), str(msg.sender.user_id),
-                        text, chat_message.reply_id, chat_message.message_array
-                    )
-                except Exception as e:
-                    _log.error(f"处理 /贴表情 失败: {e}")
-                    try:
-                        await self.api.qq.post_group_msg(msg.group_id, text=f"贴表情出错了…（{e}）")
-                    except Exception:
-                        pass
-            elif text == "/撤回记录":
-                await self.command_handler.handle_group_revoked_history(
-                    self.api.qq, str(msg.group_id)
-                )
-            return  # 其他 / 命令直接跳过
 
-        # 兜底：raw_message 不含 /贴表情 时（纯表情+引用消息 raw_message 可能为空），
-        # 若消息含 face 段则解析后判断文本是否包含命令字样。
+        # 忽略机器人自己的消息，防止自回复循环
+        bot_uin = self.config_manager.get_bt_uin()
+        if bot_uin and str(msg.sender.user_id) == str(bot_uin):
+            return
+
+        # 检查机器人是否被禁言（结果写入文件供面板读取）
+        muted = await self.mood_handler.is_bot_muted(self.api, msg.group_id)
+        try:
+            mute_file = self.log_manager.base_log_dir / f"{msg.group_id}_mute.json"
+            mute_file.write_text(json.dumps({
+                "muted": muted, "checked_at": time.time(),
+            }, ensure_ascii=False), encoding="utf-8")
+        except Exception:
+            pass
+        if muted:
+            return
+
+        # /贴表情 兜底：raw_message 不含 /贴表情 但消息含 face 段时，解析后判断
+        text = msg.raw_message or ""
         if "/贴表情" not in text:
-            has_face = False
             for seg in getattr(event, "message", None) or []:
                 try:
                     seg_type = seg.get("type") if isinstance(seg, dict) else (
                         getattr(seg, "msg_seg_type", None) or seg.__class__.__name__.lower()
                     )
                     if str(seg_type).lower() in ("face", "emoji"):
-                        has_face = True
+                        chat_message = self.message_handler.parse_group_message(msg)
+                        if "/贴表情" in (chat_message.message or ""):
+                            await self.cmd_emoji_like(event)
+                            return
                         break
                 except Exception:
                     continue
-            if has_face:
-                try:
-                    chat_message = self.message_handler.parse_group_message(msg)
-                    if "/贴表情" in (chat_message.message or ""):
-                        await self.command_handler.handle_group_emoji_like(
-                            self.api.qq, str(msg.group_id), str(msg.sender.user_id),
-                            text, chat_message.reply_id, chat_message.message_array
-                        )
-                        return
-                except Exception as e:
-                    _log.error(f"处理 /贴表情（兜底）失败: {e}")
-
-        # 812记忆 命令（群内自然语言添加知识）
-        if text.startswith("812记忆") or text.startswith("812记一下") or text.startswith("812学习"):
-            await self.command_handler.handle_group_rag_command(
-                self.api.qq, str(msg.group_id), str(msg.sender.user_id), text, msg.sender.role
-            )
-            return
 
         # 处理心情计数
         try:
@@ -634,6 +721,162 @@ class as812(NcatBotPlugin):
                 _log.warning(f"设置群名片失败: {e}")
         except Exception as e:
             _log.warning(f"处理 ##set_emotion 指令失败: {e}")
+
+    async def _panel_chat(self, text: str) -> str:
+        """模拟 as811 发消息给 bot，返回 bot 的回复（不发送到群）。"""
+        try:
+            api_key = self.config_manager.get_api_key()
+            if not api_key:
+                return "API 密钥未配置"
+
+            cat_prompt = self.prompt_manager.load_prompt()
+
+            # 构造 as811 的消息
+            chat_message = ChatMessage(
+                timestamp=time.time(),
+                user=UserInfo(nickname="811", qq=str(bot_state.MASTER_UIN), card="", role="群主", title=""),
+                message=text,
+                force_reply=True,
+            )
+
+            # 构建聊天历史
+            active_gid = self.config_manager.get_active_group_id() or "883744030"
+            chat_history = self.message_handler.build_chat_history(active_gid, chat_message)
+
+            # 注入心情
+            self.mood_handler.inject_mood(chat_history, active_gid)
+
+            # 调用 LLM 生成回复
+            image_api_key = self.config_manager.get_image_api_key()
+            rag_context = ""
+            if self.rag_manager and self.rag_manager.should_retrieve(text):
+                rag_context, _ = self.rag_manager.retrieve(text)
+
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+            return response or ""
+        except Exception as e:
+            _log.error(f"[面板] 聊天处理异常: {e}")
+            return f"处理异常: {e}"
+
+    async def _execute_panel_command(self, text: str) -> str:
+        """执行面板命令并返回结果文本（不发送到群）。
+
+        复用 command_handler 的逻辑，用 FakeApi 收集输出。
+        """
+        active_gid = self.config_manager.get_active_group_id() or "883744030"
+
+        # FakeApi：收集 post_group_msg 的文本输出，不真正发送
+        collected = []
+        class FakeApi:
+            async def post_group_msg(self, gid, text=None, **kw):
+                if text:
+                    collected.append(text)
+            async def post_private_msg(self, uid, text=None, **kw):
+                if text:
+                    collected.append(text)
+
+        fake_api = FakeApi()
+
+        if text == "/撤回记录":
+            await self.command_handler.handle_group_revoked_history(fake_api, active_gid)
+        elif text == "/rag_stats":
+            await self.command_handler.handle_group_rag_command(fake_api, active_gid, "", "/rag_stats", "")
+        elif text == "/rag_list":
+            await self.command_handler.handle_group_rag_command(fake_api, active_gid, "", "/rag_list", "")
+        elif text == "/rag_help":
+            await self.command_handler.handle_group_rag_command(fake_api, active_gid, "", "/rag_help", "")
+        elif text.startswith("/记忆 ") or text.startswith("812记忆 "):
+            await self.command_handler.handle_group_rag_command(fake_api, active_gid, "", text, "")
+        elif text == "/helpMH":
+            return (
+                "直接发送集会码即可记录喵~\n/查询 获取集会列表\n"
+                "/删除mhw 删除最近一个 MHW 集会码\n/删除mhr 删除最近一个 MHR 集会码\n"
+                "/清空 清空所有集会码\n/爬取ws(wi,rs) 更新最新数据\n"
+                "/怪物列表 列出已收录的怪物名称\n"
+                "/ws(wi,rs)简介/弱点/肉质 怪物名字 查询对应数据"
+            )
+        else:
+            return f"未知命令：{text}"
+
+        return "\n".join(collected) if collected else "（命令已执行，无输出）"
+
+    async def _poll_panel_commands(self):
+        """轮询面板写入的 _panel_cmd.json，执行其中的指令。"""
+        _log.info("[面板] 指令轮询已启动，每 2 秒检查一次")
+        while True:
+            try:
+                if self._panel_cmd_path.exists():
+                    mtime = self._panel_cmd_path.stat().st_mtime
+                    if mtime != self._panel_cmd_mtime:
+                        self._panel_cmd_mtime = mtime
+                        data = json.loads(self._panel_cmd_path.read_text(encoding="utf-8"))
+                        cmd = data.get("cmd", "")
+                        text = data.get("text", "")
+                        _log.info(f"[面板] 收到指令: cmd={cmd} text={text}")
+
+                        result_file = Path(__file__).parent / "logs" / "_panel_result.json"
+
+                        if cmd == "send" and text:
+                            # 模拟 as811 发消息，触发 bot 被动回复，结果只在面板显示
+                            try:
+                                result = await self._panel_chat(text)
+                                result_file.write_text(json.dumps({
+                                    "cmd": f"811: {text}", "result": result or "（bot 选择不回复）",
+                                    "time": time.time(),
+                                }, ensure_ascii=False), encoding="utf-8")
+                                _log.info(f"[面板] 聊天: 811说'{text}' → {str(result)[:50]}")
+                            except Exception as e:
+                                _log.error(f"[面板] 聊天失败: {e}")
+                                result_file.write_text(json.dumps({
+                                    "cmd": text, "result": f"处理失败: {e}",
+                                    "time": time.time(),
+                                }, ensure_ascii=False), encoding="utf-8")
+
+                        elif cmd == "group_cmd" and text:
+                            try:
+                                result = await self._execute_panel_command(text)
+                                result_file.write_text(json.dumps({
+                                    "cmd": text, "result": result, "time": time.time(),
+                                }, ensure_ascii=False), encoding="utf-8")
+                                _log.info(f"[面板] 命令已执行: {text}")
+                            except Exception as e:
+                                _log.error(f"[面板] 命令执行失败: {e}")
+                                result_file.write_text(json.dumps({
+                                    "cmd": text, "result": f"执行失败: {e}", "time": time.time(),
+                                }, ensure_ascii=False), encoding="utf-8")
+
+                        elif cmd == "set_mood" and text:
+                            try:
+                                self.mood_handler.save_mood_state("", {"mood": text})
+                                _log.info(f"[面板] 心情已保存: {text}")
+                                for gid in self.config_manager.get_active_group_ids():
+                                    try:
+                                        await self.mood_handler._update_group_card(self.api, int(gid), text)
+                                        _log.info(f"[面板] 群 {gid} 名片已更新: 812(bot)({text})")
+                                    except Exception as e:
+                                        _log.warning(f"[面板] 群 {gid} 名片更新失败: {e}")
+                                result_file.write_text(json.dumps({
+                                    "cmd": "设置心情", "result": f"心情已改为 {text}，群名片已更新",
+                                    "time": time.time(),
+                                }, ensure_ascii=False), encoding="utf-8")
+                            except Exception as e:
+                                _log.error(f"[面板] 设置心情失败: {e}")
+
+                        elif cmd == "set_sleep":
+                            try:
+                                sleeping = bool(data.get("value", True))
+                                bot_state.set_sleep(sleeping)
+                                status = "开启" if sleeping else "关闭"
+                                result_file.write_text(json.dumps({
+                                    "cmd": "睡眠模式", "result": f"睡眠模式已{status}",
+                                    "time": time.time(),
+                                }, ensure_ascii=False), encoding="utf-8")
+                                _log.info(f"[面板] 睡眠模式: {status}")
+                            except Exception as e:
+                                _log.error(f"[面板] 设置睡眠失败: {e}")
+            except Exception as e:
+                _log.error(f"[面板] 轮询异常: {e}")
+            await asyncio.sleep(2.0)
 
     async def _expand_reply_content(self, chat_message) -> None:
         """尝试拉取被引用消息的原文，展开为 [引用:昵称:内容] 供模型理解上下文。"""
