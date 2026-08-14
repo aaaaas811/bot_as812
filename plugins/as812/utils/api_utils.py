@@ -146,10 +146,10 @@ async def call_local_chat_api(model_name: Optional[str] = None, messages: list =
 
 
 async def call_image_recognition(api_key: str, image_inputs: str | list[str]) -> Optional[str]:
-    """调用第三方识图接口，支持单图或多图输入。
+    """调用 MIMO 识图接口（Anthropic 兼容端点），支持单图或多图输入。
 
     - image_inputs: 单个图片 data url/base64，或多个图片 data url/base64 列表。
-    - 如果没有可用 SDK，则返回提示性文本以便模型继续处理。
+    - 配置与 mimo-image-recognition-mcp 相同：mimo-v2.5 + token-plan-cn 端点。
     """
     if isinstance(image_inputs, str):
         image_urls = [image_inputs] if image_inputs else []
@@ -159,88 +159,54 @@ async def call_image_recognition(api_key: str, image_inputs: str | list[str]) ->
     if not image_urls:
         return ""
 
-    # 尝试使用 zai-sdk（知谱云）
+    # 构建 OpenAI 兼容格式的图片块（与 mimo-image-recognition-mcp 相同）
+    image_blocks = [
+        {"type": "image_url", "image_url": {"url": url}}
+        for url in image_urls
+    ]
+    image_blocks.append({
+        "type": "text",
+        "text": "请用一到两句话自然地描述这些图片（它们可能来自同一张 GIF 的多个帧），避免列点或表格。",
+    })
+
+    url = "https://api.xiaomimimo.com/v1/chat/completions"
+    headers = {
+        "api-key": api_key,
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": "mimo-v2.5",
+        "messages": [{"role": "user", "content": image_blocks}],
+        "temperature": 0.2,
+        "max_tokens": 1024,
+    }
+
     try:
-        try:
-            from zai import ZhipuAiClient
-        except Exception:
-            ZhipuAiClient = None
-
-        if ZhipuAiClient is not None and api_key:
-            def _sync_call():
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, headers=headers, json=payload, timeout=120) as resp:
+                if resp.status != 200:
+                    err_text = await resp.text()
+                    _log.error(f"MIMO 识图 API 错误: {resp.status} - {err_text[:200]}")
+                    return "[识图失败：服务返回错误]"
+                result = await resp.json()
+                # OpenAI 格式：choices[0].message.content
                 try:
-                    client = ZhipuAiClient(api_key=api_key)
-                    content_blocks = [
-                        {"type": "image_url", "image_url": {"url": url}}
-                        for url in image_urls
-                    ]
-                    content_blocks.append(
-                        {
-                            "type": "text",
-                            "text": (
-                                "请用一到两句话自然地描述这些图片（它们可能来自同一张 GIF 的多个帧），"
-                                "避免列点或表格。"
-                            )
-                        }
-                    )
-                    # 请求外部识图模型，强制要求返回 1-2 句的自然语言描述（不要列点）
-                    resp = client.chat.completions.create(
-                        model="glm-4.6v-flash",
-                        messages=[
-                            {
-                                "role": "user",
-                                "content": content_blocks
-                            }
-                        ],
-                        thinking={"type": "enabled"}
-                    )
-                    # 兼容不同 SDK 返回格式，尽量提取可读文本
-                    try:
-                        # 支持 dict 风格返回
-                        if isinstance(resp, dict):
-                            choices = resp.get('choices') or []
-                            if choices:
-                                msg = choices[0].get('message') or choices[0]
-                                # message 可能是 dict with content or simple string
-                                if isinstance(msg, dict):
-                                    return msg.get('content') or msg.get('text') or str(msg)
-                                return str(msg)
-                        # 支持对象风格返回
-                        if getattr(resp, 'choices', None):
-                            ch = getattr(resp, 'choices')
-                            first = ch[0]
-                            # first may have .message.content
-                            try:
-                                return first.message.content
-                            except Exception:
-                                try:
-                                    return first.get('message', {}).get('content')
-                                except Exception:
-                                    return str(first)
-                        return str(resp)
-                    except Exception:
-                        return str(resp)
-                except Exception as e:
-                    _log.error(f"zai 识图请求失败: {e}")
-                    return None
-
-            import asyncio
-            loop = asyncio.get_event_loop()
-            result = await loop.run_in_executor(None, _sync_call)
-            if result is None:
-                return "[识图失败：服务未返回结果]"
-            try:
-                # 如果 result 是对象，尝试提取 content
-                if isinstance(result, dict):
-                    text = result.get('content') or result.get('message')
-                    return text if text else "[识图失败：服务未返回结果]"
-                text = getattr(result, 'content', None) or str(result)
-                return text if text and text != "None" else "[识图失败：服务未返回结果]"
-            except Exception:
-                return str(result)
-
-    except Exception:
-        _log.exception("尝试使用 zai-sdk 识图时出错")
-
-    # 后备：无法调用外部识图服务时，返回占位文本
-    return "[识图不可用：未配置识图服务]"
+                    choices = result.get("choices") or []
+                    if choices:
+                        msg = choices[0].get("message") or {}
+                        content = msg.get("content", "")
+                        if isinstance(content, str):
+                            return content.strip() if content.strip() else "[识图失败：服务未返回文本]"
+                        # content 可能是列表（多模态返回）
+                        text_parts = [
+                            b.get("text", "") for b in content
+                            if isinstance(b, dict) and b.get("type") == "text"
+                        ]
+                        text = "".join(text_parts).strip()
+                        return text if text else "[识图失败：服务未返回文本]"
+                except Exception:
+                    pass
+                return "[识图失败：无法解析响应]"
+    except Exception as e:
+        _log.error(f"调用 MIMO 识图 API 失败: {e}")
+        return "[识图失败：无法连接识图服务]"

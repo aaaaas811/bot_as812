@@ -29,6 +29,173 @@ class mh(NcatBotPlugin):
     mhr=list()
     analyzer = None
 
+    # ==================== 命令注册 ====================
+
+    @registrar.qq.on_group_command("/helpMH", "/helpmh", ignore_case=True)
+    async def cmd_help(self, event: GroupMessageEvent):
+        menu_text = (
+            "直接发送集会码即可记录喵~\n/查询 获取集会列表\n"
+            "/删除mhw 删除最近一个 MHW 集会码\n/删除mhr 删除最近一个 MHR 集会码\n"
+            "/清空 清空所有集会码\n/爬取ws(wi,rs) 更新最新数据\n"
+            "/怪物列表 列出所有数据源的怪物\n/ws(wi,rs)怪物列表 只列对应源的怪物\n"
+            "/ws(wi,rs)简介 怪物名字 查询该怪物的信息\n"
+            "/ws(wi,rs)弱点 怪物名字 查询该怪物的弱点简析\n"
+            "/ws(wi,rs)肉质 怪物名字 查询 mhws(mhwi,mhrs) 数据源的肉质表"
+        )
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=menu_text)
+
+    @registrar.qq.on_group_command("/查询")
+    async def cmd_query(self, event: GroupMessageEvent):
+        mhw_codes = "\n".join(self.mhw) if self.mhw else "暂无 MHW 集会码"
+        mhr_codes = "\n".join(self.mhr) if self.mhr else "暂无 MHR 集会码"
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=f"MHW集会码：\n{mhw_codes}\nMHR 集会码：\n{mhr_codes}")
+
+    @registrar.qq.on_group_command("/删除mhw")
+    async def cmd_del_mhw(self, event: GroupMessageEvent):
+        if not self.mhw:
+            await self.api.qq.post_group_msg(group_id=event.group_id, text="没有可删除的 MHW 集会码喵~")
+            return
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=f"已删除一个 MHW 集会码{self.mhw[-1]}喵~")
+        self.mhw.pop()
+        self._save_team_codes()
+
+    @registrar.qq.on_group_command("/删除mhr")
+    async def cmd_del_mhr(self, event: GroupMessageEvent):
+        if not self.mhr:
+            await self.api.qq.post_group_msg(group_id=event.group_id, text="没有可删除的 MHR 集会码喵~")
+            return
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=f"已删除一个 MHR 集会码{self.mhr[-1]}喵~")
+        self.mhr.pop()
+        self._save_team_codes()
+
+    @registrar.qq.on_group_command("/清空")
+    async def cmd_clear(self, event: GroupMessageEvent):
+        self.mhw.clear()
+        self.mhr.clear()
+        self._save_team_codes()
+        await self.api.qq.post_group_msg(group_id=event.group_id, text="已清空所有集会码喵~")
+
+    @registrar.qq.on_group_command("/爬取ws")
+    async def cmd_crawl_ws(self, event: GroupMessageEvent):
+        subprocess.Popen([sys.executable, "plugins/mh/mhws_Wiki_Crawler/src/mhws_crawler.py"])
+        self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
+        await self.api.qq.post_group_msg(group_id=event.group_id, text="已爬取并更新ws肉质表数据")
+
+    @registrar.qq.on_group_command("/爬取wi")
+    async def cmd_crawl_wi(self, event: GroupMessageEvent):
+        subprocess.Popen([sys.executable, "plugins/mh/mhwi_Wiki_Crawler/src/mhwi_crawler.py"])
+        self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
+        await self.api.qq.post_group_msg(group_id=event.group_id, text="已爬取并更新wi肉质表数据")
+
+    @registrar.qq.on_group_command("/爬取rs")
+    async def cmd_crawl_rs(self, event: GroupMessageEvent):
+        subprocess.Popen([sys.executable, "plugins/mh/mhrs_Wiki_Crawler/src/mhrs_crawler.py"])
+        self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
+        await self.api.qq.post_group_msg(group_id=event.group_id, text="已爬取并更新rs肉质表数据")
+
+    @registrar.qq.on_group_command("/怪物列表", "/ws怪物列表", "/wi怪物列表", "/rs怪物列表")
+    async def cmd_monster_list(self, event: GroupMessageEvent):
+        text = event.raw_message or ""
+        list_match = re.match(r"^/(ws|wi|rs)怪物列表$", text.strip())
+        source_filter = {'ws': 'mhws', 'wi': 'mhwi', 'rs': 'mhrs'}.get(list_match.group(1)) if list_match else None
+
+        grouped = {}
+        for m in (self.analyzer.monster_list or []):
+            name = m.get('name', '')
+            if not name:
+                continue
+            src = m.get('source', 'unknown')
+            if source_filter and src != source_filter:
+                continue
+            grouped.setdefault(src, []).append(name)
+
+        parts = []
+        for src in ['mhwi', 'mhws', 'mhrs']:
+            if src in grouped:
+                seen, uniq = set(), []
+                for n in grouped[src]:
+                    if n and n not in seen:
+                        seen.add(n); uniq.append(n)
+                parts.append(f"{src}:")
+                parts.append(' '.join(uniq))
+        for src in sorted(k for k in grouped if k not in ('mhwi', 'mhws', 'mhrs')):
+            seen, uniq = set(), []
+            for n in grouped[src]:
+                if n and n not in seen:
+                    seen.add(n); uniq.append(n)
+            parts.append(f"{src}:")
+            parts.append(' '.join(uniq))
+
+        reply = '\n'.join(parts) if parts else '暂无已收录的怪物'
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=reply)
+
+    @registrar.qq.on_group_command("/ws简介")
+    async def cmd_intro_ws(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/ws简介", "").strip()
+        await self._send_intro_reply(event, self._build_intro_for_source(monster_name, 'mhws'))
+
+    @registrar.qq.on_group_command("/wi简介")
+    async def cmd_intro_wi(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/wi简介", "").strip()
+        await self._send_intro_reply(event, self._build_intro_for_source(monster_name, 'mhwi'))
+
+    @registrar.qq.on_group_command("/rs简介")
+    async def cmd_intro_rs(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/rs简介", "").strip()
+        await self._send_intro_reply(event, self._build_intro_for_source(monster_name, 'mhrs'))
+
+    @registrar.qq.on_group_command("/ws弱点")
+    async def cmd_weakness_ws(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/ws弱点", "").strip()
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=self.analyzer.get_monster_weakness(monster_name, source='mhws'))
+
+    @registrar.qq.on_group_command("/wi弱点")
+    async def cmd_weakness_wi(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/wi弱点", "").strip()
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=self.analyzer.get_monster_weakness(monster_name, source='mhwi'))
+
+    @registrar.qq.on_group_command("/rs弱点")
+    async def cmd_weakness_rs(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/rs弱点", "").strip()
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=self.analyzer.get_monster_weakness(monster_name, source='mhrs'))
+
+    @registrar.qq.on_group_command("/简介")
+    async def cmd_intro_compat(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/简介", "").strip()
+        reply = self.analyzer.get_monster_intro(monster_name)
+        reply = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi简介 )\n" + reply
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=reply)
+
+    @registrar.qq.on_group_command("/弱点")
+    async def cmd_weakness_compat(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/弱点", "").strip()
+        reply = self.analyzer.get_monster_weakness(monster_name, source='mhws')
+        reply = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi弱点 )\n" + reply
+        await self.api.qq.post_group_msg(group_id=event.group_id, text=reply)
+
+    @registrar.qq.on_group_command("/ws肉质")
+    async def cmd_meat_ws(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/ws肉质", "").strip()
+        await self._send_meat_table_image(event, monster_name, source='mhws')
+
+    @registrar.qq.on_group_command("/wi肉质")
+    async def cmd_meat_wi(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/wi肉质", "").strip()
+        await self._send_meat_table_image(event, monster_name, source='mhwi')
+
+    @registrar.qq.on_group_command("/rs肉质")
+    async def cmd_meat_rs(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/rs肉质", "").strip()
+        await self._send_meat_table_image(event, monster_name, source='mhrs')
+
+    @registrar.qq.on_group_command("/肉质")
+    async def cmd_meat_compat(self, event: GroupMessageEvent):
+        monster_name = (event.raw_message or "").replace("/肉质", "").strip()
+        tip = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi肉质 )"
+        await self._send_meat_table_image(event, monster_name, source='mhws', tip_text=tip)
+
+    # ==================== 非命令消息处理 ====================
+
     @registrar.qq.on_group_message()
     async def _v5_group_event_entry(self, event: GroupMessageEvent):
         await self.on_group_message(event)
@@ -435,180 +602,16 @@ class mh(NcatBotPlugin):
 
     @bot_state.ignore_if_sleeping()
     async def on_group_message(self, msg: GroupMessageEvent):
-        text = msg.raw_message
-        text = text.replace("&amp;", "&") 
-        if text == "/helpMH" or text == "/helpmh":
-            menu_text = \
-            "直接发送集会码即可记录喵~\n" \
-            "/查询 获取集会列表\n" \
-            "/删除mhw 删除最近一个 MHW 集会码\n" \
-            "/删除mhr 删除最近一个 MHR 集会码\n" \
-            "/清空 清空所有集会码\n"\
-            "/爬取ws(wi,rs) 更新最新数据\n" \
-            "/怪物列表 列出所有数据源的怪物\n/ws(wi,rs)怪物列表 只列对应源的怪物\n" \
-            "/ws(wi,rs)简介 怪物名字 查询该怪物的信息\n" \
-            "/ws(wi,rs)弱点 怪物名字 查询该怪物的弱点简析\n" \
-            "/ws(wi,rs)肉质 怪物名字 查询 mhws(mhwi,mhrs) 数据源的肉质表"
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=menu_text)
+        """非命令消息处理（集会码识别）"""
+        text = (msg.raw_message or "").replace("&amp;", "&")
         if self.is_mhw_team_code.match(text):
             self.mhw.append(text)
             self._save_team_codes()
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~")
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=f"收到 MHW 集会码：\n{text}\n输入 /查询 获取集会列表喵~")
         if self.is_mhr_team_code.match(text):
             self.mhr.append(text)
             self._save_team_codes()
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"收到 MHR 集会码：\n{text}\n输入 /查询 获取集会列表喵~")
-        if text == "/查询":
-            mhw_codes = "\n".join(self.mhw) if len(self.mhw) > 0 else "暂无 MHW 集会码"
-            mhr_codes = "\n".join(self.mhr) if len(self.mhr) > 0 else "暂无 MHR 集会码"
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text=f"MHW集会码：\n{mhw_codes}\nMHR 集会码：\n{mhr_codes} ")
-        if text == "/删除mhw":
-            if len(self.mhw) == 0:
-                await self.api.qq.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHW 集会码喵~")
-                return
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text="已删除一个 MHW 集会码"+self.mhw[-1]+"喵~")
-            self.mhw.pop()
-            self._save_team_codes()
-        if text == "/删除mhr":
-            if len(self.mhr) == 0:
-                await self.api.qq.post_group_msg(group_id=msg.group_id,text="没有可删除的 MHR 集会码喵~")
-                return
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text="已删除一个 MHR 集会码"+self.mhr[-1]+"喵~")
-            self.mhr.pop()
-            self._save_team_codes()
-        if text == "/清空":
-            self.mhw.clear()
-            self.mhr.clear()
-            self._save_team_codes()
-            await self.api.qq.post_group_msg(group_id=msg.group_id,text="已清空所有集会码喵~")
-        if text == "/爬取ws":
-            # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
-            subprocess.Popen([sys.executable, "plugins/mh/mhws_Wiki_Crawler/src/mhws_crawler.py"])
-            self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新ws肉质表数据")
-            return
-        if text == "/爬取wi":
-            # 动态调用爬虫主函数（可用 subprocess 或 import 调用 main）
-            subprocess.Popen([sys.executable, "plugins/mh/mhwi_Wiki_Crawler/src/mhwi_crawler.py"])
-            self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新wi肉质表数据")
-            return
-        if text == "/爬取rs":
-            # 动态调用 mhrs 爬虫主函数
-            subprocess.Popen([sys.executable, "plugins/mh/mhrs_Wiki_Crawler/src/mhrs_crawler.py"])
-            self.analyzer = MonsterAnalyzer(os.path.dirname(__file__))
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text="已爬取并更新rs肉质表数据")
-            return
-        # 支持按数据源过滤：/怪物列表 显示全部，/ws|wi|rs怪物列表 只显示对应源
-        list_match = re.match(r"^/(ws|wi|rs)怪物列表$", text.strip())
-        if text.strip() == "/怪物列表" or list_match:
-            source_filter = {'ws': 'mhws', 'wi': 'mhwi', 'rs': 'mhrs'}.get(list_match.group(1)) if list_match else None
-
-            # 按数据源分组输出，优先显示 mhwi，然后 mhws，然后 mhrs
-            grouped = {}
-            for m in (self.analyzer.monster_list or []):
-                name = m.get('name','')
-                if not name:
-                    continue
-                src = m.get('source','unknown')
-                if source_filter and src != source_filter:
-                    continue
-                grouped.setdefault(src, []).append(name)
-
-            parts = []
-            for src in ['mhwi', 'mhws', 'mhrs']:
-                if src in grouped:
-                    # 去重但保持原顺序
-                    seen = set()
-                    uniq = []
-                    for n in grouped[src]:
-                        if n and n not in seen:
-                            seen.add(n)
-                            uniq.append(n)
-                    parts.append(f"{src}:")
-                    parts.append(' '.join(uniq))
-
-            # 如果还有其它来源，按字母序附加
-            other_srcs = sorted(k for k in grouped.keys() if k not in ('mhwi','mhws','mhrs'))
-            for src in other_srcs:
-                seen = set()
-                uniq = []
-                for n in grouped[src]:
-                    if n and n not in seen:
-                        seen.add(n)
-                        uniq.append(n)
-                parts.append(f"{src}:")
-                parts.append(' '.join(uniq))
-
-            reply = '\n'.join(parts) if parts else '暂无已收录的怪物'
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
-            return
-        
-        # 支持按数据源查询简介
-        if text.startswith("/ws简介 "):
-            monster_name = text[len("/ws简介 "):].strip()
-            reply = self._build_intro_for_source(monster_name, 'mhws')
-            await self._send_intro_reply(msg, reply)
-            return
-        if text.startswith("/wi简介 "):
-            monster_name = text[len("/wi简介 "):].strip()
-            reply = self._build_intro_for_source(monster_name, 'mhwi')
-            await self._send_intro_reply(msg, reply)
-            return
-        if text.startswith("/rs简介 "):
-            monster_name = text[len("/rs简介 "):].strip()
-            reply = self._build_intro_for_source(monster_name, 'mhrs')
-            await self._send_intro_reply(msg, reply)
-            return
-        # 支持按数据源查询弱点
-        if text.startswith("/ws弱点 "):
-            monster_name = text[len("/ws弱点 "):].strip()
-            reply = self.analyzer.get_monster_weakness(monster_name, source='mhws')
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
-            return
-        if text.startswith("/wi弱点 "):
-            monster_name = text[len("/wi弱点 "):].strip()
-            reply = self.analyzer.get_monster_weakness(monster_name, source='mhwi')
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
-            return
-        if text.startswith("/rs弱点 "):
-            monster_name = text[len("/rs弱点 "):].strip()
-            reply = self.analyzer.get_monster_weakness(monster_name, source='mhrs')
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
-            return
-        # 向后兼容旧命令 /简介 —— 映射到 mhws 并给出提示
-        if text.startswith("/简介 "):
-            monster_name = text[3:].strip()
-            reply = self.analyzer.get_monster_intro(monster_name)
-            reply = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi简介 )\n" + reply
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
-            return
-        # 向后兼容旧命令 /弱点 —— 映射到 mhws 并给出提示
-        if text.startswith("/弱点 "):
-            monster_name = text[len("/弱点 "):].strip()
-            reply = self.analyzer.get_monster_weakness(monster_name, source='mhws')
-            reply = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi弱点 )\n" + reply
-            await self.api.qq.post_group_msg(group_id=msg.group_id, text=reply)
-            return
-        # 支持两个肉质命令，分别对应 mhws 与 mhwi 数据源
-        if text.startswith("/ws肉质 "):
-            monster_name = text[len("/ws肉质 "):].strip()
-            await self._send_meat_table_image(msg, monster_name, source='mhws')
-            return
-        if text.startswith("/wi肉质 "):
-            monster_name = text[len("/wi肉质 "):].strip()
-            await self._send_meat_table_image(msg, monster_name, source='mhwi')
-            return
-        if text.startswith("/rs肉质 "):
-            monster_name = text[len("/rs肉质 "):].strip()
-            await self._send_meat_table_image(msg, monster_name, source='mhrs')
-            return
-        # 向后兼容旧命令 /肉质 —— 映射到 mhws 并给出提示
-        if text.startswith("/肉质 "):
-            monster_name = text[len("/肉质 "):].strip()
-            tip = "(已使用默认数据源 mhws，如需 mhwi 请使用 /wi肉质 )"
-            await self._send_meat_table_image(msg, monster_name, source='mhws', tip_text=tip)
-            return
+            await self.api.qq.post_group_msg(group_id=msg.group_id, text=f"收到 MHR 集会码：\n{text}\n输入 /查询 获取集会列表喵~")
         
     async def _daily_clear_team_codes(self):
         """每天 04:00 定时清空集会码（由调度器调用）。"""

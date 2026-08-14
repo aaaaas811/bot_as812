@@ -530,29 +530,28 @@ class GameInfo(NcatBotPlugin):
             )
         _log.info("[gameinfo] 用户 %s 设置UID %s 备名: %s", event.user_id, uid, label)
 
-    @registrar.qq.on_group_message()
-    async def _on_group_msg(self, event: GroupMessageEvent):
-        # 调试模式：只允许指定群
-        if bot_state.is_debug_mode() and str(event.group_id) != bot_state.get_debug_group():
-            _log.info("[gameinfo] 调试模式过滤: 群=%s (仅允许 %s)", event.group_id, bot_state.get_debug_group())
-            return
+    @registrar.qq.on_group_command("/gameinfo")
+    async def cmd_gameinfo(self, event: GroupMessageEvent):
         text = self._extract_text(event)
-        _log.info("[gameinfo] 收到群消息: 群=%s 文本=%r", event.group_id, text)
-        if text == "/gameinfo":
-            _log.info("[gameinfo] 收到 /gameinfo 指令，群=%s 用户=%s", event.group_id, event.user_id)
-            await self._check_and_send(event, full_report=True)
-            return
+        _log.info("[gameinfo] 收到 /gameinfo 指令，群=%s 用户=%s", event.group_id, event.user_id)
 
         add_match = re.match(r"^/gameinfo\s+add\s+(\d+)\s+(.+)$", text)
         if add_match:
-            _log.info("[gameinfo] 收到 /gameinfo add 指令，群=%s 用户=%s", event.group_id, event.user_id)
             await self._handle_add_uid(event, add_match.group(1), add_match.group(2).strip())
             return
 
         days_match = re.match(r"^/gameinfo\s+(\d+)$", text)
         if days_match:
-            _log.info("[gameinfo] 收到 /gameinfo 天数指令，群=%s 用户=%s", event.group_id, event.user_id)
             await self._handle_days_query(event, days_match.group(1))
+            return
+
+        await self._check_and_send(event, full_report=True)
+
+    @registrar.qq.on_group_message()
+    async def _on_group_msg(self, event: GroupMessageEvent):
+        # 调试模式过滤仍在此处（非命令消息）
+        if bot_state.is_debug_mode() and str(event.group_id) != bot_state.get_debug_group():
+            return
 
     @staticmethod
     def _extract_text(msg: GroupMessageEvent) -> str:

@@ -29,9 +29,98 @@ class Yuri(NcatBotPlugin):
 
     ACTIVE_GROUP_IDS = [883744030, 616492313]  # 定时推送的目标群列表
 
+    # ==================== 命令注册 ====================
+
+    @registrar.qq.on_group_command("/yuri")
+    async def cmd_yuri(self, event: GroupMessageEvent):
+        text = self.extract_text(event)
+        count, _ = self._parse_command_count(text, "yuri")
+        try:
+            if count == 1:
+                images = await self.get_images(1, event)
+                if images:
+                    await self.api.qq.post_group_msg(event.group_id, image=images[0])
+                else:
+                    await self.api.qq.post_group_msg(event.group_id, text="百合图片暂时不可用")
+            else:
+                images = await self.get_images(count, event)
+                if images:
+                    fc = ForwardConstructor(user_id=str(event.self_id), nickname="百合bot")
+                    for img in images:
+                        fc.attach_image(img)
+                    await self.api.qq.post_group_forward_msg(event.group_id, fc.build())
+                else:
+                    await self.api.qq.post_group_msg(event.group_id, text="百合图片暂时不可用")
+        except Exception as e:
+            _log.error(f"/yuri 指令处理失败: {e}")
+            await self.api.qq.post_group_msg(event.group_id, text="百合图片发送失败，请稍后重试")
+
+    @registrar.qq.on_group_command("/yuriwords")
+    async def cmd_yuriwords(self, event: GroupMessageEvent):
+        text = self.extract_text(event)
+        count, _ = self._parse_command_count(text, "yuriwords")
+        try:
+            if count == 1:
+                words = await self.get_yuri_words()
+                if words:
+                    await self.api.qq.post_group_msg(event.group_id, text=words)
+            else:
+                fc = ForwardConstructor(user_id=str(event.self_id), nickname="百合bot")
+                for _ in range(count):
+                    words = await self.get_yuri_words()
+                    if words:
+                        fc.attach_text(words)
+                forward = fc.build()
+                await self.api.qq.post_group_forward_msg(event.group_id, forward)
+        except Exception as e:
+            _log.error(f"/yuriwords 指令处理失败: {e}")
+
+    @registrar.qq.on_group_command("/名言警句")
+    async def cmd_quote(self, event: GroupMessageEvent):
+        text = self.extract_text(event)
+        try:
+            file_path = self.data_dir / "rgl.txt"
+            with open(file_path, "r", encoding="utf-8") as f:
+                lines = [line.strip() for line in f.readlines() if line.strip()]
+            if not lines:
+                await self.api.qq.post_group_msg(event.group_id, text="无话可说")
+                return
+            parts = text.split()
+            count = 1
+            if len(parts) > 1 and parts[1].isdigit():
+                count = max(1, min(int(parts[1]), 10))
+            if count == 1:
+                await self.api.qq.post_group_msg(event.group_id, text=random.choice(lines))
+            else:
+                fc = ForwardConstructor(user_id=str(event.self_id), nickname="名言bot")
+                for _ in range(count):
+                    fc.attach_text(random.choice(lines))
+                await self.api.qq.post_group_forward_msg(event.group_id, fc.build())
+        except FileNotFoundError:
+            await self.api.qq.post_group_msg(event.group_id, text="文件不存在")
+
+    @registrar.qq.on_group_command("/一言")
+    async def cmd_daily_quote(self, event: GroupMessageEvent):
+        quote = await self.get_daily_quote()
+        await self.api.qq.post_group_msg(event.group_id, text=quote)
+
+    @registrar.qq.on_private_command("/开启定时任务")
+    async def cmd_enable_schedule(self, event: PrivateMessageEvent):
+        self._scheduled_enabled = True
+        self._save_settings()
+        await self.api.qq.post_private_msg(event.user_id, text="✅ 定时任务已开启")
+
+    @registrar.qq.on_private_command("/关闭定时任务")
+    async def cmd_disable_schedule(self, event: PrivateMessageEvent):
+        self._scheduled_enabled = False
+        self._save_settings()
+        await self.api.qq.post_private_msg(event.user_id, text="❌ 定时任务已关闭")
+
+    # ==================== 非命令消息 ====================
+
     @registrar.qq.on_group_message()
     async def _v5_group_event_entry(self, event: GroupMessageEvent):
-        await self.on_group_event(event)
+        pass  # yuri 插件无非命令消息处理
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -76,19 +165,7 @@ class Yuri(NcatBotPlugin):
             print(f"已注册定时任务：每隔{time_interval}小时发布一次")
         except Exception as e:
             print(f"注册定时任务失败: {e}")
-    @registrar.qq.on_private_message()
-    async def on_private_message(self, event: PrivateMessageEvent):
-        text = (event.raw_message or "").strip()
-        if text == "/开启定时任务":
-            self._scheduled_enabled = True
-            self._save_settings()
-            await self.api.qq.post_private_msg(event.user_id, text="✅ 定时任务已开启")
-            _log.info("定时任务已通过私聊开启")
-        elif text == "/关闭定时任务":
-            self._scheduled_enabled = False
-            self._save_settings()
-            await self.api.qq.post_private_msg(event.user_id, text="❌ 定时任务已关闭")
-            _log.info("定时任务已通过私聊关闭")
+    # 私聊命令已通过 @registrar.qq.on_private_command 注册
 
     @bot_state.ignore_if_sleeping()
     async def daily_task(self):
@@ -388,99 +465,7 @@ class Yuri(NcatBotPlugin):
         count = max(1, min(count, 10))
         return count, True
 
+    # on_group_event 已由装饰器命令替代，此方法保留为空壳供定时任务调用
     @bot_state.ignore_if_sleeping()
     async def on_group_event(self, msg: GroupMessageEvent):
-        text = self.extract_text(msg)
-
-        # /yuri [x]
-        count, matched = self._parse_command_count(text, "yuri")
-        if matched:
-            try:
-                if count == 1:
-                    # 单张直接发送
-                    images = await self.get_images(1, msg)
-                    if images:
-                        await self.api.qq.post_group_msg(msg.group_id, image=images[0])
-                    else:
-                        await self.api.qq.post_group_msg(msg.group_id, text="百合图片暂时不可用（主API、备用API与本地缓存均失败）")
-                else:
-                    # 多张封装成聊天记录
-                    images = await self.get_images(count, msg)
-                    if images:
-                        fc = ForwardConstructor(user_id=str(msg.self_id), nickname="百合bot")
-                        for img in images:
-                            fc.attach_image(img)
-                        forward = fc.build()
-                        await self.api.qq.post_group_forward_msg(msg.group_id, forward)
-                    else:
-                        await self.api.qq.post_group_msg(msg.group_id, text="百合图片暂时不可用（主API、备用API与本地缓存均失败）")
-            except Exception as e:
-                _log.error(f"/yuri 指令处理失败: {e}")
-                await self.api.qq.post_group_msg(msg.group_id, text="百合图片发送失败，请稍后重试")
-            return
-
-        # /yuriwords [x]
-        count, matched = self._parse_command_count(text, "yuriwords")
-        if matched:
-            try:
-                if count == 1:
-                    words = await self.get_yuri_words()
-                    if words:
-                        await self.api.qq.post_group_msg(msg.group_id, text=words)
-                    else:
-                        _log.warning(f"/yuriwords 跳过发送：API不可用, group_id={msg.group_id}")
-                else:
-                    # 多条封装成聊天记录
-                    fc = ForwardConstructor(user_id=str(msg.self_id), nickname="百合bot")
-                    success_count = 0
-                    for _ in range(count):
-                        words = await self.get_yuri_words()
-                        if words:
-                            fc.attach_text(words)
-                            success_count += 1
-                        await asyncio.sleep(0.08)
-                    if success_count:
-                        forward = fc.build()
-                        await self.api.qq.post_group_forward_msg(msg.group_id, forward)
-                    else:
-                        _log.warning(f"/yuriwords 跳过发送：API不可用, group_id={msg.group_id}")
-            except Exception as e:
-                _log.error(f"/yuriwords 指令处理失败: {e}")
-            return
-
-        # /名言警句 [x]
-        if text.startswith("/名言警句"):
-            try:
-                file_path = self.data_dir / "rgl.txt"
-                with open(file_path, "r", encoding="utf-8") as f:
-                    lines = [line.strip() for line in f.readlines() if line.strip()]
-                if not lines:
-                    await self.api.qq.post_group_msg(msg.group_id, text="无话可说")
-                    return
-
-                # 解析次数
-                parts = text.split()
-                count = 1
-                if len(parts) > 1 and parts[1].isdigit():
-                    count = int(parts[1])
-                    count = max(1, min(count, 10))
-
-                if count == 1:
-                    quote = random.choice(lines)
-                    await self.api.qq.post_group_msg(msg.group_id, text=quote)
-                else:
-                    # 多条封装成聊天记录
-                    fc = ForwardConstructor(user_id=str(msg.self_id), nickname="名言bot")
-                    for _ in range(count):
-                        quote = random.choice(lines)
-                        fc.attach_text(quote)
-                    forward = fc.build()
-                    await self.api.qq.post_group_forward_msg(msg.group_id, forward)
-            except FileNotFoundError:
-                await self.api.qq.post_group_msg(msg.group_id, text="文件不存在")
-            return
-
-        # /一言
-        if text == "/一言":
-            quote = await self.get_daily_quote()
-            await self.api.qq.post_group_msg(msg.group_id, text=quote)
+        pass

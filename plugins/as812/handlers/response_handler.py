@@ -16,12 +16,13 @@ _log = get_log()
 class ResponseHandler:
     """响应处理器类"""
 
-    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, message_handler: MessageHandler, rag_manager=None, mood_handler=None):
+    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, message_handler: MessageHandler, rag_manager=None, mood_handler=None, get_image_cb=None):
         self.config_manager = config_manager
         self.log_manager = log_manager
         self.message_handler = message_handler
         self.rag_manager = rag_manager
         self.mood_handler = mood_handler
+        self.get_image_cb = get_image_cb  # async fn(file) -> 本地路径（NapCat get_image 兜底）
         # 缓存每个群组机器人最后一条消息的时间戳，避免每次从日志中遍历查找
         self._last_bot_message_time = {}
         # 按群组维护主动回复互斥锁，避免并发消息导致主动回复重复触发
@@ -84,7 +85,7 @@ class ResponseHandler:
         _log.info("开始生成回复……")
         image_api_key = self.config_manager.get_image_api_key()
         async with reply_lock:
-            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self.get_image_cb)
 
         if not response:
             return None
@@ -201,7 +202,7 @@ class ResponseHandler:
             _log.info("开始主动生成回复……")
             image_api_key = self.config_manager.get_image_api_key()
             async with reply_lock:
-                response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+                response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self.get_image_cb)
         
             if not response:
                 return None

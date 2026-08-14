@@ -78,6 +78,16 @@ async def _fetch_image_b64(u: str) -> list[str]:
         raw = u[len('base64://'):]
         if raw:
             return [f"data:image/jpeg;base64,{raw}"]
+    # 本地文件（必须先于 base64 判断：Windows 长路径也会被误判为 base64）
+    try:
+        base = os.path.join(os.path.dirname(__file__), '..', 'assests')
+        fp = os.path.join(base, u) if not os.path.isabs(u) else u
+        if os.path.exists(fp):
+            with open(fp, 'rb') as f:
+                data = f.read()
+                return _bytes_to_data_urls(data, _ext_to_mime(fp))
+    except Exception:
+        return []
     # 已是 base64（较长且无 http 开头），直接返回
     if len(u) > 100 and not u.startswith('http') and not u.startswith('/'):
         return [f"data:image/jpeg;base64,{u}"]
@@ -93,19 +103,9 @@ async def _fetch_image_b64(u: str) -> list[str]:
                         return _bytes_to_data_urls(data, mime)
         except Exception:
             return []
-    # 本地文件
-    try:
-        # 相对路径优先到 assests 目录
-        base = os.path.join(os.path.dirname(__file__), '..', 'assests')
-        fp = os.path.join(base, u) if not os.path.isabs(u) else u
-        if os.path.exists(fp):
-            with open(fp, 'rb') as f:
-                data = f.read()
-                return _bytes_to_data_urls(data, _ext_to_mime(fp))
-    except Exception:
-        return []
     return []
-async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, rag_context=""):
+
+async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, rag_context="", get_image_cb=None):
     try:
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复。"
@@ -155,9 +155,11 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
 
         # 工具调用说明（固定内容，加入缓存前缀）
         tool_instr = (
-            "如果需要对消息中的图片进行识别，请输出单独一行 JSON："
+            "重要：当系统消息列出了图片索引（如\"图片[0]: ...\"）且用户的消息涉及图片内容时，"
+            "你必须输出单独一行 JSON 来请求识图："
             "{\"tool_call\": {\"name\": \"vision_recognize\", \"image_index\": <图片索引>}}。"
-            "否则直接给出回复文本。"
+            "不要自行猜测图片内容，也不要回复\"看不清\"——请先调用工具获取识图结果。"
+            "如果没有图片索引或用户消息与图片无关，则直接给出回复文本。"
         )
         messages.append({"role": "system", "content": tool_instr})
 
@@ -219,30 +221,50 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
                     raw_idx = raw_idx[0] if raw_idx else 0
                 idx = int(raw_idx)
 
-                # 从 messages 中寻找被列出的图片 url（我们在 build_chat_history 中以 system 行列出）
-                img_url = None
+                # 从 messages 中寻找被列出的图片文件标识（build_chat_history 以 system 行列出）
+                # 注：QQ 图片 URL（gchat.qpic.cn 的 rkey）会过期，统一走 NapCat get_image 取图
+                img_file = None
                 for msg in messages:
                     try:
                         if msg.get('role') == 'system' and msg.get('content', '').startswith('当前消息包含图片/表情片段'):
-                            # content 中每行形如: 图片[0]: {url}
+                            # content 中每行形如: 图片[0]: {url} / 文件[0]: {file}
                             lines = msg['content'].splitlines()
                             for line in lines:
-                                if line.strip().startswith(f"图片[{idx}]:"):
-                                    img_url = line.split(':', 1)[1].strip()
+                                if line.strip().startswith(f"文件[{idx}]:"):
+                                    img_file = line.split(':', 1)[1].strip()
                                     break
-                            if img_url:
+                            # 旧格式无 文件 行时退回 图片 行（此时内容即本地路径或可用 URL）
+                            if not img_file:
+                                for line in lines:
+                                    if line.strip().startswith(f"图片[{idx}]:"):
+                                        img_file = line.split(':', 1)[1].strip()
+                                        break
+                            if img_file:
                                 break
                     except Exception:
                         continue
 
-                # 无法找到图片 URL，则返回空结果
-                if not img_url:
+                # 无法找到图片文件标识，则返回空结果
+                if not img_file:
+                    _log.info("[识图] 未找到图片文件标识")
                     tool_result = "[识图失败：未找到对应图片]"
                 else:
-                    # 获取图片数据：支持 http(s) 下载或本地文件读取或直接 base64 字符串
-                    img_inputs = await _fetch_image_b64(img_url)
+                    _log.info(f"[识图] file={img_file} cb={'有' if get_image_cb else '无'}")
+                    img_inputs = []
+                    if get_image_cb:
+                        try:
+                            local_path = await get_image_cb(img_file)
+                            if local_path:
+                                img_inputs = await _fetch_image_b64(str(local_path))
+                                _log.info(f"[识图] get_image 取图: {'成功' if img_inputs else '失败'}")
+                        except Exception as e:
+                            _log.warning(f"按文件标识取图失败: {e}")
+                    # 非 NapCat 文件标识时（如 http URL），直接走下载
+                    if not img_inputs and img_file.startswith(('http', 'base64://', 'data:image')):
+                        img_inputs = await _fetch_image_b64(img_file)
                     if img_inputs:
                         tool_result = await call_image_recognition(image_api_key or api_key, img_inputs)
+                        _log.info(f"[识图] MIMO 识别: {str(tool_result)[:80]}")
                     else:
                         tool_result = "[识图失败：无法获取图片数据]"
 

@@ -126,7 +126,8 @@ class as812(NcatBotPlugin):
             self.log_manager,
             self.message_handler,
             self.rag_manager,
-            self.mood_handler
+            self.mood_handler,
+            self._get_image_by_file,
         )
         # 展示层：发送/渲染回复（表情包、指令、节奏）
         self.sender = ResponseSender(
@@ -207,7 +208,46 @@ class as812(NcatBotPlugin):
         """插件卸载时清理资源。"""
         if self.bilibili_handler is not None:
             await self.bilibili_handler.on_unload(self.api)
-    
+
+    async def _get_image_by_file(self, file_name: str):
+        """通过 NapCat 的 get_image action 按文件标识下载图片，返回本地路径。
+
+        用于 QQ 图片 URL（gchat.qpic.cn 的 rkey）过期时的兜底取图。
+        ncatbot 5.x 的 api.qq 是 QQAPIClient 门面，底层 NapCatBotAPI 在 api.qq._api。
+        """
+        try:
+            if not file_name:
+                _log.info("[识图兜底] file_name 为空")
+                return None
+            qq_api = getattr(self.api, "qq", None)
+            if qq_api is None:
+                _log.info("[识图兜底] api.qq 不存在")
+                return None
+            # 底层原始 API（NapCatBotAPI）有 _call，可调用 OneBot 11 标准 action
+            raw_api = getattr(qq_api, "_api", None)
+            call_fn = getattr(raw_api, "_call", None) if raw_api is not None else None
+            if call_fn is None:
+                _log.info(f"[识图兜底] 底层 API 无 _call 方法（raw_api={type(raw_api).__name__ if raw_api else None}）")
+                return None
+            resp = await call_fn("get_image", {"file": file_name})
+            _log.info(f"[识图兜底] get_image 响应: {str(resp)[:200]}")
+            data = resp.get("data") if isinstance(resp, dict) else {}
+            local_file = None
+            if isinstance(data, dict):
+                local_file = data.get("file") or data.get("path")
+            elif isinstance(data, str):
+                local_file = data
+            if not local_file:
+                _log.warning(f"get_image 未返回文件路径: {resp}")
+                return None
+            if os.path.exists(local_file):
+                _log.info(f"[识图兜底] 本地文件可用: {local_file}")
+                return local_file
+            _log.warning(f"get_image 返回的文件不存在: {local_file}")
+        except Exception as e:
+            _log.warning(f"按文件标识取图失败: {e}")
+        return None
+
     def _adapt_group_event(self, event: GroupMessageEvent):
         """将 v5 事件适配为旧逻辑可用的数据结构。"""
         sender = getattr(event, "sender", None)
@@ -306,7 +346,7 @@ class as812(NcatBotPlugin):
         # 生成回复
         _log.info("开始生成私聊回复……")
         image_api_key = self.config_manager.get_image_api_key()
-        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self._get_image_by_file)
 
         if not response:
             _log.info("私聊回复为空")
@@ -752,7 +792,7 @@ class as812(NcatBotPlugin):
             if self.rag_manager and self.rag_manager.should_retrieve(text):
                 rag_context, _ = self.rag_manager.retrieve(text)
 
-            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context)
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self._get_image_by_file)
             return response or ""
         except Exception as e:
             _log.error(f"[面板] 聊天处理异常: {e}")

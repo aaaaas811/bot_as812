@@ -333,12 +333,16 @@ class MessageHandler:
                         # 优先显示 url，其次 file 字段，再fallback为 summary 或空占位
                         url = seg.get("url") or seg.get("file") or seg.get("image_url") or seg.get("file_url") or seg.get("summary") or ""
                         img_lines.append(f"图片[{i}]: {url}")
+                        # 记录 NapCat 文件标识，URL 过期时用于兜底取图
+                        fname = seg.get("file") or ""
+                        if fname and fname != url:
+                            img_lines.append(f"文件[{i}]: {fname}")
                 except Exception:
                     continue
 
             # 解析当前消息文本中可能存在的 CQ:image（例如引用中的展开文本）
             try:
-                cq_imgs = []
+                cq_imgs = []  # (url, file)
                 pattern = re.compile(r"\[CQ:image,([^\]]+)\]")
                 for m in pattern.finditer(current_msg_text):
                     params = m.group(1)
@@ -351,13 +355,18 @@ class MessageHandler:
                         except Exception:
                             continue
                     # 优先取 url，其次 file
-                    cq_imgs.append(info.get('url') or info.get('file') or '')
+                    url = info.get('url') or info.get('file') or ''
+                    fname = info.get('file') or ''
+                    cq_imgs.append((url, fname))
 
                 if cq_imgs:
                     start_idx = len(img_lines)
-                    for j, u in enumerate(cq_imgs):
+                    for j, (u, fname) in enumerate(cq_imgs):
                         try:
                             img_lines.append(f"图片[{start_idx + j}]: {u}")
+                            # 记录 NapCat 文件标识，URL 过期时用于兜底取图
+                            if fname and fname != u:
+                                img_lines.append(f"文件[{start_idx + j}]: {fname}")
                         except Exception:
                             continue
             except Exception:
