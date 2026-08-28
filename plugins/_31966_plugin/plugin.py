@@ -23,17 +23,16 @@ from uapi import UapiClient
 from uapi.errors import UapiError
 
 import bot_state
+from plugins._31966_plugin.sleep_schedule import is_scheduled_sleep_time
 
 try:
     from as812.core.config_manager import ConfigManager
     from as812.core.log_manager import LogManager
     from as812.models.message_models import BotResponse
-    from as812.responses.CatCatRes import cat_cat_response, get_reply_lock
 except ModuleNotFoundError:
     from plugins.as812.core.config_manager import ConfigManager
     from plugins.as812.core.log_manager import LogManager
     from plugins.as812.models.message_models import BotResponse
-    from plugins.as812.responses.CatCatRes import cat_cat_response, get_reply_lock
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -48,31 +47,35 @@ class PluginPlugin(NcatBotPlugin):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.cyc_wait_time = 0.2
         self.emoji_kill_mode = False
         self.emoji_kill_times = 8
         self.emoji_wait_time = 0.1
-        self.poke_back_times = 1
-        self.poke_back_enabled = True
-        self.poke_delay = self._load_poke_delay()
-        self._last_poke_time: dict[str, float] = {}
         self.famous_words_time = 3600
         self.config_manager = ConfigManager()
         self.log_manager = LogManager()
 
-    @staticmethod
-    def _load_poke_delay() -> int:
-        """从 config.yaml 读取戳一戳冷却时间，读取失败时返回 0（不限制）。"""
-        try:
-            config_path = AS812_DIR / "config" / "config.yaml"
-            with open(config_path, "r", encoding="utf-8") as f:
-                cfg = yaml.safe_load(f) or {}
-            return int(cfg.get("poke_delay", 60))
-        except Exception:
-            return 60
-
     async def on_load(self):
+        # 热重载或重启时立即按当前时间校准，避免等到下一个整点。
+        bot_state.set_sleep(is_scheduled_sleep_time())
+        self.add_scheduled_task(
+            name="enter_sleep_mode",
+            interval="00:00",
+            callback=self.enter_sleep_mode,
+        )
+        self.add_scheduled_task(
+            name="exit_sleep_mode",
+            interval="08:00",
+            callback=self.exit_sleep_mode,
+        )
         self.logger.info(f"{self.name} 已加载")
+
+    async def enter_sleep_mode(self):
+        bot_state.set_sleep(True)
+        self.logger.info("已按计划进入睡眠模式")
+
+    async def exit_sleep_mode(self):
+        bot_state.set_sleep(False)
+        self.logger.info("已按计划退出睡眠模式")
 
     async def on_close(self):
         self.logger.info(f"{self.name} 已卸载")
@@ -93,16 +96,6 @@ class PluginPlugin(NcatBotPlugin):
             except UapiError as exc:
                 self.logger.warning(f"名言警句 API 错误: {exc}")
             await asyncio.sleep(self.famous_words_time)
-
-    def load_cat_prompt(self) -> str:
-        """从 plugins/as812/config/cat_prompt.txt 读取人设 prompt。"""
-        try:
-            prompt_path = AS812_DIR / "config" / "cat_prompt.txt"
-            with open(prompt_path, "r", encoding="utf-8") as f:
-                return f.read().strip()
-        except Exception as exc:
-            self.logger.error(f"读取 cat_prompt.txt 失败: {exc}")
-            return ""
 
     async def on_group_event(self, msg: GroupMessageEvent):
         # Compatibility entry for legacy dispatcher paths.
@@ -140,27 +133,6 @@ class PluginPlugin(NcatBotPlugin):
             if number_minus.isdigit():
                 self.emoji_kill_times = max(1, self.emoji_kill_times - int(number_minus))
             await self.api.qq.post_private_msg(msg.user_id, text=f"当前歼灭次数为：{self.emoji_kill_times} 次")
-        if text == "戳一戳回击开启":
-            self.poke_back_enabled = True
-            await self.api.qq.post_private_msg(msg.user_id, text="戳一戳回击已开启喵~")
-        if text == "戳一戳回击关闭":
-            self.poke_back_enabled = False
-            await self.api.qq.post_private_msg(msg.user_id, text="戳一戳回击已关闭喵~")
-        if text == "查询戳一戳回击":
-            status = "开启" if self.poke_back_enabled else "关闭"
-            await self.api.qq.post_private_msg(
-                msg.user_id, text=f"当前戳一戳回击为：{status}，次数：{self.poke_back_times}"
-            )
-        if text.startswith("戳一戳回击次数+"):
-            number_plus = text[len("戳一戳回击次数+") :].strip()
-            if number_plus.isdigit():
-                self.poke_back_times += int(number_plus)
-            await self.api.qq.post_private_msg(msg.user_id, text=f"当前戳一戳回击次数为：{self.poke_back_times} 次")
-        if text.startswith("戳一戳回击次数-"):
-            number_minus = text[len("戳一戳回击次数-") :].strip()
-            if number_minus.isdigit():
-                self.poke_back_times = max(0, self.poke_back_times - int(number_minus))
-            await self.api.qq.post_private_msg(msg.user_id, text=f"当前戳一戳回击次数为：{self.poke_back_times} 次")
         if text == "812睡觉":
             await self.api.qq.post_private_msg(msg.user_id, text="哦呀斯密....")
             bot_state.set_sleep(True)
@@ -186,71 +158,6 @@ class PluginPlugin(NcatBotPlugin):
         if text == "812起床" and bot_state.is_sleeping():
             bot_state.set_sleep(False)
             await self.api.qq.post_group_msg(msg.group_id, text="嗯——早上好喵呜喵呜~")
-
-    @registrar.qq.on_poke()
-    @bot_state.ignore_if_sleeping()
-    async def on_poke(self, event: NoticeEvent):
-        target_id = getattr(event.data, "target_id", None)
-        if str(target_id) != str(event.self_id) or not self.poke_back_enabled:
-            return
-
-        # 戳一戳冷却：poke_delay 秒内同一群不允许再次触发
-        if self.poke_delay > 0:
-            group_key = str(event.group_id)
-            now = time.time()
-            last = self._last_poke_time.get(group_key, 0)
-            if now - last < self.poke_delay:
-                self.logger.info(
-                    f"群 {group_key} 戳一戳冷却中（{self.poke_delay}s），跳过本次触发"
-                )
-                return
-            self._last_poke_time[group_key] = now
-
-        for _ in range(self.poke_back_times):
-            if event.group_id and event.user_id:
-                await self.api.qq.send_poke(event.group_id, event.user_id)
-            await asyncio.sleep(self.cyc_wait_time)
-
-        # 阻塞机制：若该群已有回复正在生成中，跳过本次戳一戳 AI 回复
-        group_id = str(event.group_id)
-        reply_lock = get_reply_lock(group_id)
-        if reply_lock.locked():
-            self.logger.info(f"群 {group_id} 正在生成回复中，跳过戳一戳 AI 回复")
-            return
-
-        try:
-            config_path = AS812_DIR / "config" / "config.yaml"
-            with open(config_path, "r", encoding="utf-8") as f:
-                cat_config = yaml.safe_load(f) or {}
-                api_key = cat_config.get("api_key")
-            cat_prompt = self.load_cat_prompt()
-
-            try:
-                _, user_info_str, personality_summary, _ = self.log_manager.load_personal_log(
-                    str(event.group_id), str(event.user_id)
-                )
-            except Exception:
-                user_info_str = ""
-                personality_summary = ""
-
-            chat_history = []
-            if user_info_str:
-                chat_history.append({"role": "system", "content": f"该用户的基本信息：{user_info_str}"})
-            if personality_summary:
-                chat_history.append({"role": "system", "content": f"该用户的个性总结：{personality_summary}"})
-            chat_history.append(
-                {
-                    "role": "system",
-                    "content": f"有人戳了戳因此812对其进行了{self.poke_back_times}下回击，812对此有些戏谑性的恼怒",
-                }
-            )
-
-            async with reply_lock:
-                response = await cat_cat_response(api_key, chat_history, cat_prompt)
-            if response:
-                await self._send_response_like_as812(event.group_id, response)
-        except Exception as exc:
-            self.logger.warning(f"戳一戳 AI 回复失败: {exc}")
 
     @registrar.on("notice.group_msg_emoji_like", platform="qq")
     @bot_state.ignore_if_sleeping()

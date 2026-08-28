@@ -8,6 +8,19 @@ xiaozhi-server 本身为 ESP32 硬件设计，通过 WebSocket 传输 Opus 音�
 
 本插件作为 WebSocket 客户端连接 xiaozhi-server，将 QQ 私聊的文本通过 `detect` 通道发送，收集 TTS 响应中的 `sentence_start` 文本片段，拼接后返回 QQ。
 
+## 私聊开关
+
+插件加载后默认关闭，不会自动处理任何普通私聊。仅 `super_user` 或
+`allowed_users` 中的用户可以使用以下指令和桥接功能：
+
+| 私聊指令 | 作用 |
+|----------|------|
+| `开启小智` | 开启 xiaozhi 私聊桥接；此后的普通私聊会发送给 xiaozhi-server |
+| `关闭小智` | 关闭桥接并断开已有的 xiaozhi-server 连接 |
+
+开关状态不会持久化；插件重载或 Bot 重启后会恢复为关闭状态。该开关与主
+`as812` 插件的“开启私聊 / 关闭私聊”相互独立。
+
 ## 配置
 
 编辑 `config/config.yaml`：

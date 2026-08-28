@@ -25,6 +25,7 @@ class XiaozhiBridge(NcatBotPlugin):
     async def on_load(self):
         self._config = self._load_config()
         self._conn_manager = ConnectionManager(self._config)
+        self._enabled = False
         _log.info("[xiaozhi_bridge] 插件已加载")
 
     async def on_unload(self):
@@ -40,6 +41,20 @@ class XiaozhiBridge(NcatBotPlugin):
 
         raw_text = (event.raw_message or "").strip()
         if not raw_text:
+            return
+
+        if raw_text == "开启小智":
+            self._enabled = True
+            await self._qq_post_private_msg(event.user_id, text="小智桥接已开启")
+            return
+
+        if raw_text == "关闭小智":
+            self._enabled = False
+            await self._conn_manager.close_all()
+            await self._qq_post_private_msg(event.user_id, text="小智桥接已关闭")
+            return
+
+        if not self._enabled:
             return
 
         # 跳过转述命令，避免与 as812 插件冲突
