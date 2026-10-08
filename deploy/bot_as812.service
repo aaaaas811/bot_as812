@@ -1,0 +1,19 @@
+[Unit]
+Description=bot_as812 QQ bot
+Requires=napcat@3024473284.service
+After=napcat@3024473284.service
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/bot_as812
+ExecStart=%h/bot_as812/.venv/bin/python -u %h/bot_as812/main.py
+Environment=PYTHONUNBUFFERED=1
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=45
+UMask=0077
+
+[Install]
+WantedBy=default.target

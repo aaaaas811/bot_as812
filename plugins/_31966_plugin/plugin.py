@@ -203,6 +203,8 @@ class PluginPlugin(NcatBotPlugin):
     @registrar.qq.on_group_increase()
     @bot_state.ignore_if_sleeping()
     async def on_group_member_join(self, event: GroupIncreaseEvent):
+        if str(event.group_id) == "616492313":
+            return
         await self.api.qq.post_group_msg(group_id=event.group_id, text="新天尊玩什么太刀")
 
     async def _send_response_like_as812(self, group_id: int, response: str):

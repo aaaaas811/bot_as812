@@ -24,6 +24,7 @@ from .handlers.message_handler import MessageHandler
 from .handlers.response_handler import ResponseHandler
 from .handlers.mood_handler import MoodHandler
 from .handlers.sender import ResponseSender
+from .handlers.reply_coordinator import GroupReplyCoordinator
 from .handlers.command_handler import CommandHandler
 from .handlers.bilibili_handler import BilibiliHandler
 from .models.message_models import BotResponse, ChatMessage, UserInfo
@@ -83,6 +84,7 @@ class as812(NcatBotPlugin):
         self.rag_manager = None
         self._assets_dir = Path(__file__).parent / "assests"
         self._private_chat_enabled = False
+        self.reply_coordinator = None
     
     async def on_load(self):
         """插件加载时执行"""
@@ -140,6 +142,7 @@ class as812(NcatBotPlugin):
             self._qq_delete_msg,
             self._set_emotion,
         )
+        self.reply_coordinator = GroupReplyCoordinator(self._reply_to_group_messages)
         self.command_handler = CommandHandler(
             self.config_manager,
             self.prompt_manager,
@@ -206,6 +209,8 @@ class as812(NcatBotPlugin):
 
     async def on_unload(self):
         """插件卸载时清理资源。"""
+        if self.reply_coordinator is not None:
+            await self.reply_coordinator.close()
         if self.bilibili_handler is not None:
             await self.bilibili_handler.on_unload(self.api)
 
@@ -465,6 +470,13 @@ class as812(NcatBotPlugin):
         if bot_uin and str(msg.sender.user_id) == str(bot_uin):
             return
 
+        preparation = asyncio.create_task(self._prepare_group_message(event, msg))
+        self.reply_coordinator.submit(str(msg.group_id), preparation)
+        await preparation
+
+    async def _prepare_group_message(self, event: GroupMessageEvent, msg) -> ChatMessage | None:
+        """完成群消息检查、展开和保存，供回复收拢器使用。"""
+
         # 检查机器人是否被禁言（结果写入文件供面板读取）
         muted = await self.mood_handler.is_bot_muted(self.api, msg.group_id)
         try:
@@ -500,15 +512,6 @@ class as812(NcatBotPlugin):
         except Exception as e:
             _log.warning(f"处理心情计数失败: {e}")
         
-        # 获取提示词
-        cat_prompt = self.prompt_manager.load_prompt()
-        
-        # 获取API密钥
-        api_key = self.config_manager.get_api_key()
-        if not api_key:
-            _log.error("API密钥未配置")
-            return
-        
         # 解析消息
         chat_message = self.message_handler.parse_group_message(msg)
 
@@ -522,38 +525,42 @@ class as812(NcatBotPlugin):
         personal_log_file = self.log_manager.get_personal_log_path(str(msg.group_id), str(msg.sender.user_id))
         self.log_manager.append_to_personal_log(personal_log_file, f"用户: {chat_message.message}")
         
-        # 处理被动回复
+        return chat_message
+
+    async def _reply_to_group_messages(self, group_id: str, messages: tuple[ChatMessage, ...], commit) -> None:
+        """根据同群收拢的一批消息生成回复，并在实际开口时提交本次回复。"""
+        api_key = self.config_manager.get_api_key()
+        if not api_key:
+            _log.error("API密钥未配置")
+            return
+        cat_prompt = self.prompt_manager.load_prompt()
+        latest = messages[-1]
         response = await self.response_handler.process_passive_response(
-            api_key, 
-            chat_message, 
-            str(msg.group_id), 
-            cat_prompt
+            api_key, latest, group_id, cat_prompt, list(messages)
         )
-        
-        if response:
-            # 根据配置的概率决定是否引用消息
-            reply_id = None
-            random_response_way = self.config_manager.get_random_response_way()
-            if random.random() < random_response_way:
-                reply_id = msg.message_id
-            await self.sender.send_group_response(msg.group_id, response, reply_id)
-        else:
-            # 尝试主动回复
-            active_group_ids = self.config_manager.get_active_group_ids()
-            if str(msg.group_id) in active_group_ids:
-                active_response = await self.response_handler.process_active_response(
-                    api_key,
-                    cat_prompt,
-                    str(msg.group_id)
-                )
-                if active_response:
-                    await self.sender.send_group_response(msg.group_id, active_response)
-                else:
-                    _log.info("未发送主动回复：延迟条件未满足或无可用用户消息")
-            else:
-                _log.info(
-                    f"未进入主动回复：当前群 {msg.group_id} 不在 active_group_ids({active_group_ids}) 中"
-                )
+        active = False
+        if not response and group_id in self.config_manager.get_active_group_ids():
+            response = await self.response_handler.process_active_response(
+                api_key, cat_prompt, group_id, list(messages)
+            )
+            active = bool(response)
+        if not response:
+            return
+
+        reply_id = None
+        if not active and random.random() < self.config_manager.get_random_response_way():
+            reply_id = latest.message_id
+
+        started = False
+
+        def on_first_send():
+            nonlocal started
+            started = True
+            commit()
+
+        await self.sender.send_group_response(int(group_id), response, reply_id, on_first_send=on_first_send)
+        if started:
+            await self.response_handler.record_sent_response(group_id, latest, response, active=active)
     
     @registrar.qq.on_private_message()
     @bot_state.ignore_if_sleeping()

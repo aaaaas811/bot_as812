@@ -1,4 +1,4 @@
-# __init__.py
-from .main import as812
+"""Shared utilities are importable without registering the plugin's handlers.
 
-__all__ = ["as812"]
+The framework loads the entry class from main.py via manifest.toml.
+"""

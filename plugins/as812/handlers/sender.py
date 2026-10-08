@@ -35,14 +35,21 @@ class ResponseSender:
         self._delete_msg = delete_msg                  # async fn(message_id)
         self._set_emotion = set_emotion                # async fn(group_id, mood)
 
-    async def send_group_response(self, group_id: int, response: str, reply_id: str = None) -> None:
+    async def send_group_response(self, group_id: int, response: str, reply_id: str = None, on_first_send=None) -> None:
         """发送群聊回复（记录机器人回复日志）。"""
         paragraphs = [p.strip() for p in re.split(r"\n\s*\n+", response) if p.strip()]
         if not paragraphs:
             return
         bot_qq = self.config_manager.get_bt_uin() or "812"
 
+        started = False
+
         async def send_line(**kwargs):
+            nonlocal started
+            if not started:
+                started = True
+                if on_first_send is not None:
+                    on_first_send()
             return await self._post_group_msg(group_id, **kwargs)
 
         def on_text_sent(text, msg_id):

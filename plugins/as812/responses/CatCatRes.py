@@ -9,8 +9,8 @@ import base64
 import aiohttp
 _log = get_log()
 
-# 跨插件共享的回复阻塞锁：key=group_id, value=asyncio.Lock
-# 当 LLM 正在为某个群生成回复时，同群的其他触发源（被动、主动、戳一戳）将被跳过
+# 跨插件共享的回复生成锁：key=group_id, value=asyncio.Lock
+# 同群生成串行执行；新消息由 GroupReplyCoordinator 取消旧草稿并重新收拢。
 _reply_locks: dict[str, asyncio.Lock] = {}
 
 

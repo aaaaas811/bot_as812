@@ -11,7 +11,7 @@ _log = get_log()
 
 # Unicode emoji 字符（手机键盘表情，如 🍬😂），用于 /贴表情 直接透传
 EMOJI_CHAR_RE = re.compile(
-    r"^[\U0001F000-\U0001FAFF☀-➿⬀-⯿️‍⃣\U0001F1E6-\U0001F1FF]+$"
+    r"^[\U0001F000-\U0001FAFF☀-➿⬀-⯿㊗️‍⃣\U0001F1E6-\U0001F1FF]+$"
 )
 
 # QQ 原生表情 ID 映射（OneBot 通用表，0-79）

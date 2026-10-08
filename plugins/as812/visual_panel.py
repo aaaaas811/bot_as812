@@ -17,6 +17,11 @@ from pathlib import Path
 from typing import Dict, Optional
 
 try:
+    from .panel_preferences import load_panel_preferences, save_panel_preferences
+except ImportError:  # Direct script launch from main.py.
+    from panel_preferences import load_panel_preferences, save_panel_preferences
+
+try:
     import tkinter as tk
     from tkinter import font as tkfont, scrolledtext
 except Exception as e:
@@ -59,17 +64,21 @@ class VisualPanel:
 
     def __init__(self, assets_dir: Optional[str] = None, logs_dir: Optional[str] = None,
                  parent_pid: Optional[int] = None, config_dir: Optional[str] = None):
-        self.root = tk.Tk()
-        self.root.title("as812 面板")
-        self.root.configure(bg="#1e1e2e")
-        self.root.geometry("960x620")
-        self.root.resizable(True, True)
-        self.root.minsize(600, 400)
-
         base = Path(__file__).parent
         self.assets_dir = Path(assets_dir) if assets_dir else base / "assests"
         self.logs_dir = Path(logs_dir) if logs_dir else base / "logs"
         self.config_dir = Path(config_dir) if config_dir else base / "config"
+        self._preferences_path = self.config_dir / "panel.json"
+        self._preferences = load_panel_preferences(self._preferences_path)
+        self._theme_name = self._preferences["theme"]
+
+        self.root = tk.Tk()
+        self.root.title("as812 面板")
+        self.root.configure(bg="#111827")
+        window = self._preferences["window"]
+        self.root.geometry(f'{window["width"]}x{window["height"]}')
+        self.root.resizable(True, True)
+        self.root.minsize(720, 480)
 
         # 状态
         self._current_mood: str = ""
@@ -84,6 +93,7 @@ class VisualPanel:
         available = list(tkfont.families())
         font_family = next((f for f in preferred if f in available), available[0])
         self._font_family = font_family
+        self._font_scale = self._preferences["font_scale"]
 
         # 后台线程控制（必须在构建 UI 之前初始化，因为 UI 构建中会启动线程）
         self._stop_event = threading.Event()
@@ -94,6 +104,10 @@ class VisualPanel:
         # 底部栏先打包（固定高度），主区域填充剩余空间
         self._build_bottom_bar()
         self._build_main_area()
+        self._scale_widget_fonts(self.root)
+        self._apply_theme(self._theme_name)
+        if not self._preferences["sidebar_visible"]:
+            self._set_sidebar_visible(False)
 
         # 立绘资源
         self._default_image_path = self.assets_dir / "img" / "立绘" / "立绘.jpg"
@@ -170,6 +184,13 @@ class VisualPanel:
         )
         self._settings_btn.pack(side=tk.RIGHT, padx=4)
 
+        self._sidebar_btn = tk.Button(
+            bar, text="◧ 侧栏", font=(self._font_family, 10), bd=0,
+            bg="#2a2a3e", fg="#aaa", activebackground="#3a3a4e",
+            command=self._toggle_sidebar, cursor="hand2",
+        )
+        self._sidebar_btn.pack(side=tk.RIGHT, padx=4)
+
     def _build_main_area(self):
         """中间主区域：左侧消息 + 右侧立绘。"""
         main = tk.Frame(self.root, bg="#1e1e2e")
@@ -179,11 +200,25 @@ class VisualPanel:
         left = tk.Frame(main, bg="#1e1e2e")
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        msg_toolbar = tk.Frame(left, bg="#1e1e2e")
+        msg_toolbar.pack(fill=tk.X, padx=10, pady=(6, 0))
         msg_header = tk.Label(
-            left, text="💬 消息流", font=(self._font_family, 11, "bold"),
+            msg_toolbar, text="💬 消息流", font=(self._font_family, 11, "bold"),
             fg="#ccc", bg="#1e1e2e", anchor="w",
         )
-        msg_header.pack(fill=tk.X, padx=10, pady=(6, 0))
+        msg_header.pack(side=tk.LEFT)
+        self._search_entry = tk.Entry(
+            msg_toolbar, width=18, font=(self._font_family, 9), bg="#252536",
+            fg="#e0e0e0", insertbackground="#fff", bd=0,
+        )
+        self._search_entry.pack(side=tk.RIGHT, ipady=2)
+        self._search_entry.bind("<Return>", self._find_next_message)
+        for text, command in (("查找", self._find_next_message), ("复制", self._copy_messages), ("清空", self._clear_messages)):
+            tk.Button(
+                msg_toolbar, text=text, font=(self._font_family, 9), bd=0,
+                bg="#374151", fg="#d1d5db", activebackground="#4b5563",
+                command=command, cursor="hand2", padx=7,
+            ).pack(side=tk.RIGHT, padx=(0, 4))
 
         self._msg_text = tk.Text(
             left, bg="#252536", fg="#e0e0e0", font=(self._font_family, 11),
@@ -198,11 +233,13 @@ class VisualPanel:
         self._msg_text.tag_configure("emoji", foreground="#ffcc00")
         self._msg_text.tag_configure("system", foreground="#6a6", font=(self._font_family, 10, "italic"))
         self._msg_text.tag_configure("cmd_result", foreground="#22d3ee", font=("Consolas", 10))
+        self._msg_text.tag_configure("search_hit", background="#facc15", foreground="#111827")
 
         # 右侧立绘 + 操作
-        right = tk.Frame(main, bg="#1e1e2e", width=300)
+        right = tk.Frame(main, bg="#1e1e2e", width=320)
         right.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(0, 8), pady=6)
         right.pack_propagate(False)
+        self._right_panel = right
 
         self._canvas = tk.Canvas(
             right, bg="#1e1e2e", highlightthickness=0, cursor="hand2",
@@ -297,14 +334,10 @@ class VisualPanel:
         cmd_row.pack(fill=tk.X, padx=8, pady=(0, 6))
         tk.Label(cmd_row, text="命令：", font=(self._font_family, 9),
                  fg="#666", bg="#2a2a3e").pack(side=tk.LEFT)
-        quick_cmds = [
-            ("/怪物列表", "#6366f1"), ("/撤回记录", "#8b5cf6"),
-            ("/rag_stats", "#0ea5e9"), ("/helpMH", "#f59e0b"),
-            ("/rs怪物列表", "#10b981"),
-        ]
-        for cmd, color in quick_cmds:
+        for item in self._preferences["quick_commands"]:
+            label, cmd, color = item["label"], item["command"], item["color"]
             tk.Button(
-                cmd_row, text=cmd, font=(self._font_family, 8), bd=0,
+                cmd_row, text=label, font=(self._font_family, 8), bd=0,
                 bg=color, fg="#fff", activebackground=color, cursor="hand2",
                 padx=6, pady=1,
                 command=lambda c=cmd: self._send_quick_cmd(c),
@@ -320,6 +353,63 @@ class VisualPanel:
             self._append_system_msg(f"已发送命令：{cmd}")
         except Exception as e:
             self._append_system_msg(f"发送命令失败：{e}")
+
+    def _find_next_message(self, event=None):
+        """Highlight the next message containing the search text."""
+        query = self._search_entry.get().strip()
+        self._msg_text.tag_remove("search_hit", "1.0", tk.END)
+        if not query:
+            return "break"
+        start = getattr(self, "_search_position", "1.0")
+        index = self._msg_text.search(query, start, stopindex=tk.END, nocase=True)
+        if not index and start != "1.0":
+            index = self._msg_text.search(query, "1.0", stopindex=tk.END, nocase=True)
+        if index:
+            end = f"{index}+{len(query)}c"
+            self._msg_text.tag_add("search_hit", index, end)
+            self._msg_text.see(index)
+            self._search_position = end
+        else:
+            self._search_position = "1.0"
+            self._append_system_msg(f"未找到：{query}")
+        return "break"
+
+    def _copy_messages(self):
+        """Copy selected text, or the complete message stream when none is selected."""
+        try:
+            text = self._msg_text.get(tk.SEL_FIRST, tk.SEL_LAST)
+        except tk.TclError:
+            text = self._msg_text.get("1.0", "end-1c")
+        if text:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(text)
+            self._append_system_msg("消息已复制到剪贴板")
+
+    def _clear_messages(self):
+        self._msg_text.configure(state=tk.NORMAL)
+        self._msg_text.delete("1.0", tk.END)
+        self._msg_text.configure(state=tk.DISABLED)
+        self._msg_count = 0
+        self._stats_label.configure(text="回复：0 条")
+
+    def _toggle_sidebar(self):
+        self._set_sidebar_visible(not self._right_panel.winfo_manager())
+
+    def _set_sidebar_visible(self, visible: bool):
+        if visible:
+            if not self._right_panel.winfo_manager():
+                self._right_panel.pack(side=tk.RIGHT, fill=tk.BOTH, padx=(0, 8), pady=6)
+        else:
+            self._right_panel.pack_forget()
+        self._preferences["sidebar_visible"] = visible
+        self._sidebar_btn.configure(text="◧ 侧栏" if visible else "▣ 展开侧栏")
+        self._save_preferences()
+
+    def _save_preferences(self):
+        try:
+            self._preferences = save_panel_preferences(self._preferences_path, self._preferences)
+        except OSError as error:
+            self._append_system_msg(f"面板偏好保存失败：{error}")
 
     # ============================================================
     # 集会码管理
@@ -880,9 +970,14 @@ class VisualPanel:
             tab_bar, text="📋 bot.log", font=(self._font_family, 11),
             bg="#333", fg="#aaa", bd=0, padx=14, pady=4, cursor="hand2",
         )
+        panel_tab_btn = tk.Button(
+            tab_bar, text="🎨 面板", font=(self._font_family, 11),
+            bg="#333", fg="#aaa", bd=0, padx=14, pady=4, cursor="hand2",
+        )
         config_tab_btn.pack(side=tk.LEFT, padx=(0, 4))
         prompt_tab_btn.pack(side=tk.LEFT, padx=(0, 4))
         log_tab_btn.pack(side=tk.LEFT)
+        panel_tab_btn.pack(side=tk.LEFT, padx=(4, 0))
 
         # 内容区
         content_frame = tk.Frame(notebook, bg="#1e1e2e")
@@ -1030,9 +1125,43 @@ class VisualPanel:
             command=load_log,
         ).pack()
 
+        # ---- panel.json 编辑器 ----
+        panel_frame = tk.Frame(content_frame, bg="#1e1e2e")
+        tk.Label(
+            panel_frame,
+            text="可配置主题、窗口、字号、侧栏和快捷命令；保存后重启面板完整生效",
+            font=(self._font_family, 10), fg="#888", bg="#1e1e2e", anchor="w",
+        ).pack(fill=tk.X, pady=(0, 4))
+        panel_text = tk.Text(
+            panel_frame, bg="#252536", fg="#e0e0e0", font=("Consolas", 11),
+            wrap=tk.NONE, bd=0, padx=10, pady=8, insertbackground="#fff",
+            highlightthickness=0,
+        )
+        panel_text.pack(fill=tk.BOTH, expand=True)
+        panel_text.insert(
+            "1.0", json.dumps(self._preferences, ensure_ascii=False, indent=2)
+        )
+
+        def save_panel_config():
+            try:
+                data = json.loads(panel_text.get("1.0", tk.END))
+                self._preferences = save_panel_preferences(self._preferences_path, data)
+                self._append_system_msg("面板偏好已保存，主题与侧栏已立即应用")
+                self._apply_theme(self._preferences["theme"])
+                self._set_sidebar_visible(self._preferences["sidebar_visible"])
+                win.destroy()
+            except (ValueError, OSError) as error:
+                self._append_system_msg(f"panel.json 保存失败: {error}")
+
+        tk.Button(
+            panel_frame, text="💾 保存面板偏好", font=(self._font_family, 11),
+            bg="#0ea5e9", fg="#fff", bd=0, padx=16, pady=4, cursor="hand2",
+            command=save_panel_config,
+        ).pack(pady=(6, 0))
+
         # ---- Tab 切换逻辑 ----
-        all_frames = [config_frame, prompt_frame, log_frame]
-        all_btns = [config_tab_btn, prompt_tab_btn, log_tab_btn]
+        all_frames = [config_frame, prompt_frame, log_frame, panel_frame]
+        all_btns = [config_tab_btn, prompt_tab_btn, log_tab_btn, panel_tab_btn]
 
         def switch_tab(idx):
             for i, (frame, btn) in enumerate(zip(all_frames, all_btns)):
@@ -1048,6 +1177,7 @@ class VisualPanel:
         config_tab_btn.configure(command=lambda: switch_tab(0))
         prompt_tab_btn.configure(command=lambda: switch_tab(1))
         log_tab_btn.configure(command=lambda: switch_tab(2))
+        panel_tab_btn.configure(command=lambda: switch_tab(3))
 
         # 默认显示 config
         switch_tab(0)
@@ -1057,37 +1187,97 @@ class VisualPanel:
     # ============================================================
 
     _LIGHT = {
-        "bg": "#ffffff", "bar_bg": "#f0f0f0", "text_bg": "#fafafa",
-        "text_fg": "#222", "mood_fg": "#ff2d95", "canvas_bg": "#ffffff",
+        "bg": "#f8fafc", "bar_bg": "#ffffff", "text_bg": "#ffffff",
+        "card_bg": "#f1f5f9", "input_bg": "#e2e8f0",
+        "text_fg": "#0f172a", "muted_fg": "#64748b", "border": "#cbd5e1",
+        "mood_fg": "#db2777", "canvas_bg": "#f8fafc",
         "theme_icon": "🌙",
     }
     _DARK = {
-        "bg": "#1e1e2e", "bar_bg": "#2a2a3e", "text_bg": "#252536",
-        "text_fg": "#e0e0e0", "mood_fg": "#ff69b4", "canvas_bg": "#1e1e2e",
+        "bg": "#111827", "bar_bg": "#1f2937", "text_bg": "#172033",
+        "card_bg": "#243044", "input_bg": "#374151",
+        "text_fg": "#f3f4f6", "muted_fg": "#9ca3af", "border": "#374151",
+        "mood_fg": "#f472b6", "canvas_bg": "#111827",
         "theme_icon": "☀",
     }
 
     def _toggle_theme(self):
         """切换亮/暗主题。"""
-        is_dark = self.root.cget("bg") == self._DARK["bg"]
-        t = self._LIGHT if is_dark else self._DARK
-        self.root.configure(bg=t["bg"])
-        # 遍历更新所有 widget 的颜色
-        for w in [self._mood_label, self._stats_label]:
+        self._apply_theme("light" if self._theme_name == "dark" else "dark")
+        self._save_preferences()
+
+    def _apply_theme(self, name: str):
+        """Apply a complete palette to existing widgets and remember the choice."""
+        name = name if name in {"light", "dark"} else "dark"
+        palette = self._LIGHT if name == "light" else self._DARK
+        self._theme_name = name
+        self._preferences["theme"] = name
+        all_palettes = (self._LIGHT, self._DARK)
+        base_colors = {"#1e1e2e", *(p["bg"] for p in all_palettes)}
+        bar_colors = {"#2a2a3e", *(p["bar_bg"] for p in all_palettes)}
+        card_colors = {"#252536", *(p["card_bg"] for p in all_palettes), *(p["text_bg"] for p in all_palettes)}
+        input_colors = {"#333", "#374151", *(p["input_bg"] for p in all_palettes)}
+        text_colors = {"#ccc", "#ddd", "#e0e0e0", "#222", *(p["text_fg"] for p in all_palettes)}
+        muted_colors = {"#555", "#666", "#888", "#aaa", *(p["muted_fg"] for p in all_palettes)}
+
+        def recolor(widget):
             try:
-                w.configure(bg=t["bar_bg"], fg=t["mood_fg"] if w == self._mood_label else "#aaa")
+                current = str(widget.cget("bg")).lower()
+                if current in base_colors:
+                    widget.configure(bg=palette["bg"])
+                elif current in bar_colors:
+                    widget.configure(bg=palette["bar_bg"])
+                elif current in card_colors:
+                    widget.configure(bg=palette["card_bg"])
+                elif current in input_colors:
+                    widget.configure(bg=palette["input_bg"])
             except Exception:
                 pass
+            try:
+                current_fg = str(widget.cget("fg")).lower()
+                if current_fg in text_colors:
+                    widget.configure(fg=palette["text_fg"])
+                elif current_fg in muted_colors:
+                    widget.configure(fg=palette["muted_fg"])
+            except Exception:
+                pass
+            for child in widget.winfo_children():
+                recolor(child)
+
+        self.root.configure(bg=palette["bg"])
+        recolor(self.root)
         try:
-            self._msg_text.configure(bg=t["text_bg"], fg=t["text_fg"])
+            self._msg_text.configure(bg=palette["text_bg"], fg=palette["text_fg"])
+            self._search_entry.configure(
+                bg=palette["input_bg"], fg=palette["text_fg"],
+                insertbackground=palette["text_fg"],
+            )
+            self._mood_label.configure(fg=palette["mood_fg"])
+            self._stats_label.configure(fg=palette["muted_fg"])
         except Exception:
             pass
         try:
-            self._canvas.configure(bg=t["canvas_bg"])
-            self._canvas_tip.configure(bg=t["canvas_bg"])
+            self._canvas.configure(bg=palette["canvas_bg"])
+            self._canvas_tip.configure(bg=palette["canvas_bg"], fg=palette["muted_fg"])
         except Exception:
             pass
-        self._theme_btn.configure(text=t["theme_icon"], bg=t["bar_bg"])
+        self._theme_btn.configure(text=palette["theme_icon"], bg=palette["bar_bg"])
+
+    def _scale_widget_fonts(self, widget):
+        """Scale explicitly configured widget fonts once during construction."""
+        if self._font_scale != 1.0:
+            try:
+                current = tkfont.Font(root=self.root, font=widget.cget("font")).actual()
+                size = current.get("size", 10)
+                if size:
+                    widget.configure(font=(
+                        current["family"], max(7, round(size * self._font_scale)),
+                        current.get("weight", "normal"), current.get("slant", "roman"),
+                    ))
+            except Exception:
+                pass
+        for child in widget.winfo_children():
+            self._scale_widget_fonts(child)
 
     # ============================================================
     # 日志监控（只读 812 的回复）
@@ -1211,6 +1401,14 @@ class VisualPanel:
 
     def stop(self):
         self._stop_event.set()
+        try:
+            self._preferences["window"] = {
+                "width": max(720, self.root.winfo_width()),
+                "height": max(480, self.root.winfo_height()),
+            }
+            self._save_preferences()
+        except Exception:
+            pass
         try:
             self.root.destroy()
         except Exception:

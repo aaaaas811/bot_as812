@@ -1,0 +1,52 @@
+import os
+import yaml
+from typing import Tuple
+from pydantic import BaseModel
+
+
+class Config(BaseModel):
+    """配置模型类"""
+    font_file: str = "font.ttf"
+    """字体文件路径"""
+    text_box_topleft: Tuple[int, int] = (119, 450)
+    """文本框左上角坐标"""
+    image_box_bottomright: Tuple[int, int] = (398, 625)
+    """文本框右下角坐标"""
+    base_overlay_file: str = "BaseImages\\base_overlay.png"
+    """底图置顶图层文件路径"""
+    use_base_overlay: bool = True
+    """是否使用底图置顶图层"""
+    text_wrap_algorithm: str = "original"
+    """文本换行算法，可选值："original"(原始算法), "knuth_plass"(改进的Knuth-Plass算法)"""
+
+    class Config:
+        arbitrary_types_allowed = True
+
+
+def load_config(config_file: str = "config.yaml") -> Config:
+    """
+    从YAML文件加载配置
+    
+    Args:
+        config_file: 配置文件路径
+        
+    Returns:
+        Config: 配置对象
+    """
+    # 如果配置文件不存在，使用默认配置
+    if not os.path.exists(config_file):
+        return Config()
+    
+    # 读取YAML配置文件
+    with open(config_file, 'r', encoding='utf-8') as f:
+        config_data = yaml.safe_load(f)
+    
+    # 处理坐标值，确保它们是元组而不是列表
+    if 'text_box_topleft' in config_data and isinstance(config_data['text_box_topleft'], list):
+        config_data['text_box_topleft'] = tuple(config_data['text_box_topleft'])
+    
+    if 'image_box_bottomright' in config_data and isinstance(config_data['image_box_bottomright'], list):
+        config_data['image_box_bottomright'] = tuple(config_data['image_box_bottomright'])
+    
+    # 创建并返回配置对象
+    return Config(**config_data)

@@ -82,8 +82,11 @@ if __name__ == "__main__":
                 print("[startup] applied ncatbot runtime patch (missing confirm)")
 
 import sdk_compat  # noqa: F401
+from bilibili_login_compat import install_bilibili_login_patch
 import bot_state
 from ncatbot.app import BotClient
+
+install_bilibili_login_patch()
 
 # --t 调试模式：只在 1042029905 群活跃
 if "--t" in sys.argv:

@@ -1,0 +1,16 @@
+name = "steam_status_monitor"
+version = "4.5.5"
+main = "main.py"
+entry_class = "SteamStatusMonitorPlugin"
+author = "Maoer"
+description = "监控 Steam 玩家在线、离线和游戏状态变化，并向 QQ 群推送通知。"
+
+[dependencies]
+
+[pip_dependencies]
+httpx = ">=0.26,<1"
+aiohttp = ">=3.9,<4"
+Pillow = ">=9.5,<13"
+requests = ">=2.28,<3"
+numpy = ">=1.21,<3"
+socksio = ">=1.0,<2"

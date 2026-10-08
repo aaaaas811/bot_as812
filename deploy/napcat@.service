@@ -1,0 +1,16 @@
+[Unit]
+Description=NapCat QQ account %i
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+WorkingDirectory=%h/Napcat
+ExecStart=/usr/bin/xvfb-run -a %h/Napcat/opt/QQ/qq --no-sandbox -q %i
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=45
+UMask=0077
+
+[Install]
+WantedBy=default.target

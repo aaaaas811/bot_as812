@@ -4,7 +4,7 @@ import time
 import random
 from typing import Optional, Tuple
 from ncatbot.utils.logger import get_log
-from ..models.message_models import ChatMessage, BotResponse
+from ..models.message_models import ChatMessage
 from ..core.config_manager import ConfigManager
 from ..core.log_manager import LogManager
 from .message_handler import MessageHandler
@@ -44,17 +44,15 @@ class ResponseHandler:
                                       api_key: str, 
                                       msg: ChatMessage, 
                                       group_id: str, 
-                                      cat_prompt: str) -> Optional[str]:
+                                      cat_prompt: str,
+                                      current_messages: list[ChatMessage] | None = None) -> Optional[str]:
         """处理被动回复（由用户消息触发）"""
         # 关键判断：只有被@或消息中包含812时才回复
-        if not msg.force_reply:
+        if not (msg.force_reply or any(item.force_reply for item in (current_messages or []))):
             return None
 
-        # 阻塞机制：若该群已有回复正在生成中，跳过本次触发
+        # 与同群其他回复共享生成锁；新的批次等待旧请求取消并释放锁
         reply_lock = self._get_reply_lock(group_id)
-        if reply_lock.locked():
-            _log.info(f"群 {group_id} 正在生成回复中，跳过本次被动触发")
-            return None
 
         user_qq = msg.user.qq
         
@@ -70,7 +68,7 @@ class ResponseHandler:
         
         # 构建聊天历史
         chat_history = self.message_handler.build_chat_history(
-            group_id, msg
+            group_id, msg, current_messages
         )
 
         # 注入当前心情（若已设置），让回复带有情绪
@@ -78,10 +76,11 @@ class ResponseHandler:
 
         # RAG 检索
         rag_context = ""
-        if self.rag_manager and self.rag_manager.should_retrieve(msg.message):
-            rag_context, _ = self.rag_manager.retrieve(msg.message)
+        batch_text = "\n".join(item.message for item in current_messages) if current_messages else msg.message
+        if self.rag_manager and self.rag_manager.should_retrieve(batch_text):
+            rag_context, _ = self.rag_manager.retrieve(batch_text)
 
-        # 生成回复（加锁，阻塞期间同群新消息不会再次触发）
+        # 生成回复；收拢器负责在新消息到来时取消本次生成
         _log.info("开始生成回复……")
         image_api_key = self.config_manager.get_image_api_key()
         async with reply_lock:
@@ -91,53 +90,35 @@ class ResponseHandler:
             return None
 
         _log.info(f"812：{response}")
-
-        # 保存机器人回复
-        bot_qq = self.config_manager.get_bt_uin()
-        bot_response = BotResponse(
-            timestamp=time.time(),
-            message=response,
-            qq=bot_qq
-        )
-
-        # 记录内存中的最后回复时间，优先使用此时间判断主动回复延迟
-        try:
-            self._last_bot_message_time[group_id] = bot_response.timestamp
-        except Exception:
-            pass
-
-        # 保存到个人日志
-        self._append_to_personal_chat_history(personal_log_file, f"812：{response}")
-
         return response
     
     async def process_active_response(self,
                                      api_key: str,
                                      cat_prompt: str,
-                                     group_id: str) -> Optional[str]:
+                                     group_id: str,
+                                     current_messages: list[ChatMessage] | None = None) -> Optional[str]:
         """处理主动回复"""
-        # 阻塞机制：若该群已有回复正在生成中，跳过本次触发
+        # 与同群其他回复共享生成锁
         reply_lock = self._get_reply_lock(group_id)
-        if reply_lock.locked():
-            _log.info(f"群 {group_id} 正在生成回复中，跳过本次主动触发")
-            return None
 
         group_lock = self._active_reply_locks.get(group_id)
         if group_lock is None:
             group_lock = asyncio.Lock()
             self._active_reply_locks[group_id] = group_lock
 
-        # 避免并发消息同时进入主动回复链路
-        if group_lock.locked():
-            return None
-
+        # 等待前一个主动回复尝试退出，再检查延迟并生成当前批次
         async with group_lock:
             # 检查延迟
             if not await self._check_active_reply_delay(group_id):
                 return None
         
             # 获取最新的用户消息
-            current_message, user_qq = self._get_latest_user_message(group_id)
+            if current_messages:
+                chat_message = current_messages[-1]
+                current_message = chat_message.to_dict()
+                user_qq = chat_message.user.qq
+            else:
+                current_message, user_qq = self._get_latest_user_message(group_id)
             if not current_message:
                 _log.warning("无合适的新消息，无法主动回复")
                 return None
@@ -146,9 +127,6 @@ class ResponseHandler:
             personal_history, user_info_str, personal_log_file = \
                 await self._load_personal_data(group_id, user_qq)
         
-            # 记录用户消息到个人日志
-            self._append_to_personal_chat_history(personal_log_file, current_message["message"])
-
             # 构建聊天历史（复用统一格式化的用户信息，保持与被动回复一致）
             chat_message = ChatMessage.from_dict(current_message)
             current_user_info = self.message_handler.get_user_info_string(chat_message)
@@ -157,7 +135,7 @@ class ResponseHandler:
                 self.log_manager.update_personal_log_header(personal_log_file, current_user_info)
 
             chat_history = self.message_handler.build_chat_history(
-                group_id, chat_message
+                group_id, chat_message, current_messages
             )
 
             # 注入当前心情（若已设置），让回复带有情绪
@@ -195,10 +173,11 @@ class ResponseHandler:
         
             # RAG 检索
             rag_context = ""
-            if self.rag_manager and self.rag_manager.should_retrieve(current_message.get("message", "")):
-                rag_context, _ = self.rag_manager.retrieve(current_message.get("message", ""))
+            batch_text = "\n".join(item.message for item in current_messages) if current_messages else current_message.get("message", "")
+            if self.rag_manager and self.rag_manager.should_retrieve(batch_text):
+                rag_context, _ = self.rag_manager.retrieve(batch_text)
 
-            # 生成回复（加锁，阻塞期间同群新消息不会再次触发）
+            # 生成回复；收拢器负责在新消息到来时取消本次生成
             _log.info("开始主动生成回复……")
             image_api_key = self.config_manager.get_image_api_key()
             async with reply_lock:
@@ -208,32 +187,15 @@ class ResponseHandler:
                 return None
         
             _log.info(f"812：{response}")
-        
-            # 检查是否需要总结
-        
-            # 保存机器人回复
-            bot_qq = self.config_manager.get_bt_uin()
-            bot_response = BotResponse(
-                timestamp=time.time(),
-                message=response,
-                qq=bot_qq
-            )
-        
-            # 保存到群历史
-            self.log_manager.save_bot_response(group_id, bot_response)
-        
-            # 保存到个人日志
-            self._append_to_personal_chat_history(personal_log_file, f"812：{response}")
-            # 记录内存中的最后回复时间，优先使用此时间判断主动回复延迟
-            try:
-                self._last_bot_message_time[group_id] = bot_response.timestamp
-            except Exception:
-                pass
-        
-            # 更新延迟
-            self._update_active_reply_delay()
-        
             return response
+
+    async def record_sent_response(self, group_id: str, msg: ChatMessage, response: str, active: bool = False) -> None:
+        """在群消息开始发送后记录回复和主动回复计时。"""
+        self._last_bot_message_time[group_id] = time.time()
+        _, _, personal_log_file = await self._load_personal_data(group_id, msg.user.qq)
+        self._append_to_personal_chat_history(personal_log_file, f"812：{response}")
+        if active:
+            self._update_active_reply_delay()
     
     async def _load_personal_data(self, group_id: str, user_qq: str) -> Tuple[list, str, str]:
         """加载个人数据（异步包装）"""

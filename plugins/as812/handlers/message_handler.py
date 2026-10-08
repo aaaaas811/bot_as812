@@ -249,7 +249,8 @@ class MessageHandler:
 
     def build_chat_history(self,
                           group_id: str,
-                          current_message: ChatMessage) -> List[Dict[str, str]]:
+                          current_message: ChatMessage,
+                          current_messages: List[ChatMessage] | None = None) -> List[Dict[str, str]]:
         """构建聊天历史"""
         config_data = {
             "context_history": self.config_manager.get("context_history", 50),
@@ -305,14 +306,28 @@ class MessageHandler:
 
         # 添加当前消息，明确标记要回复的那条消息
         current_msg_text = current_message.message or ""
+        if current_messages and len(current_messages) > 1:
+            current_msg_text = "\n".join(
+                f"{message.user.nickname or message.user.qq}: {message.message or '[图片/表情]'}"
+                for message in current_messages
+            )
+            message_array = [
+                segment for message in current_messages
+                for segment in (message.message_array or [])
+            ]
+        else:
+            message_array = getattr(current_message, "message_array", None)
         # 若当前消息包含结构化段（如图片/表情），将其列出供模型选择是否需要识图
         img_msg = self._build_image_index_message(
-            current_msg_text, getattr(current_message, "message_array", None)
+            current_msg_text, message_array
         )
         if img_msg:
             messages.append({"role": "system", "content": img_msg})
 
-        messages.append({"role": "user", "content": f"【请回答这条消息】{current_user_name}: {current_msg_text}"})
+        if current_messages and len(current_messages) > 1:
+            messages.append({"role": "user", "content": f"【请一并回答以下消息】\n{current_msg_text}"})
+        else:
+            messages.append({"role": "user", "content": f"【请回答这条消息】{current_user_name}: {current_msg_text}"})
 
         return messages
 

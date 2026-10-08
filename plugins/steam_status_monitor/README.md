@@ -1,0 +1,419 @@
+# Steam 状态监控插件 V3（NcatBot 迁移版） ![MIT](https://img.shields.io/badge/LICENSE-MIT-blue?style=flat-square) ![NcatBot](https://img.shields.io/badge/NcatBot-5.x-purple?style=flat-square) [![Stars](https://img.shields.io/github/stars/Maoer233/astrbot_plugin_steam_status_monitor?style=flat-square)](https://github.com/Maoer233/astrbot_plugin_steam_status_monitor)
+
+> 当前目录是适配 `bot_as812` 的 **NcatBot 5.x 迁移版**。NcatBot 通过
+> `manifest.toml` 加载插件，聊天命令、Steam 轮询、图片渲染、数据持久化和群推送已接入
+> NcatBot；原 AstrBot Plugin Pages 管理页及 QQ 官方指令面板因没有对应 NcatBot 接口而降级停用。
+
+## NcatBot 快速上手
+
+1. 插件已放在 `plugins/steam_status_monitor`，重启 NcatBot 或执行插件热重载即可发现。
+2. 复制 `config.example.json` 为本地 `config.json`，填写 `steam_api_key`；`sgdb_api_key`、代理等可选项也写在同一文件。`config.json` 含密钥，已由仓库规则忽略。
+3. 在群聊中由 NcatBot 全局 root、群主或群管理员执行 `/steam addid <SteamID>`。
+4. 执行 `/steam on` 启动本群监控，使用 `/steam help` 查看全部命令。
+
+依赖已经写入 `manifest.toml` 的 `[pip_dependencies]`；NcatBot 可按当前项目配置自动检查安装。
+
+下面保留上游 AstrBot 版的完整功能资料，涉及 WebUI 的章节不适用于当前 NcatBot 迁移版。
+
+## 访问统计
+![访问统计](https://count.getloli.com/get/@astrbot_ssm?theme=rule34)
+
+当前迁移版运行于 NcatBot，用于定时轮询 Steam Web API，监控指定玩家的在线/离线/游戏状态变更，并在状态变化时推送通知。支持多 SteamID 监控、自动记录游玩日志、群聊分组和数据持久化。
+
+## 功能特性
+- 支持定时轮询多个 SteamID 的状态，分群管理，每个群聊可独立配置监控玩家
+- 检测玩家上线、下线、开始/切换/退出游戏等状态变更，自动推送游戏启动/关闭提醒
+- **游玩会话状态机**：一局游戏只有一个所有者；切到另一款游戏立即结算上一局；同一游戏 180 秒内假退出不重复推结束卡
+- **监控开关持久化**：`/steam on` / `/steam off` 写入 `group_switches.json`，重启后仍记住本群开关
+- 成就变动自动推送提醒
+- **头像框渲染**：开始游戏/结束游戏/list/rank 均支持 Steam 头像框，本地优先缓存 7 天
+- **游戏时长排行榜**：支持  / ，按数字天数查询，凌晨 4:00 天分界
+- 游戏时长排行榜：支持  本群排行和  所有群排行，可按数字天数查询
+- 智能轮询 + 固定轮询双模式可切换，默认为1-30分钟查询一次状态，取决于steam的上次在线时间
+- 持久化记录玩家游玩日志，重启bot后状态不会丢失
+- **批量查询优化**：采用 Steam 官方批量接口（单次最多 100 个 ID），大幅降低 API 调用次数，从根本上避免触发 Steam 限流（HTTP 429 / x-eresult: 84）
+- **多种 ID 输入格式**：`addid` 现支持 SteamID64、个人资料链接、自定义 vanity URL、`s.team` 短链、8 位好友码等多种格式
+- **通知开关精细化**：可独立控制游戏结束通知、成就推送、以及图片/文本推送方式
+- **结束卡长名**：长游戏名按开始卡同一套策略拉长画布并换行，不再截断
+- **无效会话过滤**：跳过空群号 / `GroupMessage:0_` 等无法投递的 QQ 会话，避免主动推送报错
+- **超时不堵结束卡**：Steam 查询超时期间仍结算到期会话并立刻推送结束通知，不会攒到下次开局
+- **网络代理支持**：可配置 http / https / socks5 代理，改善网络环境下的数据获取稳定性
+- **字体运行时下载**：商店包不含约 39MB CJK 字体；启动后后台从 [fonts-bundle](https://github.com/Maoer233/astrbot_plugin_steam_status_monitor/releases/tag/fonts-bundle) 下载并校验，可用 `/steam fonts` 查看进度。下载完成前卡片可能暂时缺字
+- **性能优化**：节流写盘、单点异常隔离、批量预拉取，避免拖慢 NcatBot 主进程
+- **逐指令权限**：本群操作允许群主/群管理员；跨群、全局配置及清理操作仅允许 NcatBot 全局 root
+- **管理页（迁移限制）**：上游 AstrBot Plugin Pages 在 NcatBot 下停用，改用聊天命令和 `config.json`
+- **搜索翻译（迁移限制）**：NcatBot 下未接入 AstrBot LLM provider，价格搜索直接使用原始查询词
+
+## 默认轮询间隔说明（智能轮询模式）
+| 玩家最近在线时间      | 轮询间隔 |
+|----------------------|---------|
+| 游戏中               | 1分钟   |
+| 12分钟内             | 3分钟   |
+| 12分钟~3小时         | 5分钟   |
+| 3小时~24小时         | 10分钟  |
+| 24~48小时            | 20分钟  |
+| 超过48小时           | 30分钟  |
+
+## 补充使用说明
+
+在需要进行提醒的群聊输入指令添加要监控的玩家（以下格式均支持）：
+   - `/steam addid 7656119xxxxxxxxx`（SteamID64）
+   - `/steam addid https://steamcommunity.com/profiles/7656119xxxxxxxxx`（个人资料链接）
+   - `/steam addid https://steamcommunity.com/id/customname`（自定义 vanity URL）
+   - `/steam addid https://s.team/p/7656119xxxxxxxxx`（s.team 短链）
+   - `/steam addid 123456789`（8 位好友码）
+
+启动轮询：
+   `/steam on`  启动本群 Steam 状态监控，后续状态变更会自动推送。
+
+## 配置项说明
+| 配置项 | 说明 | 默认值 |
+|-------|------|-------|
+| `steam_api_key` | Steam Web API Key | — |
+| `sgdb_api_key` | SteamGridDB API Key（用于封面图） | — |
+| `fixed_poll_interval` | 固定轮询间隔（秒），为 0 时使用智能轮询 | 0 |
+| `smart_poll_intervals` | 智能轮询各状态间隔（分钟，逗号分隔） | `1,3,5,10,20,30` |
+| `retry_times` | Steam API 请求重试次数 | 3 |
+| `max_group_size` | 单群最大监控人数 | 20 |
+| `detailed_poll_log` | 详细轮询日志开关 | true |
+| `enable_achievement_poll` | 成就轮询推送开关 | true |
+| `enable_steam_style` | Steam列表渲染风格开关（开启=steam风格；关闭=原卡片风格） | true |
+| `enable_game_end_notify` | 游戏结束通知开关 | true |
+| `notify_send_image` | 通知发送图片开关 | true |
+| `notify_send_text` | 通知发送文本开关 | true |
+| `enable_proxy` | 启用网络代理 | false |
+| `proxy_url` | 代理链接（如 `http://127.0.0.1:7890`） | 空 |
+| `font_download_enabled` | 启动后自动下载 CJK 字体包 | true |
+| `font_pack_url` | 自定义字体包 URL（须 https，仍按清单校验） | 空 |
+| `font_download_timeout_sec` | 字体包下载超时（秒） | 600 |
+
+> 修改启动期配置后请重启 NcatBot 或热重载插件；`/steam set` 会写回本目录的 `config.json`。
+
+## 注意事项
+- 获取速度与是否成功获取 Steam 数据取决于网络环境。建议通过加速或代理（现已内置代理配置项）来保证稳定的查询状态。
+- 如果出现未知的轮询错误可以使用 `/steam clear_allids` 来清除所有群聊的轮询 id。
+- 修改插件参数后如出现重复通知，请完整重启 NcatBot。
+- 如果出现未知的无法提醒，但轮询显示正常的情况，请使用 `/steam on/off` 进行修复。`/steam off` 会持久保存，重启后本群仍保持关闭。
+- `/steam addid`、`/steam on`、排行榜推送只能在群聊使用。私聊写入空群号会导致 QQ 主动推送缺少数字 `session_id`。
+- Steam 查询出现 `ConnectTimeout` / `ReadTimeout` 时，结束卡仍会按时发出，不会等到下次开局才补发。网络不稳定时建议开启代理。
+- 监控人数较多时，建议适当调高 `max_group_size` 并保持智能轮询，以兼顾时效与 Steam 限流。
+- Steam 摘要同一时刻只有一个 `gameid`，插件不能识别「同时玩多款游戏」，A→B 会视为切换并立即结算 A。
+- 商店安装后首次启动会在后台下载 CJK 字体（约 39MB）。默认先走国内 GitHub 镜像（`gh-proxy.com` / `ghproxy.net` / `github.akams.cn`），失败再回退官方 Release；单个源超时默认 10 分钟。可用 `/steam fonts` 查看状态，`/steam fonts download` 立即下载并显示进度，`/steam fonts clean` 清理缓存。填写 `font_pack_url` 则只用自定义地址。开发克隆若 `assets/fonts` 已有字体则跳过下载。
+
+## 演示截图
+![开始游戏示例](https://raw.githubusercontent.com/Maoer233/astrbot_plugin_steam_status_monitor/main/assets/images/str.png)
+![结束游戏示例](https://raw.githubusercontent.com/Maoer233/astrbot_plugin_steam_status_monitor/main/assets/images/stop.png)
+![成就推送示例](https://raw.githubusercontent.com/Maoer233/astrbot_plugin_steam_status_monitor/main/assets/images/achievement.png)
+![WebUI 管理后台](https://raw.githubusercontent.com/Maoer233/astrbot_plugin_steam_status_monitor/main/assets/images/webui.png)
+![List 玩家列表](https://raw.githubusercontent.com/Maoer233/astrbot_plugin_steam_status_monitor/main/assets/images/list.png)
+![价格查询示例](https://raw.githubusercontent.com/Maoer233/astrbot_plugin_steam_status_monitor/main/assets/images/price.png)
+
+
+## QQ 官方机器人后台配置面板
+
+> 本节为上游功能资料。NcatBot 迁移版未接入 AstrBot Plugin Pages 和 QQ 官方指令面板，以下页面与同步命令不可用。
+
+### 功能用途
+
+插件 WebUI 左侧的 **QQ 官方机器人** 页面用于集中维护 QQ 开放平台接入参数和 QQ 指令面板参数，支持读取、修改、保存及恢复默认配置。后端会再次校验所有输入，机器人密钥在页面读取时自动脱敏，不会以明文回显。
+
+> 该页面保存的是本插件使用的 QQ 官方机器人参数，不会自动修改 AstrBot“机器人”页面中的适配器配置。开启“后台 QQ 官方机器人配置”后，插件同步 QQ 指令面板时优先使用这里保存的 AppID 和密钥；关闭后继续使用当前 QQ 官方适配器的凭据。
+
+### 配置项说明
+
+| 配置项 | 说明 | 格式要求 |
+| --- | --- | --- |
+| 启用状态 | 是否让插件使用本面板中的 QQ 官方机器人凭据 | 开启时 AppID、密钥必填 |
+| 机器人 AppID | QQ 开放平台分配的机器人 AppID | 5～20 位数字 |
+| 机器人密钥 | QQ 开放平台分配的机器人 Secret | 8～256 个不含空白的字符；读取时脱敏 |
+| 回调地址 | Webhook 接入使用的公网回调 URL | 完整的 `http://` 或 `https://` URL，不得包含用户名或密码 |
+| 消息格式 | QQ 消息的目标格式 | `plain`（纯文本）或 `markdown` |
+| 启用 QQ 指令面板 | 是否允许执行 `/steam qq菜单同步` | 布尔开关 |
+| 使用场景 | 指令面板生效的会话类型 | `group`（群聊）或 `c2c`（单聊） |
+| 目标群 OpenID | 指令面板关联的 QQ 官方群标识 | 每行一个或逗号分隔；不能填写普通 QQ 群号 |
+| 群指令菜单项 | QQ 客户端菜单中显示的指令名称、说明和顺序 | 最多 20 项；指令必须以 `/` 开头且不能重复 |
+
+### 自定义群指令菜单
+
+后台的 **群指令菜单项** 模块用于决定 QQ 官方机器人菜单中展示哪些指令。每个菜单项由“指令”和“说明”组成，支持添加、删除以及通过上下按钮调整显示顺序；删除全部菜单项后，同步结果中不会展示指令。
+
+该模块只维护 QQ 客户端中的菜单入口，不会自动注册或实现新的机器人指令。添加的指令必须已由本插件或 AstrBot 中的其他插件提供，否则用户点击后机器人无法处理。修改菜单后需要先保存配置，再执行 `/steam qq菜单同步` 将最新内容提交到 QQ 开放平台。
+
+### 使用步骤
+
+1. 打开插件 WebUI，进入左侧 **QQ 官方机器人**。
+2. 填写 AppID、密钥；Webhook 模式再填写回调地址。
+3. 选择消息格式、指令面板场景并按需填写目标群 OpenID。
+4. 在 **群指令菜单项** 中添加、删除或排序需要展示的指令，并填写对应说明。
+5. 开启相应状态后点击 **保存配置**。输入不合法时页面会显示具体错误且不会保存。
+6. 重载插件，然后在目标 QQ 官方群中执行 `/steam qq菜单同步`；目标群 OpenID 留空时，插件会从当前官方群事件自动获取。
+7. 需要清除本面板配置时点击 **恢复默认**；确认后会清空 AppID、密钥、回调地址、目标群及已保存的面板 ID，并恢复默认菜单项。
+
+### 注意事项
+
+- AppID 和密钥属于敏感凭据，请勿截图、提交到 Git 或发送给他人。
+- 页面显示的 `******xxxx` 是脱敏密钥；不修改该字段直接保存时，原密钥会被保留。
+- 回调地址只负责配置记录与格式校验，实际 Webhook 可达性、签名验证和 QQ 开放平台登记仍需在对应适配器及开放平台完成。
+- `markdown` 是否可发送取决于机器人账号当前拥有的 QQ 开放平台能力。
+- 普通 QQ 群号不能转换为群 OpenID。若不确定，请留空并从目标 QQ 官方群执行同步命令。
+- 修改 AppID、密钥或启用状态后建议重载插件；修改指令面板参数后重新执行同步命令。
+
+## 指令列表
+- `/steam on` 启动本群Steam状态监控（开关会落盘，重启后仍开启）
+- `/steam off` 停止本群Steam状态监控（开关会落盘，重启后仍关闭；本群不再接收开始/结束卡）
+- `/steam price [游戏名或 Steam 链接]` 查询游戏价格、史低与地区对比
+- `/steam px [游戏名]` 价格查询快捷版，无需回复序号，直接返回第一条匹配游戏的价格
+- `/steam fonts` 查看字体包下载状态（检测 CJK 字体是否就绪，缺字时卡片可能暂缺文字）
+- `/steam fonts download` 立即下载字体包并显示进度
+- `/steam fonts clean` 清理已下载的字体缓存
+- `/steam list` 列出本群所有玩家当前状态
+- `/steam alllist [img|text]` 列出所有群聊玩家状态（默认图片，`text` 纯文本输出）
+- `/steam config` 查看当前插件配置
+- `/steam set [参数] [值]` 设置配置参数（如 `/steam set poll_interval_sec 30`）
+- `/steam addid [SteamID/链接/好友码] [@用户] [备注名]` 添加玩家并可选 **@用户** 绑定（通过 @ 群成员完成QQ绑定，支持多种格式）
+- `/steam delid [SteamID/好友码/链接]` 从本群监控列表删除SteamID
+- `/steam push_group [SteamID]` 添加id到联动推送的副群（轮询一次通知多个群聊）
+- `/steam delpush_group [SteamID]` 删除id联动推送的副群
+- `/steam openbox [SteamID/好友码/链接]` 查看指定SteamID的全部详细信息
+- `/steamwho @用户` / `/在干嘛 @用户`  即时查询 @绑定玩家的 Steam 状态
+- `/steam rank [天数]` 查看本群游戏时长排行榜（默认今日，可指定天数）
+- `/steam allrank [天数]` 查看所有群游戏时长排行榜（默认今日，可指定天数）
+- `/steam rank_on [all|list|test|del]` 管理每日排行榜推送（默认每群独立排行；all=显式使用共享全局排行，list=查看状态，test=即刻推送，del [群号]=删除指定群推送）
+- `/steam rs` 清除所有状态并初始化
+- `/steam achievement_on` 开启本群Steam成就推送
+- `/steam achievement_off` 关闭本群Steam成就推送
+- `/steam test_achievement_render [steamid] [gameid] [数量]` 测试成就图片渲染
+- `/steam test_game_start_render [steamid] [gameid]` 测试开始游戏图片渲染
+- `/steam清除缓存` 清除所有头像、封面图等图片缓存
+- `/steam help` 显示所有指令帮助
+
+## 依赖
+- NcatBot 5.x
+- 其余 Python 依赖以 `manifest.toml` 的 `[pip_dependencies]` 为准
+
+### 依赖安装方法
+正常启动 NcatBot 时会检查并按项目设置提示安装缺失依赖。
+
+可以添加QQ：1912584909 或加交流群：881855879 来反馈功能和建议 闲聊也欢迎喵~
+
+## 🔗 关联项目
+📢 **Steam Monitor 独立版**：[@NeP](https://github.com/nep-0) 用 Go 重写的零依赖版本，无需 AstrBot，单文件运行，Web 管理界面，开箱即用。
+→ [github.com/nep-0/steam-monitor](https://github.com/nep-0/steam-monitor)
+
+## ⭐ Stars
+
+> 如果本项目对您的生活 / 工作产生了帮助，或者您关注本项目的未来发展，请给项目 Star，这是我维护这个开源项目的动力 ❤️。
+
+## 更新记录
+- V4.5.5（2026/09/05）
+  - **价格查询**：新增香港（HK）地区，支持 HK 区价格对比与港币折算（汇率 HKD→CNY≈0.8582），地区名显示“港区”。
+
+- V4.5.4（2026/09/05）
+  - **修复**：`/steam list` 状态识别不完整。此前 `/steam list` 中处于“忙碌 / 离开 / 打盹”的玩家会被错误地显示为“在线”；现已与 `/steam alllist` 保持一致，能正确区分“在线 / 忙碌 / 离开 / 打盹”四种状态，并显示对应的状态文字与配色。
+  - **修复**：排行榜游戏名回归显示英文。游戏时长排行榜中的游戏名在后续版本退化为英文（如 `Infinity Nikki`），而 4.3.0 之前显示的是正确中文名（如 `无限暖暖`）。现已确保排行榜图片中的游戏名优先取自 Steam 商店中文名（`l=schinese`），并兼容插件重启 / 缓存异常导致的英文名残留，保证显示中文名。
+
+- V4.5.2（2026/09/04）
+  - **价格修复**：修正查价命令参数剥离，并过滤无关的 Steam 搜索结果；补充 Price 功能说明与示意图。
+
+- V4.5.1（2026/09/04）
+  - **修复**：结束游戏时成就延迟补偿（5 分钟冗余对比）此前因提前清空成就快照而失效，导致最后几分钟解锁的成就可能漏通知；现改为在结束瞬间捕获旧成就快照作为对比基准，并校验 key 未被新会话占用，避免重开同游戏 / 快速切回时误清新局数据。
+
+- V4.5.0（2026/09/04）
+  - **字体资源包**（#42，#43，感谢 @OLRainM）：商店包改为运行时下载 CJK 字体，主包体积大幅减小；新增 `src/infrastructure/fonts/pack_service.py`、`src/shared/fonts.py` 与 `assets/fonts/manifest.json`；字体下载优先走国内镜像，并按文件名报告缺字；从仓库跟踪中移除字体设计文档。
+  - **成就图标**：成就图标下载失败时回退 `unknown_avatar` 占位，并增强下载健壮性（备选域名 / 灰图回退 / 失败日志）。
+  - **列表封面**：修复 `/steam list`、`/steam alllist` 等列表类封面缺失——补传 SGDB `api_key`、`appid`、`api_base`。
+  - **会话修复**：阻止插件重启时复活旧版会话。
+  - **网络波动文案**：网络波动通知更新为“在游玩 游戏名 时重启游戏/网络波动了”。
+
+- V4.4.4（2026/09/04）
+  - **优化**：开始游戏卡片右上角玩家人数不再与玩家名重叠（玩家人数字体减小、顶部间距调整）。
+
+- V4.4.2（2026/09/03）
+  - **修复**：恢复会话重构后黑白名单（`game_filter_mode` / `game_filter_ids`）对开始 / 结束游戏播报的过滤效果。
+
+- V4.4.1（2026/09/03）
+  - **修复**：好评率“全部评测”改用 Steam 商店 `appreviews` 接口的 `language=all` 口径（此前缺省只统计英文子集，导致好评率与数量同商店页不符）；并补充“多半差评”评分档位与配色。
+
+- V4.4.0（2026/09/03）
+  - **会话重构**（#41，感谢 @OLRainM）：用 `SessionService` 独占一局游戏的开始/确认退出/关闭；检测循环只投递状态快照。切游戏立即结算上一局；同一游戏 180 秒内假退出才进入确认退出，到期由主轮询 `tick_due` 关闭。运行时不再持有 pending / delayed task / `start_play_times`。
+  - **结束卡长名**：长游戏名按开始卡策略拉长画布并换行，保留「结束游戏」文案。
+  - **无效 QQ 会话**：发送前过滤空群号和 `GroupMessage:0_`；加载时丢弃脏数据；私聊 / WebUI 禁止再写入无效群号，避免 `缺少有效的数字 session_id`。
+  - **监控开关落盘**：`/steam on` / `/steam off` / 成就开关写入 `group_switches.json`。关闭的群不再轮询、不再接收开始/结束卡，跨群联动也会跳过已关闭的群。
+  - **超时不堵结束卡**：Steam 批量查询超时期间继续结算到期会话并立刻 flush，结束通知不再攒到下次开局才发出。
+  - **日志**：网络超时等 `str()` 为空的异常会打出类型名（如 `ConnectTimeout`），避免日志只剩空冒号。
+  - **新指令**：新增 `/steam px <游戏名>`（price 快捷版），无需回复序号，直接返回第一条匹配游戏的价格。
+  - **卡片优化**：开始卡 / 结束卡宽度逻辑统一（玩家人数、时间作为右上角叠标不再撑宽画布）；结束卡改为「玩家名 / 结束游戏 / 游戏名」三行布局。
+  - **价格卡片**：好评率支持「全部评测 / 中文评测」双口径（源自 Steam 商店官方接口），按褒贬分级配色并表格化排版。
+
+- V4.3.0（2026/08/30）
+  - **价格查询**：接入 ITAD 价格查询并完善 Steam 游戏详情卡片（评价/商店/地区/价格），支持多区域价格对比与币种渲染（#39，感谢 @OLRainM）
+  - **价格修复**：修复 `/steam price <游戏名> <数字>` 参数截断（尾部数字被吞，参考 steam_shop_price 插件做法）；对比区价格改用 Steam 商店各区价（`cc=<国家>`）并统一折算人民币；更新汇率表（open.er-api + frankfurter 双源交叉核验）；地区名显示优化（乌区/俄区/美区等）；对比区样式及原价删除线调整；LLM 翻译游戏名时剥离推理思考内容
+  - **WebUI 优化**：价格查询地区与对比地区改为下拉选项（`price_region` / `price_compare_regions`）
+  - **通知与架构**：按会话幂等去重避免重复通知，候选游戏序号支持群聊/私聊，监控模块化拆分与候选序号监听等（#39，感谢 @OLRainM）
+
+- 2026/08/29 开发更新
+  - **版本修复**：发布 V4.2.0，修复 `/steam addid` 对已在监控中的 SteamID 无法补充备注或绑定的问题；现在支持通过 `@用户 备注` 或仅备注更新已有玩家信息。
+  - **架构重构**：完成监控模块模块化拆分，分离监控管理、通知追踪、状态变更和分发路由职责，补充后台管理接口、统计逻辑及单元测试，降低主插件复杂度并改善跨群处理一致性。
+  - **功能新增**：接入 ITAD 价格查询，完善 Steam 游戏详情卡片，增加评价、商店、地区和价格信息展示，并支持 CN、RU 区域价格摘要及对应币种渲染。
+  - **通知修复**：按目标会话、Steam 用户、游戏、事件类型和事件时间进行幂等去重，避免同一状态事件经多个来源群路由后重复通知。
+  - **交互修复**：移除不兼容的 `steam_first` 参数；候选游戏序号监听覆盖群聊和私聊，按会话隔离候选缓存，命中后阻止消息继续进入 LLM 处理。
+  - **渲染修复**：统一价格查询与游戏详情渲染接口，修复传入 `region_prices` 时价格详情卡片渲染失败的问题。
+
+- V4.2.0（2026/08/28）
+  - **Bug 修复**：修复 `/steam addid` 添加已在监控中的 SteamID 时无法补充备注/绑定的问题；现在可对已监控玩家更新备注（支持 `@用户 备注` 及仅备注两种方式），列表/排行显示名同步生效
+
+- V4.1.0（2026/08/28）
+  - **功能新增**：支持设置反向代理（#38，感谢 @nep-0），新增 `steam_api_base` / `steam_store_base` / `sgdb_api_base` 三个代理地址配置项，可分别代理 Steam Web API、Steam 商店与 SteamGridDB，留空使用官方地址
+
+- V4.0.0（2026/08/28）
+  - **重大重构**：核心逻辑深度模块化拆分（#37，感谢 @OLRainM），steam_status_monitor.py 由单体拆分为 src/application/services/ 职责模块（监控/轮询/状态变更/成就/通知/QQ 菜单管理），新增 src/domain/monitoring/ 领域层（polling/state/transitions）；新增单元测试（分发列表路由回归、通知虚构 SteamID）
+  - **Bug 修复**：防止跨群重复监控同一 SteamID 并自动转为推送群；完善分发路由与群组清理，避免主群与联动群重复投递；修复长玩家名称图片布局
+
+- V3.4.0（2026/08/24）
+  - **重大重构**：插件主体拆分为 src/ 分层结构（application/domain/infrastructure/presentation/shared），根入口 main.py 保持兼容；新增 QQ 官方机器人适配与后台指令面板（qq_official_* / qq_menu_*）；WebUI 管理接口性能优化（TTL 缓存/同键并发合并/缓存失效）
+  - **Bug 修复**：修复初始化时跨群同一 SteamID 状态基线不一致；成就 API 地址改为可配置端点（steam_api_base）
+  - **功能新增**：新增 Steam 官方 library_capsule_2x 高清竖版封面获取（SGDB 兜底）；初始化轮询改为批量查询 + status_override，减少重复 API 调用
+  - **功能新增**：/steam list、/steam alllist、/steamwho 新增 Steam 好友列表风格渲染（enable_steam_style，默认关闭保持 V3.3.3 原卡片风格）
+  - **功能优化**：重启后跳过插件停止期间遗留变化的陈旧播报（基于 states.json 写入时间判断，阈值 60 分钟）；logo 归位插件根目录
+
+- V3.3.3（2026/07/30）
+  - **功能新增**：新增网络波动通知开关（enable_network_fluctuation_notify），可单独关闭网络波动文本提醒
+  - **功能新增**：开始游戏渲染图片右下角添加版本号水印（淡色小字）
+
+- V3.3.2（2026/07/29）
+  - **Bug 修复**：成就渲染 total_height 为浮点数导致 TypeError；修复为强制 int 转换
+
+- V3.3.1（2026/07/28）
+  - **Bug 修复**：WebUI 群聊管理添加玩家时，好友码和链接被拒绝；改用 resolve_steam_input 统一解析
+
+- V3.3.0（2026/07/28）
+  - **Bug 修复**：免费游戏（如 Apex Legends）开始游戏通知中游玩时长显示"缺省"，修复 GetOwnedGames API 缺少 include_played_free_games 参数
+  - **文档优化**：优化 README 绑定机制说明，明确 @用户 绑定方式，修正命令前缀描述
+
+- V3.2.7（2026/07/24）
+  - **群聊管理聚合**：群详情表格增加绑定(@)/备注列，添加SteamID时支持同时绑定QQ
+  - **批量导入**：新增"批量导入"按钮，支持空格分隔格式（SteamID/链接 @用户 备注），每行一条
+
+- V3.2.6（2026/07/24）
+  - **Bug 修复**：甘特图数据源重复叠加导致出现幽灵时间段（session_records 和 play_records 同时存在时重复渲染）
+
+- V3.2.5（2026/07/24）
+  - **通知开关优化**：新增 `enable_game_start_notify` 配置项，关闭后不发送开始游戏通知但仍记录时长
+  - **addid 自动启用监控**：`/steam addid` 后自动启动监控，无需额外 `/steam on`
+  - **WebUI 自动投递**：WebUI 添加的群首次收到消息时自动补全通知目标
+
+- V3.2.4（2026/07/24）
+  - **内置 WebUI**：外置 aiohttp 管理站迁移为 AstrBot Plugin Pages，复用 Dashboard 登录鉴权，不再监听独立端口
+  - **分群每日榜单**：默认按每个目标群的监控成员分别聚合、渲染和推送，单群无记录或失败不影响其他群
+  - **推送范围语义**：管理页明确区分"接收群聊"和"榜单内容范围"，全局榜单仅在显式选择时启用
+
+- V3.2.3（2026/07/23）
+  - **权限系统迁移 (by LitChi-bit)**：回退 AstrBot 原生逐指令 `admin/member` 权限，移除插件内部 `permission_level`
+  - **WebUI 权限管理 (by LitChi-bit)**：新增"指令权限"逐条配置，直接同步 AstrBot 框架持久化配置与运行时权限
+  - **权限提示优化**：框架权限不足提示改为 WebUI 操作引导
+
+- V3.2.1（2026/07/16）
+  - **WebUI 管理后台（Beta）**：基于 aiohttp 的嵌入式管理页面，支持仪表盘、甘特图、热力图、群聊管理、绑定管理、每日推送设置
+  - **仪表盘**：展示监控统计、玩家排行榜、热门游戏饼图、在线玩家卡片（状态色标识、封面提色）
+  - **甘特图**：展示游戏时间窗口，支持今天/昨天/7天/30天切换
+  - **热力图**：团队贡献日历（GitHub 风格）和个人详情页，含游戏占比分析
+  - **群聊管理**：增删群聊、增删 SteamID、状态展示
+  - **连接测试**：一键测试 Steam API / Steam Store / SGDB 连通性
+  - **Gantt 数据源优化**：优先使用 session_records 真实时间戳，回退按 1:1 分钟映射
+  - **新增依赖**：`aiohttp>=3.9.0`（Web 服务器）
+
+- V3.1.16（2026/07/15）
+  - **Bug 修复**：修复旧版 start_play_times 数据格式不兼容导致轮询崩溃（int → dict 自动迁移）
+
+- V3.1.15（2026/07/13）
+  - **功能改进**：alllist 支持 img/text 双模式输出，卡片叠加状态色渐变，修复 personastate 状态识别（区分在线/忙碌/离开/打盹），头像框默认缓存 30 天
+
+- V3.1.14（2026/07/13）
+  - **功能改进**：统一权限系统，移除 AstrBot 框架层 ADMIN 权限装饰器，所有指令改用插件内部 permission_level 控制
+
+- V3.1.13（2026/07/09）
+  - **Bug 修复**：定时排行榜推送在主轮询无玩家到点时被跳过，导致推送失效
+
+- V3.1.12（2026/07/08）
+  - **QQ-SteamID 绑定系统**：addid 支持 @用户 [备注名]，绑定即监控
+  - **自定义备注名**：所有推送通知、list、rank、alllist、/在干嘛 图片优先显示备注
+  - **新增指令**：/steamwho @用户 / /在干嘛 @用户 即时查询单人 Steam 状态
+  - **delid/openbox 支持多格式**：好友码、链接均可
+
+- V3.1.11（2026/07/07）
+  - **封面降级优化**：竖版封面缺失时叠加横版 header_image，永久缓存
+  - **排行榜视觉优化**：进度条改为 Top1 满格基准，显示百分比对比，总时长金色
+  - **游戏过滤**：黑白名单模式（全部/白名单/黑名单），按 gameid 过滤
+
+- V3.1.10（2026/07/06）
+  - **Bug 修复**：修复 WebUI 保存配置时 smart_poll_intervals 类型校验失败（list vs string），init 阶段强制归一化为逗号分隔字符串
+  - **代理增强**：SOCKS5 代理自动安装 socksio 依赖（pip install httpx[socks]），安装失败则打印清晰指引
+  - **代理增强**：fetch_player_status / fetch_player_statuses_batch 异常处理加固，try 包裹 async with httpx.AsyncClient，防止 context manager 异常穿透到主轮询
+  - **依赖更新**：requirements.txt httpx → httpx[socks]
+
+- V3.1.9（2026/07/06）
+  - **Bug 修复**：Steam API 返回非 dict 错误响应（如 x-eresult: 84）时不再崩溃，改为优雅降级并输出诊断日志
+  - **Bug 修复**：addid 分隔符从 [,.\s] 改为仅中英文逗号，避免 URL 中的 . 被错误截断
+  - **Bug 修复**：ResolveVanityURL 同样加 isinstance 守卫，防止异常响应导致崩溃
+  - **指令优化**：README 更新 rank_on 统一用法，移除已废弃的 rank_off
+
+- V3.1.8（2026/07/05）
+  - **指令增强**：/steam delid 支持跨群删除（私聊传群号），退群也能清理监控
+
+- V3.1.7（2026/07/05）
+  - **Bug 修复**：重启插件后不再重复播报开始/结束游戏通知（初始化静默建立状态基线）
+  - **Bug 修复**：移除持久化加载时错误的 gameid 清除逻辑，消除重启误判
+
+- V3.1.6（2026/07/05）
+  - **性能优化**：主轮询跨群合并批量查询，N个群从N次API调用降为1次（自动去重）
+
+- V3.1.5（2026/07/05）
+  - **Bug 修复**：定时排行榜推送 (rank_on / rank_on all) 目标群为空导致无推送
+  - **新增配置**：排行榜推送时间可自定义（rank_push_hour / rank_push_minute，默认 8:30）
+  - **指令优化**：/steam rank_on 整合 list（查看状态）/ test（即刻推送）/ del（删除推送）
+
+- V3.1.4（2026/07/05）
+  - **性能优化**：steam_list / steam_alllist / steam_on 初始化全部改用批量查询接口，大幅减少 API 调用次数
+
+- V3.1.2（2026/07/04）
+  - **Bug 修复**：排行榜 (rank/allrank) 封面获取日期键与数据聚合对齐，修复封面不显示
+  - **Bug 修复**：排行榜 (rank/allrank) 新增 Steam 头像框渲染
+  - **Bug 修复**：玩家切换游戏时，上一款游戏游玩时长不再丢失
+
+- V3.1.1（2026/07/04）
+  - **新增头像框显示**：开始游戏/结束游戏/list/rank 图片均支持显示 Steam 头像框
+  - **缓存配置化**：头像/头像框/封面缓存时间可在 WebUI 配置，默认头像1天/头像框7天/封面永不
+  - **alllist图片渲染**： steam alllist 改为图片渲染
+  - **权限分级**：新增 permission_level 配置（1=管理员限定 2=查询指令放开 3=开关+添加ID放开）
+
+
+- V3.1.0（2026/07/04）
+  - **排行榜功能**：新增游戏时长排行榜，支持 `steam rank` 本群排行和 `steam allrank` 所有群排行
+  - 参数由 week/month 改为任意数字天数（如 `steam rank 15`），默认返回当天
+  - 每天凌晨 4:00 为天分界点，定时播报默认早上 8:30 推送昨日排行榜
+  - `steam rank_on` / `steam rank_off` 开启/关闭每群排行榜自动推送
+  - 修复重启插件后已通知过的退出记录重复推送的问题
+
+- V3.0.0（2026/07/03）重大更新
+  - **性能与稳定性大幅优化**：采用 Steam 官方批量查询接口（单次最多 100 个 ID），大幅降低 API 调用次数，从根本上避免触发 Steam 限流（HTTP 429 / x-eresult: 84）及 IP 被封禁；批量失败时自动降级为单查，保证可用性
+  - **轮询架构重构**：重写全局轮询循环，按动态到点查询 + 异常隔离（`return_exceptions=True`），修复在线玩家不再轮询、离线玩家轮询间隔越来越长的问题
+  - **WebUI 卡顿修复**：引入持久化数据脏标志 + 节流写盘（默认 300 秒一次），避免高频写盘拖慢 AstrBot 主进程与 WebUI
+  - **退出推送修复**：新增延迟退出检查与去重机制（`_pending_quit_tasks`），修复同一玩家同一游戏在短时间内重复触发退出通知的问题；优化推送会话管理，修复 `未设置推送会话，无法发送消息` 错误
+  - **多种 ID 输入格式**：`addid` 现支持 SteamID64、个人资料链接、自定义 vanity URL（自动调用 ResolveVanityURL 解析）、`s.team` 短链、8 位好友码
+  - **通知开关精细化**：新增 `enable_game_end_notify`（可单独关闭游戏结束通知）、`notify_send_image` / `notify_send_text`（图片/文本推送可独立控制）
+  - **配置项开放**：`max_group_size`（单群最大监控人数）由硬编码改为可配置项，方便大群 / 粉丝群使用
+  - **网络代理支持**：新增 `enable_proxy` / `proxy_url` 配置项，支持 http / https / socks5 代理（来自社区 PR）
+  - **字体自动管理**：启动时自动检测并加载插件 `fonts` 目录下的 NotoSansHans 系列字体，缓存到数据目录，渲染更稳定
+  - **成就系统优化**：新增 `enable_achievement_poll` 开关，获取成就失败的游戏自动加入黑名单跳过轮询
+  - **游戏名中文化**：优先通过 Steam 商店 API 获取游戏中文名，无则回退英文名
+- V2.2.0
+  添加了缺失的封面的图片显示
+  添加了新功能，可以将已经轮询中账号，联动推送到多个副群（适用于多个粉丝群的情况）
+
+## 贡献者
+
+感谢以下社区贡献者（V3.4.0）：
+
+- [@OLRainM](https://github.com/OLRainM)：模块化重构、QQ 官方机器人适配、WebUI 管理接口性能优化
+- [@e-legy](https://github.com/e-legy)：跨群状态基线修复、Steam 官方高清竖版封面获取
+- [@guairenwei](https://github.com/guairenwei)：Steam 好友列表风格渲染

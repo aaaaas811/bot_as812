@@ -125,6 +125,10 @@ config.yaml
 *.json
 *.yml
 *.yaml
+
+# Keep the local secret-bearing config ignored; only track its template.
+!plugins/steam_status_monitor/config.example.json
+!plugins/steam_status_monitor/assets/fonts/manifest.json
 plugins/as812/config/
 plugins/mh/data/
 plugins/mh/image_cache/
