@@ -1,0 +1,12 @@
+name = "seu_lectures"
+version = "1.0.0"
+main = "main.py"
+entry_class = "SEULectures"
+author = "as812"
+description = "私聊和群聊 /讲座 查询 SEU 当前素质讲座，合并转发输出"
+
+[dependencies]
+
+[pip_dependencies]
+aiohttp = ">=3.11"
+cryptography = ">=41"

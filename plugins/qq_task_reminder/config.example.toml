@@ -1,0 +1,27 @@
+# Copy to config.toml on the BOT SERVER; disabled until fully configured.
+enabled = false
+account = "YOUR_PERSONAL_QQ"
+groups = ["GROUP_ID"]
+user_context = "填写与你有关的课程、班级、姓名/昵称，帮助区分别人的任务"
+daily_time = "21:00" # Asia/Shanghai, independent of server timezone
+reminder_hours = [24, 1, 0]
+extract_interval_seconds = 300
+listen_host = "127.0.0.1" # Use TLS reverse proxy or a private network
+listen_port = 8098
+token_env = "QQ_TASK_ONEBOT_TOKEN"
+
+[ai]
+# OpenAI-compatible chat endpoint; can use the same provider as as812.
+# No automatic sharing of as812 conversation history or personality prompts.
+base_url = "https://YOUR_AI_PROVIDER/v1"
+model = "YOUR_MODEL"
+api_key_env = "QQ_TASK_AI_KEY"
+
+[smtp]
+host = "smtp.qq.com" # Example only; replace for another email provider
+port = 465
+security = "ssl" # ssl / starttls
+username = "YOUR_SENDER@qq.com"
+sender = "YOUR_SENDER@qq.com"
+recipient = "YOUR_RECIPIENT@example.com"
+password_env = "QQ_TASK_SMTP_PASSWORD" # SMTP authorization code, not QQ password

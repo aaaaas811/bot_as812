@@ -74,17 +74,11 @@ class ResponseHandler:
         # 注入当前心情（若已设置），让回复带有情绪
         self._inject_mood(chat_history, group_id)
 
-        # RAG 检索
-        rag_context = ""
-        batch_text = "\n".join(item.message for item in current_messages) if current_messages else msg.message
-        if self.rag_manager and self.rag_manager.should_retrieve(batch_text):
-            rag_context, _ = self.rag_manager.retrieve(batch_text)
-
         # 生成回复；收拢器负责在新消息到来时取消本次生成
         _log.info("开始生成回复……")
         image_api_key = self.config_manager.get_image_api_key()
         async with reply_lock:
-            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self.get_image_cb)
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, "", self.get_image_cb)
 
         if not response:
             return None
@@ -171,17 +165,11 @@ class ResponseHandler:
             except Exception:
                 pass
         
-            # RAG 检索
-            rag_context = ""
-            batch_text = "\n".join(item.message for item in current_messages) if current_messages else current_message.get("message", "")
-            if self.rag_manager and self.rag_manager.should_retrieve(batch_text):
-                rag_context, _ = self.rag_manager.retrieve(batch_text)
-
             # 生成回复；收拢器负责在新消息到来时取消本次生成
             _log.info("开始主动生成回复……")
             image_api_key = self.config_manager.get_image_api_key()
             async with reply_lock:
-                response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self.get_image_cb)
+                response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, "", self.get_image_cb)
         
             if not response:
                 return None

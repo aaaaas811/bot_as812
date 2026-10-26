@@ -55,11 +55,28 @@ class VectorStore:
             return len(existing["ids"])
         return 0
 
-    def search(self, query_text: str, top_k: int = 5, threshold: float = 0.5) -> list[dict]:
+    def upsert(self, texts: list[str], metadatas: list[dict], ids: list[str]):
+        self._collection.upsert(documents=texts, metadatas=metadatas, ids=ids)
+
+    def records(self, where: Optional[dict] = None) -> list[dict]:
+        data = self._collection.get(where=where, include=["documents", "metadatas"])
+        return [dict(meta or {}, text=text, chunk_id=cid)
+                for cid, text, meta in zip(data["ids"], data["documents"], data["metadatas"])]
+
+    def delete_ids(self, ids: list[str]):
+        if ids:
+            self._collection.delete(ids=ids)
+
+    def search(self, query_text: str, top_k: int = 5, threshold: float = 0.5,
+               where: Optional[dict] = None) -> list[dict]:
         """文本查询（嵌入和相似度计算由 ChromaDB 完成）"""
+        count = self.count()
+        if not count or top_k <= 0:
+            return []
         results = self._collection.query(
             query_texts=[query_text],
-            n_results=top_k,
+            n_results=min(top_k, count),
+            where=where,
         )
 
         if not results["ids"] or not results["ids"][0]:
@@ -68,7 +85,7 @@ class VectorStore:
         scored = []
         for i, chunk_id in enumerate(results["ids"][0]):
             distance = results["distances"][0][i] if results.get("distances") else 0
-            # ChromaDB 默认用余弦距离 (0=相同, 2=相反)，转相似度
+            # 默认平方 L2 距离；归一化向量的 L2² / 2 = 1 - cosine。
             similarity = 1.0 - (distance / 2.0)
             if similarity < threshold:
                 continue

@@ -105,6 +105,12 @@ class as812(NcatBotPlugin):
                 embedding_dim=int(self.config_manager.get("rag_embedding_dim", 1536)),
                 top_k=int(self.config_manager.get("rag_top_k", 5)),
                 similarity_threshold=float(self.config_manager.get("rag_similarity_threshold", 0.5)),
+                max_context_chars=int(self.config_manager.get("rag_max_context_chars", 600)),
+                context_top_k=int(self.config_manager.get("rag_context_top_k", 3)),
+                memory_enabled=self.config_manager.get("rag_memory_enabled", True),
+                memory_half_life_days=float(self.config_manager.get("rag_memory_half_life_days", 30)),
+                memory_max_age_days=float(self.config_manager.get("rag_memory_max_age_days", 180)),
+                memory_max_per_scope=int(self.config_manager.get("rag_memory_max_per_scope", 200)),
                 chunk_size=int(self.config_manager.get("rag_chunk_size", 512)),
                 chunk_overlap=int(self.config_manager.get("rag_chunk_overlap", 64)),
                 chunk_strategy=self.config_manager.get("rag_chunk_strategy", "paragraph"),
@@ -121,7 +127,7 @@ class as812(NcatBotPlugin):
             _log.warning(f"RAG 管理器初始化失败: {e}，RAG 功能已禁用")
             self.rag_manager = None
 
-        self.message_handler = MessageHandler(self.config_manager, self.log_manager)
+        self.message_handler = MessageHandler(self.config_manager, self.log_manager, self.rag_manager)
         self.mood_handler = MoodHandler(self.config_manager)
         self.response_handler = ResponseHandler(
             self.config_manager,
@@ -343,15 +349,10 @@ class as812(NcatBotPlugin):
         # 注入当前心情（若已设置），让回复带有情绪
         self.mood_handler.inject_mood(chat_history, private_group_id)
 
-        # RAG 检索
-        rag_context = ""
-        if self.rag_manager and self.rag_manager.should_retrieve(chat_message.message):
-            rag_context, _ = self.rag_manager.retrieve(chat_message.message)
-
         # 生成回复
         _log.info("开始生成私聊回复……")
         image_api_key = self.config_manager.get_image_api_key()
-        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self._get_image_by_file)
+        response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, "", self._get_image_by_file)
 
         if not response:
             _log.info("私聊回复为空")
@@ -795,11 +796,7 @@ class as812(NcatBotPlugin):
 
             # 调用 LLM 生成回复
             image_api_key = self.config_manager.get_image_api_key()
-            rag_context = ""
-            if self.rag_manager and self.rag_manager.should_retrieve(text):
-                rag_context, _ = self.rag_manager.retrieve(text)
-
-            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, rag_context, self._get_image_by_file)
+            response = await cat_cat_response(api_key, chat_history, cat_prompt, image_api_key, "", self._get_image_by_file)
             return response or ""
         except Exception as e:
             _log.error(f"[面板] 聊天处理异常: {e}")

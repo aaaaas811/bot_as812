@@ -13,9 +13,10 @@ from ..core.config_manager import ConfigManager
 class MessageHandler:
     """消息处理器类"""
 
-    def __init__(self, config_manager: ConfigManager, log_manager: LogManager):
+    def __init__(self, config_manager: ConfigManager, log_manager: LogManager, rag_manager=None):
         self.config_manager = config_manager
         self.log_manager = log_manager
+        self.rag_manager = rag_manager
 
     @staticmethod
     def map_role(role: str) -> str:
@@ -271,6 +272,14 @@ class MessageHandler:
         # 加载群历史并合并为一条（只保留机器人和当前用户的消息）
         group_messages = self.log_manager.load_group_history(group_id, chat_config.context_history)
         bot_qq = str(self.config_manager.get_bt_uin() or "")
+
+        if self.rag_manager:
+            batch = current_messages or [current_message]
+            context = self.rag_manager.context_for_chat(
+                str(group_id), group_messages, [message.to_dict() for message in batch], bot_qq
+            )
+            if context:
+                messages.append({"role": "system", "content": context})
 
         history_lines: List[str] = []
         # 遍历历史（从近到远），但我们最后希望按时间顺序展示，因此先收集再反转

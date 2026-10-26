@@ -240,6 +240,9 @@ sudo journalctl _SYSTEMD_USER_UNIT=bot_as812.service -n 100 --no-pager
 代码更新不会覆盖根配置、插件配置、`data/`、`rag_data/`、`memory/` 或数据库，
 也不会复制日志和 Windows 环境。新增插件需相应补充 Linux 依赖及目标机配置；
 JSON/YAML 文件默认不更新，`*.example.json` 和 `assets/` 内静态资源除外。
+任务提醒插件的 `config.toml` 同样保留；`config.example.toml` 和桌面转发插件的
+`package.json` 随代码发布。QQ 任务提醒未填写配置时保持关闭。
+校园讲座插件需要 `cryptography>=41`，已列入 Linux 依赖清单。
 怪物资料和语录等 `data/` 内资源需单独更新。解压采用覆盖方式，代码删除或插件改名
 需在目标上单独处理；不会自动删除树莓派文件。
 

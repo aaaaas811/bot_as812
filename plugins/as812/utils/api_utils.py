@@ -50,9 +50,9 @@ async def call_deepseek_chat_api(api_key: str, messages: list) -> Optional[str]:
     data = {
         "model": model_name,
         "messages": messages,
-        "temperature": 0.3,
-        "frequency_penalty": 1.3,
-        "presence_penalty": 0.8,
+        "temperature": 0.7,
+        "frequency_penalty": 0.3,
+        "presence_penalty": 0.1,
         "max_tokens": 2000,
         "stream": False
     }

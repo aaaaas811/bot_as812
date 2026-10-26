@@ -26,6 +26,9 @@ class DeploymentBundleTests(unittest.TestCase):
                 "plugins/as812/assets/cat.png": "image",
                 "plugins/steam/assets/fonts/manifest.json": "{}",
                 "plugins/steam/config.example.json": "{}",
+                "plugins/tasks/config.example.toml": "enabled = false",
+                "plugins/tasks/config.toml": "token = 'local-secret'",
+                "plugins/tasks/desktop/package.json": "{\"name\":\"task-forwarder\"}",
                 "config.yaml": "token: local-secret",
                 "plugins/as812/config/config.yaml": "key: local-secret",
                 "plugins/steam/config.json": "{\"key\":\"secret\"}",
@@ -37,6 +40,8 @@ class DeploymentBundleTests(unittest.TestCase):
                 "plugins/as812/logs/private.log": "private messages",
                 "plugins/as812/__pycache__/main.pyc": "compiled",
                 "plugins/as812/.env": "SECRET=private",
+                "plugins/as812/.git.bak/config": "old repository credentials",
+                "plugins/as812/.git.bak/hooks/pre-commit": "old repository hook",
                 "napcat/launcher.bat": "Windows launcher",
                 ".venv/Scripts/python.exe": "Windows interpreter",
             }
@@ -57,9 +62,11 @@ class DeploymentBundleTests(unittest.TestCase):
                 "main.py", "deploy/requirements-linux.txt", "plugins/as812/main.py",
                 "plugins/as812/assets/cat.png", "plugins/steam/assets/fonts/manifest.json",
                 "plugins/steam/config.example.json",
+                "plugins/tasks/config.example.toml", "plugins/tasks/desktop/package.json",
             }
             state = {
                 "config.yaml", "plugins/as812/config/config.yaml", "plugins/steam/config.json",
+                "plugins/tasks/config.toml",
                 "plugins/as812/rag/rag_data/chroma_db/chroma.sqlite3",
                 "plugins/as812/rag/rag_data/chroma_db/index.bin",
                 "plugins/mh/data/_team_codes.json", "data/rbac.json", "memory/conversation.txt",

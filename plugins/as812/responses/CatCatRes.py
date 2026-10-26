@@ -110,8 +110,8 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
         # prompt 可能包含 persona 描述；我们将其作为 system persona 使用（若无则使用默认简洁指令）
         persona = prompt or "你是群聊机器人812，使用中文，简洁回复。"
         
-        instruction = "请根据上下文判断是否需要回复当前用户的消息。优先回复当前用户消息，避免忽略用户提问。不直接输出识图结果。回复要自然口语化，像真人聊天，避免模板化开头（如“好的呢”“没问题”“收到”），不要机械复述用户的话。"
-        responsetimes = "每行只说一句话。根据问题确定回复多少行。尽量不超过五行。偶尔可以只回一句很短的话或一个语气词，不必每次都说满。##之后的内容表示特殊行为，不算做回复内容。不要复读。"
+        instruction = "结合上下文和人设判断是否回复；需要回复时优先回应当前消息。自然口语化，不用‘好的呢’‘没问题’‘收到’等模板开场，不复述用户话或识图结果。"
+        responsetimes = "每行一句，长度按人设：默认1–2行，可只回短句或语气词；有要求再展开，尽量不超五行。特殊指令独占一行，不计入回复行数，不复读。"
         
         # 构建消息列表：固定前缀部分在前（最大化缓存命中），可变部分在后
         messages = [{"role": "system", "content": persona}]
@@ -155,11 +155,9 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
 
         # 工具调用说明（固定内容，加入缓存前缀）
         tool_instr = (
-            "重要：当系统消息列出了图片索引（如\"图片[0]: ...\"）且用户的消息涉及图片内容时，"
-            "你必须输出单独一行 JSON 来请求识图："
+            "系统有图片索引且当前消息涉及图片内容时，必须先输出单行JSON请求识图："
             "{\"tool_call\": {\"name\": \"vision_recognize\", \"image_index\": <图片索引>}}。"
-            "不要自行猜测图片内容，也不要回复\"看不清\"——请先调用工具获取识图结果。"
-            "如果没有图片索引或用户消息与图片无关，则直接给出回复文本。"
+            "索引填对应整数，不猜图、不先说‘看不清’。无索引或与图片无关时按人设回复或沉默。"
         )
         messages.append({"role": "system", "content": tool_instr})
 
@@ -273,10 +271,8 @@ async def cat_cat_response(api_key, chat_history, prompt, image_api_key=None, ra
                 try:
                     # 指令明确要求：将识图信息自然地融入回复中，不要复读识图列表，不要以“图片识别结果”开头
                     sys_msg = (
-                        "==================================\n"
-                        "识图信息（仅供参考）：\n" + str(tool_result) +
-                        "\n【重要】不要直输出识图信息，而是根据当前人设，以自然语言输出，可适当概括。" +
-                        "\n=================================="
+                        "识图参考：\n" + str(tool_result) +
+                        "\n勿照抄或以‘识图结果’开头；按人设自然概括，识图失败则沉默。"
                     )
                     messages.append({"role": "system", "content": sys_msg})
                 except Exception:

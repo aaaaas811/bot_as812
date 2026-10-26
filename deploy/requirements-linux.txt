@@ -14,3 +14,4 @@ chromadb==1.5.8
 websockets==17.0.1
 httpx[socks]==0.28.1
 numpy==2.3.5
+cryptography>=41

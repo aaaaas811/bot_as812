@@ -1,0 +1,9 @@
+{
+  "name": "napcat-plugin-personal-tasks",
+  "plugin": "个人群任务采集",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "index.mjs",
+  "description": "仅将指定群的文字消息转发至个人任务服务器",
+  "author": "as811"
+}

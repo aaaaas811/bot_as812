@@ -1,0 +1,9 @@
+name = "qq_task_reminder"
+version = "0.1.0"
+main = "main.py"
+entry_class = "QQTaskReminder"
+author = "as811"
+description = "个人 QQ 指定群任务提取、每日清单与邮件截止提醒"
+pip_dependencies = []
+
+[dependencies]

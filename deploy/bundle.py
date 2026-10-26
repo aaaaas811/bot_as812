@@ -7,7 +7,7 @@ from pathlib import Path
 
 
 def create_bundle(root: Path, output: Path, with_state: bool = False) -> int:
-    excluded_dirs = {".git", ".venv", "__pycache__", ".pytest_cache", "node_modules",
+    excluded_dirs = {".git", ".git.bak", ".venv", "__pycache__", ".pytest_cache", "node_modules",
                      "logs", "cache", "image_cache"}
     state_dirs = {"config", "data", "rag_data", "memory"}
     state_suffixes = {".json", ".yaml", ".yml", ".db", ".sqlite", ".sqlite3", ".bin"}
@@ -35,9 +35,10 @@ def create_bundle(root: Path, output: Path, with_state: bool = False) -> int:
             if path.name == ".env" or path.name.startswith(".env."):
                 continue
             if not with_state:
-                if state_dirs.intersection(relative.parts):
+                if state_dirs.intersection(relative.parts) or path.name == "config.toml":
                     continue
-                template = path.name.endswith(".example.json") or "assets" in relative.parts
+                template = (path.name.endswith(".example.json") or "assets" in relative.parts
+                            or path.name == "package.json")
                 if not template and (path.suffix in state_suffixes or
                                      path.name.endswith((".db-wal", ".db-shm", "-journal"))):
                     continue
